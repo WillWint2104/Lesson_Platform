@@ -1,0 +1,31 @@
+# CodeRabbit configuration for the Lesson Platform.
+# The user must install the CodeRabbit GitHub app for these reviews to activate.
+
+reviews:
+  # Reviews are enabled.
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    # Exclude the sample content data from heavy review — it is illustrative
+    # fixture JSON, not application logic.
+    - "!content/**"
+
+  path_instructions:
+    - path: "styles/**"
+      instructions: >-
+        Design tokens are AUTHORITATIVE in styles/tokens.css. Components must
+        reference CSS custom properties (var(--...)) and must never hardcode hex
+        values. Flag any hardcoded hex colours in component styles.
+    - path: "src/**"
+      instructions: >-
+        Apply the engineering lessons in CLAUDE.md §c — especially save/restore
+        symmetry, single shared builders for live/persisted rendering, and
+        actionable validation errors for ingested JSON.
+
+chat:
+  auto_reply: true
