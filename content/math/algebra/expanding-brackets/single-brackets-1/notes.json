@@ -1,0 +1,39 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "text": "Expanding a Single Bracket"
+    },
+    {
+      "type": "paragraph",
+      "text": "To expand a single bracket, multiply every term inside the bracket by the term outside. For example, $3(x + 2)$ becomes $3x + 6$."
+    },
+    {
+      "type": "callout",
+      "style": "key",
+      "text": "Multiply the outside term by each term inside, one at a time."
+    },
+    {
+      "type": "example",
+      "prompt": "Expand $2(x + 5)$.",
+      "working": [
+        "$2 \\times x = 2x$",
+        "$2 \\times 5 = 10$"
+      ],
+      "answer": "$2x + 10$"
+    },
+    {
+      "type": "callout",
+      "style": "warning",
+      "text": "Remember to multiply the second term too — a common mistake is to write $2x + 5$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Multiply the outside term by the first term inside.",
+        "Multiply the outside term by the second term inside.",
+        "Combine the results, keeping the operator."
+      ]
+    }
+  ]
+}
