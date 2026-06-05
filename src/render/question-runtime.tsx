@@ -1,5 +1,5 @@
 /**
- * @file question-runtime.js — Interactive question runtime.
+ * @file question-runtime.tsx — Interactive question runtime.
  *
  * Renders and drives interactive questions (text | table | graph | geometry |
  * multiple-choice), captures learner answers, and reports outcomes to the
@@ -13,3 +13,7 @@
  *
  * Stub only — no logic yet (stack decision pending, CLAUDE.md §f).
  */
+
+// Stub module: no exports yet. Present so the file is a module under
+// isolatedModules (CLAUDE.md §f).
+export {};

@@ -1,5 +1,5 @@
 /**
- * @file validator.js — Ingested JSON validator.
+ * @file validator.ts — Ingested JSON validator.
  *
  * Validates lesson manifests, notes, and questions against the JSON contracts
  * (CLAUDE.md §e) and produces ACTIONABLE errors, e.g. "question 3: missing
@@ -13,3 +13,7 @@
  *
  * Stub only — no logic yet (stack decision pending, CLAUDE.md §f).
  */
+
+// Stub module: no exports yet. Present so the file is a module under
+// isolatedModules (CLAUDE.md §f).
+export {};

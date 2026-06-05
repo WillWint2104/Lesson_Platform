@@ -1,5 +1,5 @@
 /**
- * @file progress-store.js — Learner progress store.
+ * @file progress-store.ts — Learner progress store.
  *
  * Persists and restores learner progress, NAMESPACED by subject/topic so that
  * strictly-isolated content packs never read or write each other's state
@@ -12,3 +12,7 @@
  *
  * Stub only — no logic yet (stack decision pending, CLAUDE.md §f).
  */
+
+// Stub module: no exports yet. Present so the file is a module under
+// isolatedModules (CLAUDE.md §f).
+export {};

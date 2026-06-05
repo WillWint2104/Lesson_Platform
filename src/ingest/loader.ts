@@ -1,5 +1,5 @@
 /**
- * @file loader.js — Content ingestion loader.
+ * @file loader.ts — Content ingestion loader.
  *
  * Loads lesson manifests and their referenced notes/questions JSON from the
  * /content hierarchy (subject → topic → topic-area → lesson).
@@ -12,3 +12,7 @@
  *
  * Stub only — no logic yet (stack decision pending, CLAUDE.md §f).
  */
+
+// Stub module: no exports yet. Present so the file is a module under
+// isolatedModules (CLAUDE.md §f).
+export {};
