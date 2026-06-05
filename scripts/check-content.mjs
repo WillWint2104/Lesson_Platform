@@ -24,8 +24,13 @@ async function collectJson(dir) {
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
-  } catch {
-    return [];
+  } catch (err) {
+    // Only "directory doesn't exist" is benign here (e.g. no /content yet).
+    // Any other I/O error must fail CI rather than silently pass.
+    if (err && err.code === "ENOENT") {
+      return [];
+    }
+    throw err;
   }
   const found = [];
   for (const entry of entries) {
