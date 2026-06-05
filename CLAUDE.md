@@ -130,7 +130,8 @@ for minimal valid examples of all three files.
 - **TypeScript strict mode is on;** path alias `@` → `/src`.
 - **Video hosting: YouTube unlisted embeds** (no embed implementation yet).
 - **App hosting: TBD.**
-- `/src` modules in `ingest`/`render`/`state`/`shared` are still JSDoc stubs.
+- `/src` modules in `ingest`/`render`/`state`/`shared` are TypeScript stubs
+  (JSDoc headers preserved; no runtime logic yet).
 
 ### Build / run commands
 
