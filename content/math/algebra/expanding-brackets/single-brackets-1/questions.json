@@ -1,0 +1,30 @@
+{
+  "questions": [
+    {
+      "type": "text",
+      "prompt": "Expand $4(x + 3)$.",
+      "skill": "expanding-single-brackets",
+      "difficulty": 1
+    },
+    {
+      "type": "multiple-choice",
+      "prompt": "Which is the correct expansion of $\\frac{1}{2}(2x + 6)$?",
+      "skill": "expanding-single-brackets",
+      "difficulty": 2,
+      "options": [
+        { "text": "$x + 3$", "isCorrect": true },
+        { "text": "$x + 6$", "isCorrect": false },
+        { "text": "$2x + 3$", "isCorrect": false },
+        { "text": "$\\frac{1}{2}x + 6$", "isCorrect": false }
+      ]
+    },
+    {
+      "type": "table",
+      "prompt": "Complete the table by expanding each bracket.",
+      "rows": [
+        { "expression": "$5(x + 1)$", "expansion": "" },
+        { "expression": "$3(2x - 4)$", "expansion": "" }
+      ]
+    }
+  ]
+}
