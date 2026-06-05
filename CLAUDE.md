@@ -121,7 +121,22 @@ for minimal valid examples of all three files.
 
 ## f. Current state
 
-- **Scaffold only.**
-- **Stack decision pending** — do NOT install a framework.
-- **No build step yet.**
-- **Deployment target TBD.**
+- **Stack: Vite + React + TypeScript** — chosen for a fast, zero-config dev
+  server and first-class TS support with a minimal dependency surface.
+- **Dependencies kept minimal:** `react`, `react-dom` + dev `vite`,
+  `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`.
+  No router, state lib, UI kit, or KaTeX yet (KaTeX arrives with the
+  notes-renderer PR).
+- **TypeScript strict mode is on;** path alias `@` → `/src`.
+- **Video hosting: YouTube unlisted embeds** (no embed implementation yet).
+- **App hosting: TBD.**
+- `/src` modules in `ingest`/`render`/`state`/`shared` are still JSDoc stubs.
+
+### Build / run commands
+
+```sh
+npm install                  # install dependencies
+npm run dev                  # Vite dev server (http://localhost:5173)
+npm run build                # tsc --noEmit && vite build  -> dist/
+node scripts/check-content.mjs   # validate all /content JSON parses
+```
