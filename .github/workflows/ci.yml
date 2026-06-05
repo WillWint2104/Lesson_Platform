@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  scaffold-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Content JSON validity
+        run: node scripts/check-content.mjs
+
+      - name: Design tokens presence sanity
+        run: |
+          test -f styles/tokens.css || { echo "::error::styles/tokens.css is missing"; exit 1; }
+          grep -q -- "--green" styles/tokens.css || { echo "::error::styles/tokens.css is missing the --green token"; exit 1; }
+          test -f index.html || { echo "::error::index.html is missing"; exit 1; }
+          echo "tokens.css present and contains --green; index.html present."
+
+      - name: Pass summary
+        run: |
+          echo "=================================================="
+          echo " CI PASSED"
+          echo " - All /content *.json files parse"
+          echo " - styles/tokens.css present, contains --green token"
+          echo " - index.html present"
+          echo "=================================================="
