@@ -18,9 +18,19 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Content JSON validity
         run: node scripts/check-content.mjs
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Production build
+        run: npx vite build
 
       - name: Design tokens presence sanity
         run: |
@@ -33,7 +43,10 @@ jobs:
         run: |
           echo "=================================================="
           echo " CI PASSED"
+          echo " - npm ci installed dependencies"
           echo " - All /content *.json files parse"
+          echo " - tsc --noEmit: no type errors"
+          echo " - vite build: production build succeeded"
           echo " - styles/tokens.css present, contains --green token"
           echo " - index.html present"
           echo "=================================================="
