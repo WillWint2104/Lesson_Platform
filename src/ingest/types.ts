@@ -91,11 +91,15 @@ export interface LessonVideo {
   duration: number | null;
 }
 
-/** The inner lesson object of a manifest. */
+/**
+ * The inner lesson object of a manifest.
+ *
+ * NOTE: no `subject`/`topic`/`topicArea` — the hierarchy is derived from the
+ * directory path by the loader (CLAUDE.md §a), not stored in the manifest.
+ */
 export interface Lesson {
   id: string;
   title: string;
-  subject: string;
   video: LessonVideo;
   /** Inline blocks, or a path (relative to the lesson dir) to a NotesFile. */
   notes: NoteBlock[] | string;
