@@ -40,6 +40,14 @@
   /* ---- Studio mint — DARK SURFACES ONLY (video player chrome) ---- */
   --studio-mint: #beffdc;
 
+  /* ---- Surface tints (pale backgrounds for callouts / chips) ---- */
+  --green-tint: #e7f4ec;
+  --gold-tint: #fbf2d9;
+  --cyan-tint: #e4f4f9;
+
+  /* ---- Muted ink (secondary text, e.g. working steps) ---- */
+  --muted-ink: #5b6b61;
+
   /* ---- Typography ---- */
   --font-heading: "Plus Jakarta Sans", system-ui, sans-serif;  /* headings / buttons */
   --font-body: "Manrope", system-ui, sans-serif;               /* body */
