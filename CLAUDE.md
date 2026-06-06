@@ -9,14 +9,17 @@ are an agent picking this project up cold, read this file in full before doing a
 
 A deployed, online lesson platform.
 
-A **lesson** is a recorded video (produced in the **HGL-Console** studio, dark mint
-theme) + **notes** + **interactive questions**. All lesson material is **ingested from
-JSON** — the platform renders content; it does not author it inline.
+The unit of content is the **topic area**: ONE page combining **area-level notes**
+and an **ordered sequence of video→exercise pulses** (videos produced in the
+**HGL-Console** studio, dark mint theme; exercises are interactive questions). All
+material is **ingested from JSON** — the platform renders content; it does not
+author it inline. (The earlier **lesson-as-unit** model is superseded by this
+area-sequence model; see §e.)
 
 Content is organised as a strict hierarchy:
 
 ```
-subject → topic → topic area → lesson
+subject → topic → topic area  (each area = notes + an ordered video/exercise sequence)
 ```
 
 **Content packs are strictly isolated from each other.** There are no cross-pack
@@ -126,25 +129,38 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 - `callout` — `{ style: "key" | "warning" | "info" }`
 - `list` — `{ items }`
 
-### Lesson manifest
-`{ lesson: { id, title, order?, video: { src, duration }, notes, questions } }` —
-ties **video `src` + notes + questions** together into one lesson.
-`notes`/`questions` are either inline arrays or a file path relative to the
-lesson dir. Optional `order` (integer) sorts lessons within a topic area; ties
-or absences fall back to id-alphabetical, and duplicate orders in one area warn.
+### Area manifest (v2 — the unit is the topic AREA)
+The unit of content is the **topic area**, ONE page = area-level notes + an
+ordered `sequence` of video/exercise segments. The lesson-as-unit model is
+**superseded**. Manifest lives at
+`/content/<subject>/<topic>/<topic-area>/area.json`:
 
-`video.src` is a **YouTube source** (a `youtube.com/watch` URL, a `youtu.be`
-short link, a `youtube.com/embed` URL, or a bare 11-char id) **or `null`**.
-`null` is a first-class "authored before its video was recorded" state
-(generation may run ahead of studio recording). An unparseable `src` is an
-error. All parsing goes through `parseYouTubeId` (`/src/shared/youtube.ts`) —
-the single resolver used by both the validator and `<VideoEmbed>`.
+```
+{ "area": {
+  "title": string,
+  "notes": NoteBlock[] | string(path),               // area-level notes
+  "sequence": [                                       // ordered, as authored
+    { "type": "video",    "title": string, "src": string|null },
+    { "type": "exercise", "title": string, "questions": Question[] | string(path) }
+  ]
+} }
+```
+- `sequence` is ordered; any mix/repetition of segment types is legal (the normal
+  pattern is video→exercise pulses, not enforced). **Empty sequence is an error;
+  an exercise with zero questions is an error; an area with no notes WARNS.**
+- **Question JSON and Notes JSON contracts are UNCHANGED.**
+- A `lesson.json` manifest is **rejected** with a migration pointer (no silent
+  support): "lesson.json manifests are superseded by area.json".
 
-**Hierarchy is path-derived, never in the manifest.** `subject`, `topic`, and
-`topicArea` come from the directory path
-(`/content/<subject>/<topic>/<topic-area>/<lesson-id>/`) and are stamped on the
-lesson by the loader. A manifest containing `subject`/`topic`/`topicArea` is an
-error; a manifest at a wrong-depth path is a load-time error.
+`video.src` is a **YouTube source** (`youtube.com/watch` URL, `youtu.be` link,
+`youtube.com/embed` URL, or a bare 11-char id) **or `null`** (first-class "not
+recorded yet"). Unparseable `src` is an error; all parsing goes through
+`parseYouTubeId` (`/src/shared/youtube.ts`).
+
+**Hierarchy is path-derived, never in the manifest.** `subject`/`topic`/
+`topicArea` come from the directory path (`area.json` sits at the topic-area
+level); the **areaId** is `<subject>/<topic>/<topicArea>`. A manifest containing
+hierarchy fields is an error; a wrong-depth path is a load-time error.
 
 ### Content strings are single-line by design
 Every content string (`prompt`, `text`, `answer`, `working[]` entries, list
@@ -155,8 +171,8 @@ error: in math content these are almost always a mangled LaTeX command that lost
 its doubled backslash (`\neq`→`\n`+`eq`, `\theta`→`\t`+`heta`, `\rho`→`\r`+`ho`,
 `\beta`→`\b`+`eta`). Write `\\neq`, `\\theta`, etc. in JSON.
 
-See [`/content/math/algebra/expanding-brackets/single-brackets-1/`](content/math/algebra/expanding-brackets/single-brackets-1/)
-for minimal valid examples of all three files.
+See [`/content/math/algebra/expanding-brackets/`](content/math/algebra/expanding-brackets/)
+for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 
 ---
 
@@ -179,10 +195,18 @@ for minimal valid examples of all three files.
   notice shows on the Library; its dismissal persists through the progress
   store's storage layer (`isNoticeDismissed`/`dismissNotice`, a separate
   `lp:notice:*` key — UI state, not in the versioned progress key).
-- **`/src/ingest` is implemented:** `types.ts` (contracts), `validate.ts`
-  (pure, non-throwing validators with actionable path-precise errors + the
-  un-doubled-LaTeX control-character tripwire), and `load.ts` (discovery +
-  loader).
+- **`/src/ingest` is implemented (area-sequence model, v2):** `types.ts`
+  (contracts — `Area`/`AreaManifest` + the `video`/`exercise` segment union;
+  `Question`/`NoteBlock`/`QuestionsFile`/`NotesFile` unchanged), `validate.ts`
+  (pure, non-throwing validators with actionable path-precise errors — e.g.
+  `sequence[3] (exercise): questions file not found` — + the un-doubled-LaTeX
+  control-character tripwire; `validateAreaManifest` enforces non-empty
+  sequence, exercise ≥1 question, no-notes WARNING, and **rejects superseded
+  `lesson.json` manifests with a migration-pointing error**), and `load.ts`
+  (`buildAreaRegistry`/`loadAllAreas` — discovery, path-derived hierarchy,
+  per-segment exercise/notes resolution + figure normalization). The
+  question/notes JSON contracts are UNCHANGED — only the manifest layer moved
+  from per-lesson to per-area.
 - **Notes renderer is implemented:** `/src/render/notes/` (one component per
   block type + `NotesRenderer`) and the shared `/src/shared/MathText.tsx`.
 - **Question runtime is implemented:** `/src/render/questions/` —
@@ -193,44 +217,60 @@ for minimal valid examples of all three files.
   results via `onResult`/`onComplete` callbacks, which the progress store layer
   consumes. Graph and geometry render a token-styled `FigurePlaceholder` (a
   swappable slot for the upcoming figure-renderer PR), not real figures.
-- **Progress store is implemented:** `/src/state/` — `progress.ts`
-  (localStorage-backed, single versioned key `lp:progress:v1`; ONE
-  serialize/restore pair with an explicit field whitelist; hierarchy-scoped
-  query helpers so topics never co-mingle; stale-id guard against the registry),
+- **Progress store is implemented (schema v2, area/segment-keyed):**
+  `/src/state/` — `progress.ts` (localStorage-backed, single versioned key
+  `lp:progress:v2`; state is `areas[areaId].segments[segIndex]` where each
+  exercise segment carries `{ questionOutcomes, attempts, completedAt }`; ONE
+  serialize/restore pair with an explicit field whitelist; area-scoped query
+  helpers so areas never co-mingle; stale-id guard against the registry),
   `storage.ts` (backend detection + in-memory fallback + corrupt/future-version
-  robustness), and `ProgressContext.tsx` (`ProgressProvider` + hooks). Writes go
-  through store functions only — no component touches localStorage. Results are
-  fed from the question runtime's `onResult`/`onComplete` callbacks. **No
-  gamification fields yet** (stars/XP/streak get their own design pass).
-  **Bump `SCHEMA_VERSION` (and add a migration) on ANY breaking change to the
-  stored shape**, and extend `restoreState`'s whitelist — the round-trip test
-  fails otherwise.
+  robustness; reads the v2 key, falls back to the v1 key for migration),
+  `ProgressContext.tsx` (`ProgressProvider` + `useProgressStore`). **v1→v2
+  migration** (`migrateV1ToV2`): old per-lesson records are **preserved verbatim
+  under a `legacy` key — never destroyed** (lesson→area/segment mapping isn't
+  derivable from stored data alone); v1 storage is left intact when v2 is
+  written. `resetAll` clears area progress but preserves `legacy`. Writes go
+  through store functions only — no component touches localStorage. Outcomes are
+  fed from the question runtime via `recordOutcome(areaId, segIdx, qIdx,
+  outcome)` / `recordAttempt(areaId, segIdx, completed)` (completedAt is sticky
+  — review re-runs never clear it). **No gamification fields yet** (stars/XP/
+  streak get their own design pass). **Bump `SCHEMA_VERSION` (and add a
+  migration) on ANY breaking change to the stored shape**, and extend
+  `restoreState`'s whitelist — the round-trip test fails otherwise.
 - **Figure-kind registry is implemented:** `/src/render/figures/` — sealed
   per-kind modules dispatched by (kind, specVersion); see §g. Two proof kinds
   ship: `triangle-figure` and `bearing-diagram`. The question runtime renders
   figures through the registry's `FigureSlot`.
-- **App shell is implemented:** `react-router-dom` routing + two screens
-  (`/src/app/`). `main.tsx` builds the registry + progress store and provides
-  them (RegistryProvider + ProgressProvider) under a `BrowserRouter`. Lessons
-  within a topic area are ordered by the manifest's optional `order` (ties/
-  absences fall back to id-alphabetical); the loader exposes the sorted sequence
-  + each lesson's `areaIndex`/`areaCount`. Sequential unlock logic lives in the
-  pure `/src/app/unlock.ts`. The old multi-lesson harness is retained DORMANT at
-  `/debug` (lesson 8/9), linked nowhere.
+- **App shell is implemented:** `react-router-dom` routing (`/src/app/`).
+  `main.tsx` calls `loadAllAreas` to build the `AreaRegistry` + `createProgressStore`
+  (keyed by `registry.areas.map(a => a.id)`) and provides them (RegistryProvider +
+  ProgressProvider) under a `BrowserRouter`. **Segment unlock** lives in the pure
+  `/src/app/unlock.ts` — `computeSegmentUnlock(segments)` (videos are always
+  open; an exercise segment unlocks iff every earlier exercise segment is
+  complete; the first unlocked-incomplete segment is `current`) and
+  `isAreaComplete(segments)` (true iff every exercise segment is complete). The
+  debug harness at `/debug` is now an **area inspector** (lists registry areas +
+  validity, reset-progress), linked nowhere.
+- **Screens are TEMPORARY (this PR is the manifest/contract layer; the full
+  per-area screen redesign is the next PR).** `Library` is the area hub;
+  `AreaPage` (`/:subject/:topic/:topicArea`) renders breadcrumb + title +
+  area-complete banner + Notes + the ordered sequence (video stages via
+  `VideoEmbed`; exercise stages via `QuestionRunner` when unlocked, else a
+  "complete the previous exercise" locked note), wiring `recordOutcome`/
+  `recordAttempt(areaId, segIdx)` and `setLastVisited` on mount. The old
+  `LessonSelection`/`LessonPage` screens and the `:lessonId` route are removed.
 - **Responsive layout system:** `.app-page` is a centered container, fluid
-  below a per-screen max-width (`--app-page--wide` Library / `--list` lesson list
-  / `--reading` lesson page). The **Library is a hub**: greeting + day/date
-  kicker, registry-driven subject pills, an **always-present** hero ("Continue
-  where you left off" when there is a last-visited lesson, else "Start here" at
-  the first lesson), and a responsive topic grid (1/2/3 cols) of topic cards with
-  in-card area rows; a dashed empty-room placeholder tile keeps a one-topic
-  library reading as "early", not broken. Tuned at 360/768/1280/1920.
-- **Lesson page** (`LessonPage`): framed video + Notes/Practice tabs (default
-  Notes). Practice resumes at the first unanswered question for incomplete
-  lessons; the summary offers "Back to <area>" + "Next lesson →" (when the next
-  lesson unlocks after completion). **Review-rerun ruling:** a completed lesson
-  opens in review mode — re-running practice records fresh outcomes and
-  increments attempts but **NEVER clears `completedAt`** (encoded as a test).
+  below a per-screen max-width (`--app-page--wide` Library / `--reading` area
+  page). The **Library is a hub**: greeting + day/date kicker, registry-driven
+  subject pills, an **always-present** hero ("Continue where you left off" when
+  there is a last-visited area, else "Start here" at the first area), and a
+  responsive topic grid (1/2/3 cols) of topic cards with in-card area rows
+  (area progress reflects exercise-segment completion); a dashed empty-room
+  placeholder tile keeps a one-topic library reading as "early", not broken.
+  Tuned at 360/768/1280/1920.
+- **Review-rerun ruling (carried into v2):** a completed exercise segment opens
+  in review mode — re-running it records fresh outcomes and increments
+  `attempts` but **NEVER clears `completedAt`** (encoded as a test).
 - **Figures render wherever present (ruling):** ANY non-MC question with a
   `figure` renders it through the registry — text and table included, not just
   graph/geometry.
@@ -238,9 +278,8 @@ for minimal valid examples of all three files.
   | Route | Screen |
   |-------|--------|
   | `/` | Library **hub** (greeting + day/date kicker, subject pills, always-present hero, responsive topic grid with in-card area rows + empty-room placeholder) |
-  | `/:subject/:topic/:topicArea` | Lesson-selection list + locked checkpoint |
-  | `/:subject/:topic/:topicArea/:lessonId` | Lesson page (framed video, Notes/Practice tabs, resume + review mode, next-lesson CTA) |
-  | `/debug` | Dormant dev harness |
+  | `/:subject/:topic/:topicArea` | Area page (**temporary**) — breadcrumb, title, area-complete banner, Notes, ordered video/exercise sequence with sequential exercise unlock |
+  | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
 
 - **Video embed is implemented:** `/src/render/VideoEmbed.tsx` — a bold-framed
@@ -262,12 +301,12 @@ for minimal valid examples of all three files.
 - **Content discovery:** the loader uses Vite's
   `import.meta.glob('/content/**/*.json', { eager: true })`. `/content` sits at
   the repo root (the Vite root), so the absolute glob resolves it directly — no
-  `server.fs` changes needed. The pure core `buildLessonRegistry(files)` takes
+  `server.fs` changes needed. The pure core `buildAreaRegistry(files)` takes
   the resulting path→JSON map, so it is unit-testable without Vite.
 - **Path-derived hierarchy:** the loader stamps `subject`/`topic`/`topicArea`
-  onto each `ValidatedLesson` from the manifest's directory path; the manifest
-  itself carries none of them (it is an error if it does). Wrong-depth paths are
-  reported as load-time errors.
+  onto each `ValidatedArea` from the `area.json` directory path (four path
+  segments after `/content/`); the manifest itself carries none of them (it is
+  an error if it does). Wrong-depth paths are reported as load-time errors.
 - **Multiple-choice:** exactly one option may be `isCorrect: true`.
 
 ### Build / run commands
