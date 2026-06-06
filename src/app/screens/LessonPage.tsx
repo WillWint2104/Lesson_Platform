@@ -101,7 +101,7 @@ export function LessonPage() {
         : "Video";
 
   return (
-    <main className="app-page lesson">
+    <main className="app-page app-page--reading lesson">
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link className="breadcrumb__link" to="/">
           {titleCase(lesson.subject)}
