@@ -1,14 +1,15 @@
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { loadAllLessons } from "@/ingest/load";
 import { NotesRenderer } from "@/render/notes/NotesRenderer";
 import { QuestionRunner } from "@/render/questions/QuestionRunner";
 import type { QuestionResult } from "@/render/questions/types";
+import { createProgressStore } from "@/state/progress";
+import { ProgressProvider, useProgressStore } from "@/state/ProgressContext";
 
 /**
- * Scaffold smoke test + temporary ingest/notes/practice debug harness. NOT a
- * real screen. The list proves lesson discovery + validation; "Notes" renders
- * NotesRenderer; "Practice" mounts QuestionRunner. Remove once real routing
- * exists.
+ * Scaffold smoke test + temporary debug harness. NOT a real screen. Proves
+ * lesson discovery + validation, the notes/question renderers, AND the progress
+ * store (per-lesson counts + reset). Remove once real routing exists.
  */
 
 type Mode = "notes" | "practice";
@@ -67,6 +68,13 @@ const toggleButton: CSSProperties = {
   cursor: "pointer",
 };
 
+const resetButton: CSSProperties = {
+  ...toggleButton,
+  background: "var(--card-bg)",
+  color: "var(--coral-deep)",
+  border: "var(--card-border-width) solid var(--coral-deep)",
+};
+
 const tagBase: CSSProperties = {
   fontFamily: "var(--font-heading)",
   fontWeight: 700,
@@ -76,6 +84,7 @@ const tagBase: CSSProperties = {
 };
 const validTag: CSSProperties = { ...tagBase, background: "var(--green)", color: "var(--card-bg)" };
 const issueTag: CSSProperties = { ...tagBase, background: "var(--coral)", color: "var(--coral-deep)" };
+const statText: CSSProperties = { fontSize: "0.8rem", color: "var(--muted-ink)" };
 
 const panel: CSSProperties = {
   marginTop: "1.25rem",
@@ -84,7 +93,29 @@ const panel: CSSProperties = {
 };
 
 export default function App() {
-  const registry = loadAllLessons();
+  const registry = useMemo(() => loadAllLessons(), []);
+  const store = useMemo(
+    () =>
+      createProgressStore({
+        lessons: registry.lessons.map((l) => ({
+          id: l.id,
+          subject: l.subject,
+          topic: l.topic,
+          topicArea: l.topicArea,
+        })),
+      }),
+    [registry],
+  );
+
+  return (
+    <ProgressProvider store={store}>
+      <Harness registry={registry} />
+    </ProgressProvider>
+  );
+}
+
+function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) {
+  const store = useProgressStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -99,10 +130,18 @@ export default function App() {
     } else {
       setSelectedId(id);
       setMode(next);
+      store.setLastVisited(id);
     }
   };
 
+  const handleResult = (index: number, outcome: QuestionResult["outcome"]) => {
+    if (selected) store.recordOutcome(selected.id, index, outcome);
+  };
+
   const handleComplete = (results: QuestionResult[]) => {
+    if (!selected) return;
+    const allCorrect = results.length > 0 && results.every((r) => r.outcome === "correct");
+    store.recordAttempt(selected.id, allCorrect);
     const correct = results.filter((r) => r.outcome === "correct").length;
     setSummary(`Practice complete: ${correct}/${results.length} correct.`);
   };
@@ -111,13 +150,24 @@ export default function App() {
     <main style={page}>
       <section style={card}>
         <h1 style={heading}>Lesson Platform</h1>
-        <p>Vite + React + TypeScript. Notes + question runtime are live.</p>
+        <p>Vite + React + TypeScript. Notes, question runtime, and progress are live.</p>
 
         {/* TEMPORARY DEBUG HARNESS — remove once real lesson routing exists. */}
         <section style={debugSection}>
-          <h2 style={heading}>Discovered lessons ({registry.lessons.length})</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
+            <h2 style={{ ...heading, margin: 0 }}>Discovered lessons ({registry.lessons.length})</h2>
+            <button type="button" style={resetButton} onClick={() => store.resetAll()}>
+              Reset progress
+            </button>
+          </div>
+
           {registry.lessons.map((lesson) => {
             const active = lesson.id === selectedId;
+            const record = store.getLessonProgress(lesson.id);
+            const correct = record
+              ? Object.values(record.questionOutcomes).filter((o) => o === "correct").length
+              : 0;
+            const answered = record ? Object.keys(record.questionOutcomes).length : 0;
             return (
               <div key={lesson.path} style={lessonRow}>
                 <code>{lesson.id}</code>
@@ -131,6 +181,11 @@ export default function App() {
                     <button type="button" style={toggleButton} onClick={() => toggle(lesson.id, "practice")}>
                       {active && mode === "practice" ? "Hide practice" : "Practice"}
                     </button>
+                    <span style={statText}>
+                      {record
+                        ? `${record.attempts} attempt${record.attempts === 1 ? "" : "s"} · ${correct}/${answered} correct${record.completedAt ? " · ✓ completed" : ""}`
+                        : "no attempts yet"}
+                    </span>
                   </>
                 ) : (
                   <span style={issueTag}>
@@ -156,7 +211,7 @@ export default function App() {
               <QuestionRunner
                 key={selected.id}
                 questions={selected.questions}
-                onResult={() => {}}
+                onResult={handleResult}
                 onComplete={handleComplete}
               />
               {summary ? <p style={{ marginTop: "0.8rem", fontWeight: 600 }}>{summary}</p> : null}
