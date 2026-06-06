@@ -114,7 +114,12 @@ export const NOTE_BLOCK_TYPES = [
 export const CALLOUT_STYLES = ["key", "warning", "info"] as const;
 
 export interface LessonVideo {
-  src: string;
+  /**
+   * YouTube source (watch/short/embed URL or bare 11-char id), or `null` when
+   * the lesson was authored before its video was recorded — a first-class state
+   * (generation may run ahead of studio recording).
+   */
+  src: string | null;
   /** Length in seconds, or null when not yet known. */
   duration: number | null;
 }

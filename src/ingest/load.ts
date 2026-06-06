@@ -48,6 +48,8 @@ export interface ValidatedLesson {
   topicArea: string;
   /** Manifest file path (glob key). */
   path: string;
+  /** Video source (YouTube id/URL or null) + duration, from the manifest. */
+  video: { src: string | null; duration: number | null };
   notes: NoteBlock[];
   questions: Question[];
   valid: boolean;
@@ -203,6 +205,15 @@ export function buildLessonRegistry(
 
     const title = typeof lesson?.["title"] === "string" ? (lesson["title"] as string) : "";
 
+    const videoRaw =
+      lesson?.["video"] && typeof lesson["video"] === "object"
+        ? (lesson["video"] as Record<string, unknown>)
+        : undefined;
+    const video = {
+      src: typeof videoRaw?.["src"] === "string" ? (videoRaw["src"] as string) : null,
+      duration: typeof videoRaw?.["duration"] === "number" ? (videoRaw["duration"] as number) : null,
+    };
+
     lessons.push({
       id,
       title,
@@ -210,6 +221,7 @@ export function buildLessonRegistry(
       topic: hierarchy?.topic ?? "",
       topicArea: hierarchy?.topicArea ?? "",
       path: manifestPath,
+      video,
       notes,
       questions,
       valid: errors.length === 0,

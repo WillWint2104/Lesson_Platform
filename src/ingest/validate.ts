@@ -12,6 +12,7 @@
 
 import { CALLOUT_STYLES, NOTE_BLOCK_TYPES, QUESTION_TYPES } from "./types";
 import { resolveFigure, schemaKey, type FigureSchemaRegistry } from "./figure";
+import { parseYouTubeId, ACCEPTED_YOUTUBE_FORMATS } from "@/shared/youtube";
 
 export interface ValidateOptions {
   /** Per-kind figure schemas (kind@specVersion → validator). When provided,
@@ -549,7 +550,20 @@ function validateVideo(report: Report, path: string, video: unknown): void {
     report.error(path, "missing required field 'video'");
     return;
   }
-  requireString(report, path, video, "src");
+  // src may be null (authored before recording) or a parseable YouTube source.
+  const src = video["src"];
+  if (src === undefined) {
+    report.error(path, "missing required field 'src' (use null if no video yet)");
+  } else if (src !== null) {
+    if (typeof src !== "string" || !isNonEmptyString(src)) {
+      report.error(path, "field 'src' must be a non-empty string, or null if no video yet");
+    } else if (parseYouTubeId(src) === null) {
+      report.error(
+        path,
+        `field 'src' could not be parsed as a YouTube video — accepted: ${ACCEPTED_YOUTUBE_FORMATS}`,
+      );
+    }
+  }
   const duration = video["duration"];
   if (duration === undefined) {
     report.error(path, "missing required field 'duration' (use null if unknown)");
