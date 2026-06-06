@@ -85,23 +85,46 @@ describe("Library", () => {
     expect(store.isNoticeDismissed("local-progress")).toBe(true);
   });
 
-  it("hides the continue hero when there is no last-visited lesson", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
+  it("hero is in 'start here' mode (always present) with no last-visited lesson", () => {
+    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1, title: "Brackets One" }));
     renderAt("/", registry, buildStore(registry));
-    expect(screen.queryByText("Jump back in")).toBeNull();
+    expect(screen.getByText("Start here")).toBeTruthy();
+    // Points at the first lesson of the first topic/area.
+    expect(screen.getByText("Start here").closest("a")?.getAttribute("href")).toBe(
+      "/math/algebra/brackets/one",
+    );
   });
 
-  it("shows the continue hero when a lesson was last visited", () => {
+  it("hero is in 'continue' mode when a lesson was last visited (deep link)", () => {
     const registry = buildRegistry(mkLesson("brackets", "one", { order: 1, title: "Brackets One" }));
     const store = buildStore(registry);
     store.setLastVisited("one");
     renderAt("/", registry, store);
-    expect(screen.getByText("Jump back in")).toBeTruthy();
-    expect(screen.getByText("Brackets One")).toBeTruthy();
-    // Deep-links straight to the lesson page (not just the topic area).
-    expect(screen.getByText("Jump back in").closest("a")?.getAttribute("href")).toBe(
+    expect(screen.getByText("Continue where you left off")).toBeTruthy();
+    expect(screen.getByText("Continue where you left off").closest("a")?.getAttribute("href")).toBe(
       "/math/algebra/brackets/one",
     );
+  });
+
+  it("renders topic-area rows inside the topic card, each linking to its lesson list", () => {
+    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
+    const { container } = renderAt("/", registry, buildStore(registry));
+    const row = screen.getByText("Brackets").closest("a");
+    expect(row?.getAttribute("href")).toBe("/math/algebra/brackets");
+    expect(row?.className).toContain("topic-area-row");
+    // Responsive grid container + the empty-room placeholder tile are present.
+    expect(container.querySelector(".topic-grid")).not.toBeNull();
+    expect(screen.getByText(/Future topics drop in/)).toBeTruthy();
+  });
+
+  it("topic card counts only valid lessons", () => {
+    const registry = buildRegistry(
+      mkLesson("brackets", "good", { order: 1 }),
+      // Missing prompt → invalid lesson; must not be counted.
+      mkLesson("brackets", "bad", { order: 2, questions: [{ type: "text" }] }),
+    );
+    renderAt("/", registry, buildStore(registry));
+    expect(screen.getByText(/1 area · 1 lesson/)).toBeTruthy();
   });
 });
 

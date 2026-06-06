@@ -30,7 +30,7 @@ export function LessonSelection() {
   const pct = Math.round((completedCount / lessons.length) * 100);
 
   return (
-    <main className="app-page sel">
+    <main className="app-page app-page--list sel">
       <Link className="sel-back" to="/">
         ← Library
       </Link>

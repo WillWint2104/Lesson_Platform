@@ -51,6 +51,31 @@
   /* ---- Muted ink (secondary text, e.g. working steps) ---- */
   --muted-ink: #5b6b61;
 
+  /* ---- Spacing scale (4px base) ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---- Corner radii ---- */
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* ---- Container widths (max content width per screen type) ---- */
+  --container-wide: 1120px;     /* hub / grid screens (Library) */
+  --container-list: 880px;      /* lesson list */
+  --container-reading: 720px;   /* lesson content */
+
+  /* ---- Standard page padding (inline gutter / block top-bottom) ---- */
+  --page-pad-inline: var(--space-5);
+  --page-pad-block: var(--space-6);
+
   /* ---- Typography ---- */
   --font-heading: "Plus Jakarta Sans", system-ui, sans-serif;  /* headings / buttons */
   --font-body: "Manrope", system-ui, sans-serif;               /* body */
