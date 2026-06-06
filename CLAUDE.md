@@ -209,14 +209,30 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   from per-lesson to per-area.
 - **Notes renderer is implemented:** `/src/render/notes/` (one component per
   block type + `NotesRenderer`) and the shared `/src/shared/MathText.tsx`.
-- **Question runtime is implemented:** `/src/render/questions/` —
-  `QuestionRunner` (one question at a time, progress dots + difficulty badge,
-  end-of-set summary), per-type bodies (MC, text, table, graph/geometry), and
-  one shared self-mark/reveal flow + result type (`Outcome`/`QuestionResult`,
-  CLAUDE.md §c rule 4). The runtime itself holds no persistence — it emits
-  results via `onResult`/`onComplete` callbacks, which the progress store layer
-  consumes. Graph and geometry render a token-styled `FigurePlaceholder` (a
-  swappable slot for the upcoming figure-renderer PR), not real figures.
+- **Question runtime is implemented (two presentation modes share one set of
+  per-type bodies + the `Outcome`/`QuestionResult` types):** `/src/render/questions/`.
+  - **Worksheet (active)** — `Worksheet` renders ALL questions of an exercise as
+    a numbered list; each row carries the prompt (MathText), an optional figure
+    (registry), an optional difficulty badge, an answered-state indicator
+    (✓/●, restored from the store), and an answer-icon button. MC options are
+    tappable inline (reusing `MultipleChoice`); the answer icon opens
+    `SolutionModal`. Non-MC questions are answered via the modal's self-mark
+    actions.
+  - **`SolutionModal`** — accessible dialog (role=dialog, aria-modal, labelled by
+    the question number; focus moves in on open and returns to the opener on
+    close; Escape + backdrop close; Tab trapped). Self-mark mode (non-MC) shows
+    the worked solution (answer chip + working lines, NoteExample treatment) or
+    an honest "No worked solution provided" state, plus "I got it" / "Not yet".
+    Explanation mode (MC) shows the options with the correct one highlighted, no
+    self-mark.
+  - **`QuestionRunner` is DORMANT** (CLAUDE.md §c rule 8/9) — the one-at-a-time
+    runner with progress dots + end-of-set summary, retained and still tested
+    (`wiring.test.tsx`) as the future checkpoint/quiz mode, but no longer
+    rendered by any route.
+  - The runtime holds no persistence — it reports outcomes via callbacks
+    (`onOutcome` / `onResult`/`onComplete`) that the AreaPage/store layer
+    consumes. Graph/geometry without a `figure` render a token-styled
+    placeholder, not real figures.
 - **Progress store is implemented (schema v2, area/segment-keyed):**
   `/src/state/` — `progress.ts` (localStorage-backed, single versioned key
   `lp:progress:v2`; state is `areas[areaId].segments[segIndex]` where each
@@ -251,17 +267,25 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   `isAreaComplete(segments)` (true iff every exercise segment is complete). The
   debug harness at `/debug` is now an **area inspector** (lists registry areas +
   validity, reset-progress), linked nowhere.
-- **Screens are TEMPORARY (this PR is the manifest/contract layer; the full
-  per-area screen redesign is the next PR).** `Library` is the area hub;
-  `AreaPage` (`/:subject/:topic/:topicArea`) renders breadcrumb + title +
-  area-complete banner + Notes + the ordered sequence (video stages via
-  `VideoEmbed`; exercise stages via `QuestionRunner` when unlocked, else a
-  "complete the previous exercise" locked note), wiring `recordOutcome`/
-  `recordAttempt(areaId, segIdx)` and `setLastVisited` on mount. The old
-  `LessonSelection`/`LessonPage` screens and the `:lessonId` route are removed.
+- **AreaPage is the designed worksheet page** (`/:subject/:topic/:topicArea`,
+  `--container-area` 960px): breadcrumb → title + meta (exercise + question
+  totals) → Notes → the authored sequence, each segment a numbered section
+  (videos and exercises numbered **independently** — Video 1, Exercise 1, Video
+  2, Exercise 2…). Video segments render a centered `VideoEmbed` (≤800px);
+  exercise segments render the `Worksheet` when unlocked, else a **locked card**
+  (count + "finish Exercise N−1 first") with its questions **not rendered**.
+  Per-question outcomes go to the store via `recordOutcome(areaId, segIdx, …)`;
+  an exercise's sticky `completedAt` is set (via `recordAttempt`) the moment
+  every question has a `correct` outcome — consistent with `isAreaComplete`. The
+  page **subscribes to the store** so unlocking + answered-state stay live, sets
+  `setLastVisited` on mount, shows a quiet area-complete banner + back-to-library
+  CTA, and gives every segment an anchor id (`video-N`/`exercise-N`); the Library
+  "continue" hero deep-links to the first incomplete exercise and the page
+  scrolls there on load. The old `LessonSelection`/`LessonPage` screens and the
+  `:lessonId` route were removed in the v2 PR.
 - **Responsive layout system:** `.app-page` is a centered container, fluid
-  below a per-screen max-width (`--app-page--wide` Library / `--reading` area
-  page). The **Library is a hub**: greeting + day/date kicker, registry-driven
+  below a per-screen max-width (`--app-page--wide` Library / `--app-page--area`
+  area page, `--container-area` 960px). The **Library is a hub**: greeting + day/date kicker, registry-driven
   subject pills, an **always-present** hero ("Continue where you left off" when
   there is a last-visited area, else "Start here" at the first area), and a
   responsive topic grid (1/2/3 cols) of topic cards with in-card area rows
@@ -278,7 +302,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   | Route | Screen |
   |-------|--------|
   | `/` | Library **hub** (greeting + day/date kicker, subject pills, always-present hero, responsive topic grid with in-card area rows + empty-room placeholder) |
-  | `/:subject/:topic/:topicArea` | Area page (**temporary**) — breadcrumb, title, area-complete banner, Notes, ordered video/exercise sequence with sequential exercise unlock |
+  | `/:subject/:topic/:topicArea` | Area page (worksheet) — breadcrumb, title + meta, area-complete banner, Notes, numbered video/exercise sequence; exercises render as worksheets (inline MC + per-question solution modal) with sequential unlock |
   | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
 
