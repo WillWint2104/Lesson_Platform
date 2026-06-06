@@ -5,7 +5,7 @@ import type { ProgressStore } from "@/state/progress";
 import type { ValidatedLesson } from "@/ingest/load";
 import { computeUnlockStates, type LessonStatus } from "@/app/unlock";
 import { titleCase, formatDuration } from "@/app/format";
-import { NotFound } from "./NotFound";
+import { NotFound } from "@/app/screens/NotFound";
 
 /** Topic-area lesson list (per approved mockup; canonical spec in /docs). */
 export function LessonSelection() {

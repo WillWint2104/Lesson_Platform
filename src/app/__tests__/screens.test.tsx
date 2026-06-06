@@ -61,7 +61,7 @@ describe("Library", () => {
   it("renders subject pills from the registry (not hardcoded) + a 'more soon' pill", () => {
     const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
     renderAt("/", registry, buildStore(registry));
-    expect(screen.getByRole("tab", { name: "Math" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Math" })).toBeTruthy();
     expect(screen.getByText("more soon")).toBeTruthy();
   });
 

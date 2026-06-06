@@ -24,14 +24,14 @@ export function Library() {
         </span>
       </header>
 
-      {/* Subject pills are driven entirely by the registry — no hardcoded names. */}
-      <div className="lib-pills" role="tablist" aria-label="Subjects">
+      {/* Subject pills are driven entirely by the registry — no hardcoded names.
+          Single-select segmented control (toggle buttons). */}
+      <div className="lib-pills" role="group" aria-label="Subjects">
         {subjects.map((s) => (
           <button
             key={s}
             type="button"
-            role="tab"
-            aria-selected={s === subject}
+            aria-pressed={s === subject}
             className={`lib-pill${s === subject ? " lib-pill--active" : ""}`}
             onClick={() => setSubject(s)}
           >

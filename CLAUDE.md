@@ -162,7 +162,8 @@ for minimal valid examples of all three files.
   **`react-router-dom`**; dev `vite`,
   `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`,
   `@types/node`, `@types/katex`, **`vitest`**, `@testing-library/react`,
-  `@testing-library/dom`, `jsdom`. No router, state lib, or UI kit.
+  `@testing-library/dom`, `jsdom`. Routing is `react-router-dom`; no state lib
+  or UI kit.
 - **TypeScript strict mode is on;** path alias `@` → `/src`.
 - **Video hosting: YouTube unlisted embeds** (no embed implementation yet).
 - **App hosting: TBD.**

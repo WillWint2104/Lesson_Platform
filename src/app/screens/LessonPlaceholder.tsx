@@ -14,7 +14,7 @@ import { VideoEmbed } from "@/render/VideoEmbed";
 import { NotesRenderer } from "@/render/notes/NotesRenderer";
 import { QuestionRunner } from "@/render/questions/QuestionRunner";
 import type { QuestionResult } from "@/render/questions/types";
-import { NotFound } from "./NotFound";
+import { NotFound } from "@/app/screens/NotFound";
 
 type Tab = "video" | "notes" | "practice";
 
@@ -56,14 +56,14 @@ export function LessonPlaceholder() {
         ← {titleCase(lesson.topicArea)}
       </Link>
       <h1 className="sel-title">{lesson.title}</h1>
-      {/* TEMPORARY harness tabs — replaced by the real lesson page next PR. */}
-      <div className="lesson-tabs" role="tablist" aria-label="Lesson sections">
+      {/* TEMPORARY section switcher (toggle buttons) — replaced by the real
+          lesson page next PR. */}
+      <div className="lesson-tabs" role="group" aria-label="Lesson sections">
         {(["video", "notes", "practice"] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
-            role="tab"
-            aria-selected={tab === t}
+            aria-pressed={tab === t}
             className={`lesson-tab${tab === t ? " lesson-tab--active" : ""}`}
             onClick={() => {
               setSummary(null);

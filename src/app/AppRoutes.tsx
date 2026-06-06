@@ -1,9 +1,9 @@
 import { Routes, Route } from "react-router-dom";
-import { Library } from "./screens/Library";
-import { LessonSelection } from "./screens/LessonSelection";
-import { LessonPlaceholder } from "./screens/LessonPlaceholder";
-import { DebugHarness } from "./screens/DebugHarness";
-import { NotFound } from "./screens/NotFound";
+import { Library } from "@/app/screens/Library";
+import { LessonSelection } from "@/app/screens/LessonSelection";
+import { LessonPlaceholder } from "@/app/screens/LessonPlaceholder";
+import { DebugHarness } from "@/app/screens/DebugHarness";
+import { NotFound } from "@/app/screens/NotFound";
 
 export function AppRoutes() {
   return (
