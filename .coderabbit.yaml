@@ -26,6 +26,24 @@ reviews:
         Apply the engineering lessons in CLAUDE.md §c — especially save/restore
         symmetry, single shared builders for live/persisted rendering, and
         actionable validation errors for ingested JSON.
+    - path: "src/render/figures/kinds/**"
+      instructions: >-
+        SEALED kinds (CLAUDE.md §g). A kind must NEVER import a sibling kind —
+        flag any such import. Kind specs are APPEND-ONLY: do not let a change
+        alter the rendering/interpretation semantics of an already-shipped
+        specVersion; a semantics change must add a NEW specVersion with the old
+        renderer retained. If a golden snapshot changes, the PR description must
+        justify it explicitly.
+    - path: "src/render/figures/shared/**"
+      instructions: >-
+        Shared figure chrome ONLY (CLAUDE.md §g): SVG canvas, token palette,
+        label styles. It must contain NO mathematical or problem-family
+        conventions and must NEVER import a kind. Flag either violation.
+    - path: "src/ingest/__tests__/compat-corpus/**"
+      instructions: >-
+        Frozen, APPEND-ONLY back-compat corpus. Existing entries must never be
+        edited to make a changed validator pass — flag any modification to an
+        existing file here.
 
 chat:
   auto_reply: true
