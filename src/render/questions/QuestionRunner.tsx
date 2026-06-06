@@ -3,11 +3,12 @@
  *
  * One question at a time: a header with progress dots + the difficulty badge, a
  * type-specific body (via QuestionView), a Continue button, and an end-of-set
- * summary whose "Done" action fires onComplete. All state is local to the
- * runner; results are emitted via callbacks (no persistence here).
+ * summary. `initialOutcomes` seeds the dots and resumes at the first unanswered
+ * question (strictly forward). `onComplete` fires when the summary is reached;
+ * `summaryActions` lets the parent render flow CTAs in the summary.
  */
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import type { Question } from "@/ingest/types";
 import { QuestionView } from "./QuestionView";
 import type { Outcome, QuestionResult } from "./types";
@@ -16,29 +17,48 @@ export interface QuestionRunnerProps {
   questions: Question[];
   onComplete: (results: QuestionResult[]) => void;
   onResult: (index: number, outcome: Outcome) => void;
+  /** Previously recorded outcomes by index — seeds dots + resume point. */
+  initialOutcomes?: Record<number, Outcome>;
+  /** Rendered inside the end-of-set summary (flow CTAs). */
+  summaryActions?: ReactNode;
 }
 
-export function QuestionRunner({ questions, onComplete, onResult }: QuestionRunnerProps) {
-  const [index, setIndex] = useState(0);
-  const [results, setResults] = useState<(Outcome | null)[]>(() => questions.map(() => null));
+function seedResults(questions: Question[], initial?: Record<number, Outcome>): (Outcome | null)[] {
+  return questions.map((_, i) => initial?.[i] ?? null);
+}
+
+/** First unanswered index (resume point); 0 if every question is answered. */
+function firstUnanswered(results: (Outcome | null)[]): number {
+  const i = results.findIndex((r) => r === null);
+  return i === -1 ? 0 : i;
+}
+
+export function QuestionRunner({
+  questions,
+  onComplete,
+  onResult,
+  initialOutcomes,
+  summaryActions,
+}: QuestionRunnerProps) {
+  const [results, setResults] = useState<(Outcome | null)[]>(() =>
+    seedResults(questions, initialOutcomes),
+  );
+  const [index, setIndex] = useState(() => firstUnanswered(seedResults(questions, initialOutcomes)));
   const [showSummary, setShowSummary] = useState(false);
   const [prevQuestions, setPrevQuestions] = useState(questions);
-  // Synchronous "this index already emitted" guard — robust against a rapid
-  // second outcome before the results state re-renders.
   const emitted = useRef<Set<number>>(new Set());
 
-  // Reset when the question set changes (React-recommended reset-during-render —
-  // no effect, no flash). Compute the values used THIS render so the swap pass
-  // never dereferences a stale, out-of-bounds index.
+  // Reset when the question set changes (reset-during-render; compute the values
+  // used THIS render so a swap never dereferences a stale, out-of-bounds index).
   let curIndex = index;
   let curResults = results;
   let curSummary = showSummary;
   if (questions !== prevQuestions) {
-    curIndex = 0;
-    curResults = questions.map(() => null);
+    curResults = seedResults(questions, initialOutcomes);
+    curIndex = firstUnanswered(curResults);
     curSummary = false;
     setPrevQuestions(questions);
-    setIndex(0);
+    setIndex(curIndex);
     setResults(curResults);
     setShowSummary(false);
     emitted.current = new Set();
@@ -60,12 +80,12 @@ export function QuestionRunner({ questions, onComplete, onResult }: QuestionRunn
   };
 
   const advance = () => {
-    if (curIndex === questions.length - 1) setShowSummary(true);
-    else setIndex((i) => i + 1);
-  };
-
-  const finish = () => {
-    onComplete(curResults.flatMap((outcome, i) => (outcome ? [{ index: i, outcome }] : [])));
+    if (curIndex === questions.length - 1) {
+      setShowSummary(true);
+      onComplete(curResults.flatMap((outcome, i) => (outcome ? [{ index: i, outcome }] : [])));
+    } else {
+      setIndex((i) => i + 1);
+    }
   };
 
   if (curSummary) {
@@ -81,9 +101,7 @@ export function QuestionRunner({ questions, onComplete, onResult }: QuestionRunn
             {" / "}
             <span className="qr-summary__review">{toReview} to review</span>
           </p>
-          <button type="button" className="qr-button qr-button--primary" onClick={finish}>
-            Done
-          </button>
+          {summaryActions ? <div className="qr-summary__actions">{summaryActions}</div> : null}
         </div>
       </section>
     );
@@ -100,9 +118,7 @@ export function QuestionRunner({ questions, onComplete, onResult }: QuestionRunn
         <span className="qr-progress-label">
           Question {curIndex + 1} of {questions.length}
         </span>
-        {current.difficulty ? (
-          <span className="qr-difficulty">{current.difficulty}</span>
-        ) : null}
+        {current.difficulty ? <span className="qr-difficulty">{current.difficulty}</span> : null}
       </header>
 
       {/* key by index so each question mounts fresh (no leaked selection state). */}

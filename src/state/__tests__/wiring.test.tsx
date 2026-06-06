@@ -44,8 +44,7 @@ describe("QuestionRunner → progress store wiring", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Option B" })); // correct
-    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish" })); // enters summary + onComplete
 
     const record = store.getLessonProgress("L");
     expect(record?.questionOutcomes[0]).toBe("correct");
@@ -65,8 +64,7 @@ describe("QuestionRunner → progress store wiring", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Option A" })); // wrong
-    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish" })); // enters summary + onComplete
 
     const record = store.getLessonProgress("L");
     expect(record?.questionOutcomes[0]).toBe("incorrect");
