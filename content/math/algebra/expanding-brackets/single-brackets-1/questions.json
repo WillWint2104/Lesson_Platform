@@ -77,6 +77,27 @@
     },
     {
       "type": "text",
+      "prompt": "Using the diagram, write an expression for the area of the triangle.",
+      "skill": "triangle-area",
+      "difficulty": "medium",
+      "figure": {
+        "kind": "triangle-figure",
+        "specVersion": 1,
+        "data": {
+          "vertices": [
+            { "x": 0, "y": 0 },
+            { "x": 6, "y": 0 },
+            { "x": 0, "y": 4 }
+          ],
+          "labels": ["A", "B", "C"],
+          "sideLabels": ["$b$", "", "$h$"],
+          "rightAngleAt": 0
+        }
+      },
+      "answer": "$\\frac{1}{2} \\times b \\times h$"
+    },
+    {
+      "type": "text",
       "prompt": "In your own words, explain what it means to expand a bracket.",
       "skill": "expanding-single-brackets",
       "difficulty": "easy"
