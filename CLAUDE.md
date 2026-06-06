@@ -98,8 +98,9 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 ### Question JSON
 - **Required:** `type`, `prompt`.
 - `type` ∈ `text` | `table` | `graph` | `geometry` | `multiple-choice`.
-  - `multiple-choice` carries `options: [{ text, isCorrect }]`.
-  - `table` carries `rows`.
+  - `multiple-choice` carries `options: [{ text, isCorrect }]` — **exactly one**
+    option may have `isCorrect: true` (zero or two-plus is an error).
+  - `table` carries `rows` (`string[][]`).
   - `graph` / `geometry` carry `graphData` / `geometryData`.
 - **Optional:** `skill`, `difficulty`.
 - **NO `topic` field inside questions** (topic comes from the content hierarchy).
@@ -112,7 +113,24 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 - `list` — `{ items }`
 
 ### Lesson manifest
-Ties **video `src` + notes + questions** together into one lesson.
+`{ lesson: { id, title, video: { src, duration }, notes, questions } }` — ties
+**video `src` + notes + questions** together into one lesson. `notes`/`questions`
+are either inline arrays or a file path relative to the lesson dir.
+
+**Hierarchy is path-derived, never in the manifest.** `subject`, `topic`, and
+`topicArea` come from the directory path
+(`/content/<subject>/<topic>/<topic-area>/<lesson-id>/`) and are stamped on the
+lesson by the loader. A manifest containing `subject`/`topic`/`topicArea` is an
+error; a manifest at a wrong-depth path is a load-time error.
+
+### Content strings are single-line by design
+Every content string (`prompt`, `text`, `answer`, `working[]` entries, list
+`items`, table cells) is **single-line**. Document structure comes from blocks —
+paragraphs, list items, `working[]` steps — not from in-string line breaks. The
+validator therefore treats **any** control character (`\b \f \n \r \t \v`) as an
+error: in math content these are almost always a mangled LaTeX command that lost
+its doubled backslash (`\neq`→`\n`+`eq`, `\theta`→`\t`+`heta`, `\rho`→`\r`+`ho`,
+`\beta`→`\b`+`eta`). Write `\\neq`, `\\theta`, etc. in JSON.
 
 See [`/content/math/algebra/expanding-brackets/single-brackets-1/`](content/math/algebra/expanding-brackets/single-brackets-1/)
 for minimal valid examples of all three files.
@@ -140,6 +158,11 @@ for minimal valid examples of all three files.
   the repo root (the Vite root), so the absolute glob resolves it directly — no
   `server.fs` changes needed. The pure core `buildLessonRegistry(files)` takes
   the resulting path→JSON map, so it is unit-testable without Vite.
+- **Path-derived hierarchy:** the loader stamps `subject`/`topic`/`topicArea`
+  onto each `ValidatedLesson` from the manifest's directory path; the manifest
+  itself carries none of them (it is an error if it does). Wrong-depth paths are
+  reported as load-time errors.
+- **Multiple-choice:** exactly one option may be `isCorrect: true`.
 
 ### Build / run commands
 
