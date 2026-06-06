@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { loadAllLessons } from "@/ingest/load";
 import { NotesRenderer } from "@/render/notes/NotesRenderer";
+import { VideoEmbed } from "@/render/VideoEmbed";
 import { QuestionRunner } from "@/render/questions/QuestionRunner";
 import type { QuestionResult } from "@/render/questions/types";
 import { createProgressStore } from "@/state/progress";
@@ -13,7 +14,7 @@ import { figureSchemas } from "@/render/figures/registry";
  * store (per-lesson counts + reset). Remove once real routing exists.
  */
 
-type Mode = "notes" | "practice";
+type Mode = "video" | "notes" | "practice";
 
 const page: CSSProperties = {
   minHeight: "100vh",
@@ -177,6 +178,9 @@ function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) 
                 {lesson.valid ? (
                   <>
                     <span style={validTag}>valid</span>
+                    <button type="button" style={toggleButton} onClick={() => toggle(lesson.id, "video")}>
+                      {active && mode === "video" ? "Hide video" : "Video"}
+                    </button>
                     <button type="button" style={toggleButton} onClick={() => toggle(lesson.id, "notes")}>
                       {active && mode === "notes" ? "Hide notes" : "Notes"}
                     </button>
@@ -199,6 +203,13 @@ function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) 
               </div>
             );
           })}
+
+          {selected && selected.valid && mode === "video" ? (
+            <div style={panel}>
+              <h3 style={heading}>{selected.title}</h3>
+              <VideoEmbed src={selected.video.src} title={selected.title} />
+            </div>
+          ) : null}
 
           {selected && selected.valid && mode === "notes" ? (
             <div style={panel}>

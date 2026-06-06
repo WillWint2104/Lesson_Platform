@@ -344,7 +344,7 @@ describe("validateManifest", () => {
     lesson: {
       id: "x-1",
       title: "Lesson",
-      video: { src: "v.mp4", duration: null },
+      video: { src: "dQw4w9WgXcQ", duration: null },
       notes: "notes.json",
       questions: "questions.json",
     },
@@ -372,9 +372,37 @@ describe("validateManifest", () => {
 
   it("flags a video missing its duration field", () => {
     const res = validateManifest({
-      lesson: { ...goodManifest.lesson, video: { src: "v.mp4" } },
+      lesson: { ...goodManifest.lesson, video: { src: "dQw4w9WgXcQ" } },
     });
     expect(has(res.errors, "lesson.video", "missing required field 'duration'")).toBe(true);
+  });
+
+  it("accepts a null video src (authored before recording)", () => {
+    const res = validateManifest({
+      lesson: { ...goodManifest.lesson, video: { src: null, duration: null } },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it("accepts a full YouTube watch URL as src", () => {
+    const res = validateManifest({
+      lesson: {
+        ...goodManifest.lesson,
+        video: { src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", duration: null },
+      },
+    });
+    expect(res.valid).toBe(true);
+  });
+
+  it("errors on an unparseable video src and lists the accepted formats", () => {
+    const res = validateManifest({
+      lesson: { ...goodManifest.lesson, video: { src: "videos/clip.mp4", duration: null } },
+    });
+    expect(res.valid).toBe(false);
+    const issue = res.errors.find((e) => e.path === "lesson.video");
+    expect(issue?.message).toContain("could not be parsed as a YouTube video");
+    expect(issue?.message).toContain("youtu.be");
+    expect(issue?.message).toContain("11-character video id");
   });
 
   it("validates inline notes/questions arrays", () => {
@@ -400,7 +428,7 @@ describe("buildLessonRegistry", () => {
     lesson: {
       id,
       title,
-      video: { src: "v.mp4", duration: null },
+      video: { src: "dQw4w9WgXcQ", duration: null },
       notes: [],
       questions: [],
       ...extra,
@@ -419,6 +447,15 @@ describe("buildLessonRegistry", () => {
     expect(lesson?.subject).toBe("science");
     expect(lesson?.topic).toBe("biology");
     expect(lesson?.topicArea).toBe("cells");
+  });
+
+  it("normalizes video.src to the resolved YouTube id", () => {
+    const reg = buildLessonRegistry({
+      "/content/science/biology/cells/intro/lesson.json": body("intro", "Intro", {
+        video: { src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s", duration: null },
+      }),
+    });
+    expect(reg.getLessonById("intro")?.video.src).toBe("dQw4w9WgXcQ");
   });
 
   it("errors on a malformed (wrong-depth) manifest path, naming it", () => {
@@ -461,7 +498,7 @@ describe("buildLessonRegistry", () => {
         lesson: {
           id: "x",
           title: "X",
-          video: { src: "v.mp4", duration: null },
+          video: { src: "dQw4w9WgXcQ", duration: null },
           notes: "notes.json",
           questions: "questions.json",
         },
@@ -481,7 +518,7 @@ describe("buildLessonRegistry", () => {
         lesson: {
           id: "y",
           title: "Y",
-          video: { src: "v.mp4", duration: null },
+          video: { src: "dQw4w9WgXcQ", duration: null },
           notes: "missing.json",
           questions: [],
         },

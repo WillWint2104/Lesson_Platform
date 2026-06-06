@@ -23,6 +23,7 @@ import {
   type Issue,
 } from "./validate";
 import { resolveFigure, type FigureSchemaRegistry } from "./figure";
+import { parseYouTubeId } from "@/shared/youtube";
 
 export interface LoadOptions {
   /** Per-kind figure schemas; enables per-kind figure data validation at load. */
@@ -48,6 +49,8 @@ export interface ValidatedLesson {
   topicArea: string;
   /** Manifest file path (glob key). */
   path: string;
+  /** Video source (YouTube id/URL or null) + duration, from the manifest. */
+  video: { src: string | null; duration: number | null };
   notes: NoteBlock[];
   questions: Question[];
   valid: boolean;
@@ -203,6 +206,18 @@ export function buildLessonRegistry(
 
     const title = typeof lesson?.["title"] === "string" ? (lesson["title"] as string) : "";
 
+    const videoRaw =
+      lesson?.["video"] && typeof lesson["video"] === "object"
+        ? (lesson["video"] as Record<string, unknown>)
+        : undefined;
+    const rawSrc = typeof videoRaw?.["src"] === "string" ? (videoRaw["src"] as string) : null;
+    const video = {
+      // Normalise to the resolved 11-char id (the single resolver), so render
+      // never re-parses a URL — null for "not recorded" or unparseable.
+      src: rawSrc === null ? null : parseYouTubeId(rawSrc),
+      duration: typeof videoRaw?.["duration"] === "number" ? (videoRaw["duration"] as number) : null,
+    };
+
     lessons.push({
       id,
       title,
@@ -210,6 +225,7 @@ export function buildLessonRegistry(
       topic: hierarchy?.topic ?? "",
       topicArea: hierarchy?.topicArea ?? "",
       path: manifestPath,
+      video,
       notes,
       questions,
       valid: errors.length === 0,
