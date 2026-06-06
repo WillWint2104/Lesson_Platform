@@ -2,6 +2,7 @@
   "lesson": {
     "id": "single-brackets-1",
     "title": "Expanding a Single Bracket",
+    "order": 1,
     "video": {
       "src": "uNL1sT3dV1d",
       "duration": null

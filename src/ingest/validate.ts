@@ -498,6 +498,12 @@ export function validateManifest(raw: unknown, options: ValidateOptions = {}): V
 
   requireString(report, "lesson", lesson, "id");
   requireString(report, "lesson", lesson, "title");
+  if (
+    lesson["order"] !== undefined &&
+    (typeof lesson["order"] !== "number" || !Number.isInteger(lesson["order"]))
+  ) {
+    report.error("lesson.order", "field 'order' must be an integer");
+  }
   validateVideo(report, "lesson.video", lesson["video"]);
 
   // Hierarchy (subject/topic/topicArea) is derived from the directory path by
@@ -534,6 +540,7 @@ export function validateManifest(raw: unknown, options: ValidateOptions = {}): V
   warnUnknownFields(report, "lesson", lesson, [
     "id",
     "title",
+    "order",
     "video",
     "notes",
     "questions",
