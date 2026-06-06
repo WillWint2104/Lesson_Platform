@@ -29,6 +29,9 @@ jobs:
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Run tests
+        run: npm test
+
       - name: Production build
         run: npx vite build
 
@@ -46,6 +49,7 @@ jobs:
           echo " - npm ci installed dependencies"
           echo " - All /content *.json files parse"
           echo " - tsc --noEmit: no type errors"
+          echo " - vitest run: all tests pass"
           echo " - vite build: production build succeeded"
           echo " - styles/tokens.css present, contains --green token"
           echo " - index.html present"

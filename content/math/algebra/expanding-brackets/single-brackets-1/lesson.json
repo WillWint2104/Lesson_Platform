@@ -1,13 +1,13 @@
 {
-  "id": "single-brackets-1",
-  "title": "Expanding a Single Bracket",
-  "subject": "math",
-  "topic": "algebra",
-  "topicArea": "expanding-brackets",
-  "video": {
-    "src": "videos/single-brackets-1.mp4",
-    "poster": "videos/single-brackets-1.png"
-  },
-  "notes": "notes.json",
-  "questions": "questions.json"
+  "lesson": {
+    "id": "single-brackets-1",
+    "title": "Expanding a Single Bracket",
+    "subject": "math",
+    "video": {
+      "src": "videos/single-brackets-1.mp4",
+      "duration": null
+    },
+    "notes": "notes.json",
+    "questions": "questions.json"
+  }
 }

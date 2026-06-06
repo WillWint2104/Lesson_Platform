@@ -124,20 +124,29 @@ for minimal valid examples of all three files.
 - **Stack: Vite + React + TypeScript** — chosen for a fast, zero-config dev
   server and first-class TS support with a minimal dependency surface.
 - **Dependencies kept minimal:** `react`, `react-dom` + dev `vite`,
-  `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`.
-  No router, state lib, UI kit, or KaTeX yet (KaTeX arrives with the
-  notes-renderer PR).
+  `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`,
+  `@types/node`. **Testing exception:** `vitest` (the only approved addition
+  beyond the minimal set). No router, state lib, UI kit, or KaTeX yet (KaTeX
+  arrives with the notes-renderer PR).
 - **TypeScript strict mode is on;** path alias `@` → `/src`.
 - **Video hosting: YouTube unlisted embeds** (no embed implementation yet).
 - **App hosting: TBD.**
-- `/src` modules in `ingest`/`render`/`state`/`shared` are TypeScript stubs
-  (JSDoc headers preserved; no runtime logic yet).
+- **`/src/ingest` is implemented:** `types.ts` (contracts), `validate.ts`
+  (pure, non-throwing validators with actionable path-precise errors + the
+  un-doubled-LaTeX control-character tripwire), and `load.ts` (discovery +
+  loader). `render`/`state`/`shared` remain TypeScript stubs.
+- **Content discovery:** the loader uses Vite's
+  `import.meta.glob('/content/**/*.json', { eager: true })`. `/content` sits at
+  the repo root (the Vite root), so the absolute glob resolves it directly — no
+  `server.fs` changes needed. The pure core `buildLessonRegistry(files)` takes
+  the resulting path→JSON map, so it is unit-testable without Vite.
 
 ### Build / run commands
 
 ```sh
 npm install                  # install dependencies
 npm run dev                  # Vite dev server (http://localhost:5173)
+npm test                     # vitest run (validator + content fixture suite)
 npm run build                # tsc --noEmit && vite build  -> dist/
 node scripts/check-content.mjs   # validate all /content JSON parses
 ```
