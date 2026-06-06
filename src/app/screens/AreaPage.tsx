@@ -1,35 +1,78 @@
 /**
- * @file AreaPage.tsx — TEMPORARY area page (/:subject/:topic/:topicArea).
+ * @file AreaPage.tsx — one page per topic area (/:subject/:topic/:topicArea).
  *
- * Renders an area's notes + its ordered sequence (video → exercise pulses) with
- * sequential exercise unlock, wired to the v2 progress store. This is a
- * minimal-but-functional placeholder; the polished worksheet UX is the NEXT PR.
+ * The designed worksheet experience: breadcrumb → title + meta → notes → the
+ * authored sequence, each segment a clearly numbered section (videos and
+ * exercises numbered independently). Exercises render as worksheets (see
+ * `Worksheet`); a locked exercise renders a locked card with its questions
+ * hidden until the previous exercise is complete. Videos are never locked.
+ *
+ * Progress: per-question outcomes go to the v2 store; an exercise's `completedAt`
+ * is set once every question has a "correct" outcome (consistent with
+ * `isAreaComplete`). The page subscribes to the store so unlocking and
+ * answered-state indicators stay live.
+ *
+ * (QuestionRunner is now dormant — retained for the future checkpoint/quiz mode,
+ * CLAUDE.md §c rule 8/9 — and is no longer rendered here.)
  */
-import { useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
-import type { ProgressStore } from "@/state/progress";
+import type { ExerciseRecord, ProgressStore } from "@/state/progress";
 import type { ResolvedSegment } from "@/ingest/load";
 import { computeSegmentUnlock, isAreaComplete, type SegmentStatus } from "@/app/unlock";
 import { titleCase } from "@/app/format";
 import { VideoEmbed } from "@/render/VideoEmbed";
 import { NotesRenderer } from "@/render/notes/NotesRenderer";
-import { QuestionRunner } from "@/render/questions/QuestionRunner";
-import type { QuestionResult } from "@/render/questions/types";
+import { Worksheet } from "@/render/questions/Worksheet";
+import type { Outcome } from "@/render/questions/types";
 import { NotFound } from "@/app/screens/NotFound";
+
+/** Subscribe to the store and force a re-render whenever progress changes. */
+function useStoreTick(store: ProgressStore): void {
+  const [, setTick] = useState(0);
+  useEffect(() => store.subscribe(() => setTick((t) => t + 1)), [store]);
+}
+
+/** DOM ids for the per-segment anchors (independent video / exercise numbering). */
+const videoAnchor = (n: number) => `video-${n}`;
+const exerciseAnchor = (n: number) => `exercise-${n}`;
+
+interface SegItem {
+  seg: ResolvedSegment;
+  index: number;
+  status: SegmentStatus;
+  /** Display number within its own kind (Video 1, Exercise 1, Video 2…). */
+  displayNum: number;
+}
 
 export function AreaPage() {
   const { subject, topic, topicArea } = useParams();
   const registry = useRegistry();
   const store = useProgressStore();
+  const location = useLocation();
   const areaId = `${subject}/${topic}/${topicArea}`;
   const area = registry.getAreaById(areaId);
   const ok = !!area && area.valid;
 
+  useStoreTick(store);
+
   useEffect(() => {
     if (ok && area) store.setLastVisited(area.id);
   }, [ok, area, store]);
+
+  // Deep-link: scroll to the anchored segment (hero "continue" target) on load.
+  const scrolledHash = useRef<string | null>(null);
+  useEffect(() => {
+    const hash = location.hash.replace(/^#/, "");
+    if (!ok || !hash || scrolledHash.current === hash) return;
+    const el = document.getElementById(hash);
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrolledHash.current = hash;
+    }
+  }, [ok, location.hash]);
 
   if (!ok || !area) {
     return <NotFound message="That topic area doesn’t exist." />;
@@ -37,95 +80,159 @@ export function AreaPage() {
 
   const segmentInputs = area.segments.map((s, i) => ({
     type: s.type,
-    complete: s.type === "exercise" ? Boolean(store.getExerciseProgress(area.id, i)?.completedAt) : false,
+    complete:
+      s.type === "exercise" ? Boolean(store.getExerciseProgress(area.id, i)?.completedAt) : false,
   }));
   const states = computeSegmentUnlock(segmentInputs);
   const complete = isAreaComplete(segmentInputs);
 
+  // Independent numbering for videos and exercises, in authored order.
+  let videoCount = 0;
+  let exerciseCount = 0;
+  const items: SegItem[] = area.segments.map((seg, index) => {
+    const displayNum = seg.type === "video" ? ++videoCount : ++exerciseCount;
+    return { seg, index, status: states[index]!.status, displayNum };
+  });
+  const exerciseTotal = exerciseCount;
+  const questionTotal = area.segments.reduce(
+    (sum, s) => sum + (s.type === "exercise" ? s.questions.length : 0),
+    0,
+  );
+
+  function recordOutcome(segIndex: number, qIndex: number, outcome: Outcome, qCount: number) {
+    const isAllCorrect = (rec: ExerciseRecord | null) =>
+      qCount > 0 &&
+      Array.from({ length: qCount }, (_, k) => rec?.questionOutcomes[k] === "correct").every(
+        Boolean,
+      );
+
+    const wasAllCorrect = isAllCorrect(store.getExerciseProgress(area!.id, segIndex));
+    store.recordOutcome(area!.id, segIndex, qIndex, outcome);
+    const allCorrect = isAllCorrect(store.getExerciseProgress(area!.id, segIndex));
+    // Count a completed attempt on each transition INTO "all correct"; the
+    // sticky completedAt is set on the first such transition and never cleared.
+    if (allCorrect && !wasAllCorrect) store.recordAttempt(area!.id, segIndex, true);
+  }
+
   return (
-    <main className="app-page app-page--reading area">
+    <main className="app-page app-page--area area">
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link className="breadcrumb__link" to="/">
           {titleCase(area.subject)}
         </Link>{" "}
         / {titleCase(area.topic)} / {titleCase(area.topicArea)}
       </nav>
-      <h1 className="sel-title">{area.title}</h1>
-      {complete ? <div className="lesson-banner">✓ Area complete — all exercises done.</div> : null}
 
-      <section className="area-section">
-        <h2 className="area-seg-title">Notes</h2>
+      <header className="area-head">
+        <h1 className="sel-title">{area.title}</h1>
+        <p className="area-meta">
+          {exerciseTotal} exercise{exerciseTotal === 1 ? "" : "s"} · {questionTotal} question
+          {questionTotal === 1 ? "" : "s"}
+        </p>
+      </header>
+
+      {complete ? (
+        <div className="area-complete">
+          <p className="area-complete__text">✓ You’ve completed every exercise in this area.</p>
+          <Link className="btn btn--ghost" to="/">
+            Back to library
+          </Link>
+        </div>
+      ) : null}
+
+      <section className="area-section" aria-label="Notes">
+        <h2 className="ws-section-head">Notes</h2>
         <NotesRenderer blocks={area.notes} />
       </section>
 
-      <section className="area-section">
-        <h2 className="area-seg-title">Sequence</h2>
-        {area.segments.map((seg, i) => (
-          <SegmentView
-            key={i}
+      {items.map((item) =>
+        item.seg.type === "video" ? (
+          <VideoSegmentView key={item.index} num={item.displayNum} seg={item.seg} />
+        ) : (
+          <ExerciseSegmentView
+            key={item.index}
+            num={item.displayNum}
+            segIndex={item.index}
+            seg={item.seg}
+            status={item.status}
             areaId={area.id}
-            segIndex={i}
-            seg={seg}
-            status={states[i]!.status}
             store={store}
+            onOutcome={recordOutcome}
           />
-        ))}
-      </section>
+        ),
+      )}
     </main>
   );
 }
 
-function SegmentView({
-  areaId,
+function VideoSegmentView({
+  num,
+  seg,
+}: {
+  num: number;
+  seg: Extract<ResolvedSegment, { type: "video" }>;
+}) {
+  return (
+    <section className="ws-segment" id={videoAnchor(num)} aria-label={`Video ${num}: ${seg.title}`}>
+      <h2 className="ws-section-head">
+        Video {num} · {seg.title}
+      </h2>
+      <div className="ws-video">
+        <VideoEmbed src={seg.src} title={seg.title} />
+      </div>
+    </section>
+  );
+}
+
+function ExerciseSegmentView({
+  num,
   segIndex,
   seg,
   status,
+  areaId,
   store,
+  onOutcome,
 }: {
-  areaId: string;
+  num: number;
   segIndex: number;
-  seg: ResolvedSegment;
+  seg: Extract<ResolvedSegment, { type: "exercise" }>;
   status: SegmentStatus;
+  areaId: string;
   store: ProgressStore;
+  onOutcome: (segIndex: number, qIndex: number, outcome: Outcome, qCount: number) => void;
 }) {
-  if (seg.type === "video") {
-    return (
-      <div className="area-segment">
-        <h3 className="area-seg-title">▶ {seg.title}</h3>
-        <VideoEmbed src={seg.src} title={seg.title} />
-      </div>
-    );
-  }
+  const locked = status === "locked";
+  const heading = `Exercise ${num} · ${seg.title}`;
 
-  if (status === "locked") {
+  if (locked) {
     return (
-      <div className="area-segment">
-        <h3 className="area-seg-title">{seg.title}</h3>
-        <p className="lesson-card__locked">Complete the previous exercise to unlock this.</p>
-      </div>
+      <section
+        className="ws-segment ws-segment--locked"
+        id={exerciseAnchor(num)}
+        aria-label={`Exercise ${num} (locked): ${seg.title}`}
+      >
+        <h2 className="ws-section-head">{heading}</h2>
+        <div className="ws-locked">
+          <p className="ws-locked__title">
+            {seg.questions.length} question{seg.questions.length === 1 ? "" : "s"} · locked
+          </p>
+          <p className="ws-locked__note">Finish Exercise {num - 1} first to unlock this.</p>
+        </div>
+      </section>
     );
   }
 
   const record = store.getExerciseProgress(areaId, segIndex);
-  // Resume an incomplete exercise; a completed one re-runs fresh (review).
-  const initialOutcomes = record?.completedAt ? undefined : record?.questionOutcomes;
+  const outcomes = record?.questionOutcomes ?? {};
 
   return (
-    <div className="area-segment">
-      <h3 className="area-seg-title">{seg.title}</h3>
-      <QuestionRunner
-        key={`${areaId}:${segIndex}`}
+    <section className="ws-segment" id={exerciseAnchor(num)} aria-label={`Exercise ${num}: ${seg.title}`}>
+      <h2 className="ws-section-head">{heading}</h2>
+      <Worksheet
         questions={seg.questions}
-        initialOutcomes={initialOutcomes}
-        onResult={(qi, o) => store.recordOutcome(areaId, segIndex, qi, o)}
-        onComplete={(results: QuestionResult[]) =>
-          store.recordAttempt(
-            areaId,
-            segIndex,
-            results.length > 0 && results.every((r) => r.outcome === "correct"),
-          )
-        }
+        outcomes={outcomes}
+        onOutcome={(qIndex, outcome) => onOutcome(segIndex, qIndex, outcome, seg.questions.length)}
       />
-    </div>
+    </section>
   );
 }

@@ -533,3 +533,157 @@
 .qr-error code {
   font-family: ui-monospace, monospace;
 }
+
+/* ---- Worksheet (numbered question list within an exercise) ---- */
+.ws-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  counter-reset: ws;
+}
+.ws-row {
+  display: flex;
+  gap: var(--space-3);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.ws-row__num {
+  flex: none;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  color: var(--green-edge);
+  min-width: 1.5rem;
+}
+.ws-row__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.ws-row__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.ws-row__prompt {
+  flex: 1;
+  font-weight: 600;
+  line-height: 1.5;
+  min-width: 0;
+}
+.ws-row__tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* Answered-state indicator (restored from the progress store). */
+.ws-row__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius-pill);
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+.ws-row__status--correct {
+  background: var(--green-tint);
+  color: var(--green-edge);
+}
+.ws-row__status--incorrect {
+  background: var(--coral);
+  color: var(--coral-deep);
+}
+/* Answer-icon button (opens the solution / explanation modal). */
+.ws-row__solve {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-3);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--cyan-deep);
+  background: var(--cyan-tint);
+  border: var(--card-border-width) solid var(--cyan-deep);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.ws-row__solve:hover {
+  filter: brightness(0.97);
+}
+
+/* ---- Solution / explanation modal ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+}
+.modal {
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+.modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.modal__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--brand-ink);
+}
+.modal__close {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  color: var(--brand-ink);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  cursor: pointer;
+}
+.modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.modal__empty {
+  margin: 0;
+  color: var(--muted-ink);
+  font-style: italic;
+}
+.modal__actions {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

@@ -84,6 +84,22 @@ function areaProgress(area: ValidatedArea, store: ProgressStore): { done: number
   return { done, total };
 }
 
+/**
+ * Anchor (DOM id) of the first not-yet-complete exercise in an area, so the hero
+ * can deep-link straight to where the learner left off. Exercises are numbered
+ * independently of videos — matching the AreaPage's `exercise-N` ids. Returns
+ * null when every exercise is complete (or there are none).
+ */
+function firstIncompleteExerciseAnchor(area: ValidatedArea, store: ProgressStore): string | null {
+  let exerciseNum = 0;
+  for (let i = 0; i < area.segments.length; i++) {
+    if (area.segments[i]!.type !== "exercise") continue;
+    exerciseNum += 1;
+    if (!store.getExerciseProgress(area.id, i)?.completedAt) return `exercise-${exerciseNum}`;
+  }
+  return null;
+}
+
 function firstAreaOf(registry: AreaRegistry, subject: string | null): ValidatedArea | undefined {
   if (!subject) return undefined;
   for (const topic of registry.getTopics(subject)) {
@@ -104,8 +120,10 @@ function Hero({ subject }: { subject: string | null }) {
   if (!target) return null;
 
   const kicker = resume ? "Continue where you left off" : "Start here";
+  const anchor = firstIncompleteExerciseAnchor(target, store);
+  const to = anchor ? `${areaPath(target)}#${anchor}` : areaPath(target);
   return (
-    <Link className="hero" to={areaPath(target)}>
+    <Link className="hero" to={to}>
       <span className="hero__kicker">{kicker}</span>
       <span className="hero__title">{target.title}</span>
       <span className="hero__crumb">
