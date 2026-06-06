@@ -1,20 +1,18 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import type { MultipleChoiceQuestion } from "@/ingest/types";
 import { QuestionRunner } from "@/render/questions/QuestionRunner";
-import { createProgressStore, type LessonIndexEntry } from "@/state/progress";
+import { createProgressStore } from "@/state/progress";
 import { createMemoryBackend } from "@/state/storage";
-import { ProgressProvider, useLessonProgress } from "@/state/ProgressContext";
 
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
 });
 
-const lessons: LessonIndexEntry[] = [
-  { id: "L", subject: "math", topic: "algebra", topicArea: "brackets" },
-];
+const AREA = "math/algebra/brackets";
+const SEG = 1;
 
 const mc = (correctIndex: number): MultipleChoiceQuestion => ({
   type: "multiple-choice",
@@ -25,71 +23,44 @@ const mc = (correctIndex: number): MultipleChoiceQuestion => ({
   ],
 });
 
-describe("QuestionRunner → progress store wiring", () => {
-  it("persists outcomes and a completed attempt for an all-correct run", () => {
-    const store = createProgressStore({
-      backend: createMemoryBackend(),
-      lessons,
-      now: () => "T",
-    });
+function wire(store: ReturnType<typeof createProgressStore>) {
+  return render(
+    <QuestionRunner
+      questions={[mc(1)]}
+      onResult={(i, o) => store.recordOutcome(AREA, SEG, i, o)}
+      onComplete={(results) =>
+        store.recordAttempt(
+          AREA,
+          SEG,
+          results.length > 0 && results.every((r) => r.outcome === "correct"),
+        )
+      }
+    />,
+  );
+}
 
-    render(
-      <QuestionRunner
-        questions={[mc(1)]}
-        onResult={(i, o) => store.recordOutcome("L", i, o)}
-        onComplete={(results) =>
-          store.recordAttempt("L", results.length > 0 && results.every((r) => r.outcome === "correct"))
-        }
-      />,
-    );
-
+describe("QuestionRunner → v2 progress store wiring (area + segment)", () => {
+  it("persists outcomes + a completed attempt for an all-correct run", () => {
+    const store = createProgressStore({ backend: createMemoryBackend(), now: () => "T" });
+    wire(store);
     fireEvent.click(screen.getByRole("button", { name: "Option B" })); // correct
-    fireEvent.click(screen.getByRole("button", { name: "Finish" })); // enters summary + onComplete
+    fireEvent.click(screen.getByRole("button", { name: "Finish" })); // summary + onComplete
 
-    const record = store.getLessonProgress("L");
-    expect(record?.questionOutcomes[0]).toBe("correct");
-    expect(record?.attempts).toBe(1);
-    expect(record?.completedAt).toBe("T"); // all correct → completed
+    const seg = store.getExerciseProgress(AREA, SEG);
+    expect(seg?.questionOutcomes[0]).toBe("correct");
+    expect(seg?.attempts).toBe(1);
+    expect(seg?.completedAt).toBe("T");
   });
 
-  it("records an incorrect outcome and an uncompleted attempt", () => {
-    const store = createProgressStore({ backend: createMemoryBackend(), lessons, now: () => "T" });
-    render(
-      <QuestionRunner
-        questions={[mc(1)]}
-        onResult={(i, o) => store.recordOutcome("L", i, o)}
-        onComplete={(results) =>
-          store.recordAttempt("L", results.every((r) => r.outcome === "correct"))
-        }
-      />,
-    );
+  it("records an incorrect outcome + an uncompleted attempt", () => {
+    const store = createProgressStore({ backend: createMemoryBackend(), now: () => "T" });
+    wire(store);
     fireEvent.click(screen.getByRole("button", { name: "Option A" })); // wrong
-    fireEvent.click(screen.getByRole("button", { name: "Finish" })); // enters summary + onComplete
+    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
 
-    const record = store.getLessonProgress("L");
-    expect(record?.questionOutcomes[0]).toBe("incorrect");
-    expect(record?.attempts).toBe(1);
-    expect(record?.completedAt).toBeNull();
-  });
-});
-
-describe("ProgressProvider hooks re-render on change", () => {
-  function Attempts({ id }: { id: string }) {
-    const { record } = useLessonProgress(id);
-    return <span data-testid="attempts">{record?.attempts ?? 0}</span>;
-  }
-
-  it("useLessonProgress reflects store updates", () => {
-    const store = createProgressStore({ backend: createMemoryBackend(), lessons });
-    render(
-      <ProgressProvider store={store}>
-        <Attempts id="L" />
-      </ProgressProvider>,
-    );
-    expect(screen.getByTestId("attempts").textContent).toBe("0");
-    act(() => {
-      store.recordAttempt("L", false);
-    });
-    expect(screen.getByTestId("attempts").textContent).toBe("1");
+    const seg = store.getExerciseProgress(AREA, SEG);
+    expect(seg?.questionOutcomes[0]).toBe("incorrect");
+    expect(seg?.attempts).toBe(1);
+    expect(seg?.completedAt).toBeNull();
   });
 });

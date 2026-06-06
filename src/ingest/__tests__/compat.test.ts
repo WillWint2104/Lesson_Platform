@@ -9,7 +9,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  validateManifest,
+  validateAreaManifest,
   validateNotesFile,
   validateQuestionsFile,
 } from "@/ingest/validate";
@@ -26,10 +26,10 @@ describe("frozen back-compat corpus", () => {
   it.each(files)("still validates with zero errors: %s", (rel) => {
     const raw = JSON.parse(readFileSync(join(corpusDir, rel), "utf8"));
     let res;
-    if (rel.startsWith("lesson")) res = validateManifest(raw, { figureSchemas });
+    if (rel.startsWith("area")) res = validateAreaManifest(raw, { figureSchemas });
     else if (rel.startsWith("questions")) res = validateQuestionsFile(raw, { figureSchemas });
     else if (rel.startsWith("notes")) res = validateNotesFile(raw);
-    else throw new Error(`corpus file '${rel}' has an unrecognised prefix — name it lesson-*/notes-*/questions-*`);
+    else throw new Error(`corpus file '${rel}' has an unrecognised prefix — name it area-*/notes-*/questions-*`);
     if (!res.valid) {
       throw new Error(
         `${rel} broke back-compat:\n` +
