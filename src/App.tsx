@@ -5,6 +5,7 @@ import { QuestionRunner } from "@/render/questions/QuestionRunner";
 import type { QuestionResult } from "@/render/questions/types";
 import { createProgressStore } from "@/state/progress";
 import { ProgressProvider, useProgressStore } from "@/state/ProgressContext";
+import { figureSchemas } from "@/render/figures/registry";
 
 /**
  * Scaffold smoke test + temporary debug harness. NOT a real screen. Proves
@@ -93,7 +94,7 @@ const panel: CSSProperties = {
 };
 
 export default function App() {
-  const registry = useMemo(() => loadAllLessons(), []);
+  const registry = useMemo(() => loadAllLessons({ figureSchemas }), []);
   const store = useMemo(
     () =>
       createProgressStore({
@@ -102,6 +103,7 @@ export default function App() {
           subject: l.subject,
           topic: l.topic,
           topicArea: l.topicArea,
+          questions: l.questions.map((q) => ({ skill: q.skill, difficulty: q.difficulty })),
         })),
       }),
     [registry],
