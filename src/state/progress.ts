@@ -94,6 +94,11 @@ export interface ProgressStore {
   setLastVisited(lessonId: string): void;
   resetAll(): void;
   subscribe(listener: () => void): () => void;
+  /** One-time UI notice dismissal, persisted through the SAME storage layer as
+   * progress (not a parallel localStorage call). Kept out of the versioned
+   * progress key — it is UI state, not learner progress. */
+  isNoticeDismissed(noticeId: string): boolean;
+  dismissNotice(noticeId: string): void;
 }
 
 export interface CreateProgressStoreOptions {
@@ -392,6 +397,23 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+
+    isNoticeDismissed(noticeId) {
+      try {
+        return backend.getItem(`lp:notice:${noticeId}`) === "1";
+      } catch {
+        return false;
+      }
+    },
+
+    dismissNotice(noticeId) {
+      try {
+        backend.setItem(`lp:notice:${noticeId}`, "1");
+      } catch {
+        // Best effort — a dismissal that can't persist still hides for the session.
+      }
+      notify();
     },
   };
 }

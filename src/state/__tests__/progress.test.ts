@@ -197,6 +197,21 @@ describe("encapsulation and guards", () => {
     expect(store.getLastVisitedLessonId()).toBe("a"); // valid → returned
   });
 
+  it("persists a one-time notice dismissal through the storage layer", () => {
+    const backend = createMemoryBackend();
+    const store = createProgressStore({ backend, persistent: true });
+    expect(store.isNoticeDismissed("local-progress")).toBe(false);
+
+    store.dismissNotice("local-progress");
+    expect(store.isNoticeDismissed("local-progress")).toBe(true);
+
+    // A fresh store sharing the backend still sees the dismissal (persisted).
+    const reopened = createProgressStore({ backend, persistent: true });
+    expect(reopened.isNoticeDismissed("local-progress")).toBe(true);
+    // ...and it did NOT touch the versioned progress key.
+    expect(backend.getItem(PROGRESS_KEY)).toBeNull();
+  });
+
   it("persistent is false when stored data is a newer version", () => {
     const backend = createMemoryBackend();
     backend.setItem(
