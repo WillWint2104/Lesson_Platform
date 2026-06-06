@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import { segmentMath, MathText } from "@/shared/MathText";
 
 afterEach(cleanup);
@@ -52,21 +52,21 @@ describe("segmentMath", () => {
 });
 
 describe("MathText", () => {
+  // KaTeX markup has no accessible role/text, so the .katex / .mathtext-* class
+  // selectors are the appropriate assertions for the math-rendering path.
   it("renders a .katex node inside an inline span for inline math", () => {
     const { container } = render(<MathText>{"$x^2$"}</MathText>);
-    expect(container.querySelector(".mathtext-inline")).not.toBeNull();
-    expect(container.querySelector(".katex")).not.toBeNull();
+    expect(container.querySelector(".mathtext-inline .katex")).not.toBeNull();
   });
 
-  it("renders display math in a block container", () => {
+  it("renders display math in a block-level span", () => {
     const { container } = render(<MathText>{"$$x^2$$"}</MathText>);
-    expect(container.querySelector(".mathtext-display")).not.toBeNull();
-    expect(container.querySelector(".katex")).not.toBeNull();
+    expect(container.querySelector(".mathtext-display .katex")).not.toBeNull();
   });
 
-  it("renders plain text untouched, with no katex node", () => {
+  it("renders plain text untouched (user-visible), with no katex node", () => {
     const { container } = render(<MathText>{"just words"}</MathText>);
-    expect(container.textContent).toBe("just words");
+    expect(screen.getByText("just words")).toBeTruthy();
     expect(container.querySelector(".katex")).toBeNull();
   });
 
