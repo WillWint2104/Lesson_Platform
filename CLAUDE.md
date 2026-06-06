@@ -276,7 +276,9 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   (count + "finish Exercise N−1 first") with its questions **not rendered**.
   Per-question outcomes go to the store via `recordOutcome(areaId, segIdx, …)`;
   an exercise's sticky `completedAt` is set (via `recordAttempt`) the moment
-  every question has a `correct` outcome — consistent with `isAreaComplete`. The
+  every question has a `correct` outcome — consistent with `isAreaComplete`
+  (which is `exercises.length > 0 && exercises.every(s => s.complete)`, so a
+  video-only area is **not** considered complete). The
   page **subscribes to the store** so unlocking + answered-state stay live, sets
   `setLastVisited` on mount, shows a quiet area-complete banner + back-to-library
   CTA, and gives every segment an anchor id (`video-N`/`exercise-N`); the Library

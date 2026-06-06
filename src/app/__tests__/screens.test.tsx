@@ -282,6 +282,33 @@ describe("AreaPage — progress & gating", () => {
     expect(screen.queryByText(/Finish Exercise 1 first/)).toBeNull();
   });
 
+  it("increments attempts on each re-completion but keeps completedAt sticky", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        sequence: [{ type: "exercise", title: "T", questions: [textQ("Solve", "A")] }],
+      }),
+    );
+    const store = buildStore(reg);
+    renderAt(`/${AREA_ID}`, reg, store);
+    const openModal = () =>
+      fireEvent.click(screen.getByRole("button", { name: "Show solution for question 1" }));
+
+    openModal();
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "I got it" }));
+    const first = store.getExerciseProgress(AREA_ID, 0);
+    expect(first?.attempts).toBe(1);
+    expect(first?.completedAt).not.toBeNull();
+
+    // Break "all correct", then re-complete → a fresh attempt, same completedAt.
+    openModal();
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Not yet" }));
+    openModal();
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "I got it" }));
+    const second = store.getExerciseProgress(AREA_ID, 0);
+    expect(second?.attempts).toBe(2);
+    expect(second?.completedAt).toBe(first?.completedAt);
+  });
+
   it("shows the area-complete banner once every exercise is complete", () => {
     const reg = buildReg(
       mkArea("brackets", { sequence: [mcExercise("Only", "Yes", "No")] }),

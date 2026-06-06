@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
-import type { ProgressStore } from "@/state/progress";
+import type { ExerciseRecord, ProgressStore } from "@/state/progress";
 import type { ResolvedSegment } from "@/ingest/load";
 import { computeSegmentUnlock, isAreaComplete, type SegmentStatus } from "@/app/unlock";
 import { titleCase } from "@/app/format";
@@ -100,15 +100,18 @@ export function AreaPage() {
   );
 
   function recordOutcome(segIndex: number, qIndex: number, outcome: Outcome, qCount: number) {
-    store.recordOutcome(area!.id, segIndex, qIndex, outcome);
-    const rec = store.getExerciseProgress(area!.id, segIndex);
-    const allCorrect =
+    const isAllCorrect = (rec: ExerciseRecord | null) =>
       qCount > 0 &&
       Array.from({ length: qCount }, (_, k) => rec?.questionOutcomes[k] === "correct").every(
         Boolean,
       );
-    // Set the sticky completedAt the moment every question is correct.
-    if (allCorrect && !rec?.completedAt) store.recordAttempt(area!.id, segIndex, true);
+
+    const wasAllCorrect = isAllCorrect(store.getExerciseProgress(area!.id, segIndex));
+    store.recordOutcome(area!.id, segIndex, qIndex, outcome);
+    const allCorrect = isAllCorrect(store.getExerciseProgress(area!.id, segIndex));
+    // Count a completed attempt on each transition INTO "all correct"; the
+    // sticky completedAt is set on the first such transition and never cleared.
+    if (allCorrect && !wasAllCorrect) store.recordAttempt(area!.id, segIndex, true);
   }
 
   return (

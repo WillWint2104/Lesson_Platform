@@ -29,6 +29,8 @@ export interface WorksheetProps {
 export function Worksheet({ questions, outcomes, onOutcome }: WorksheetProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const openerRef = useRef<HTMLButtonElement | null>(null);
+  // Validate the UI index against the current questions before dereferencing.
+  const openQuestion = openIndex !== null ? questions[openIndex] : undefined;
 
   return (
     <>
@@ -82,12 +84,12 @@ export function Worksheet({ questions, outcomes, onOutcome }: WorksheetProps) {
         })}
       </ol>
 
-      {openIndex !== null ? (
+      {openIndex !== null && openQuestion ? (
         <SolutionModal
           questionNumber={openIndex + 1}
-          question={questions[openIndex]!}
+          question={openQuestion}
           onMark={
-            questions[openIndex]!.type === "multiple-choice"
+            openQuestion.type === "multiple-choice"
               ? undefined
               : (o) => {
                   onOutcome(openIndex, o);
