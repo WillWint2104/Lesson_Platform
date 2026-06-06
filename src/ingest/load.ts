@@ -27,7 +27,10 @@ export interface ValidatedLesson {
   /** Lesson id from the manifest, or the manifest path when id is unusable. */
   id: string;
   title: string;
+  /** Hierarchy derived from the directory path (CLAUDE.md §a), not the manifest. */
   subject: string;
+  topic: string;
+  topicArea: string;
   /** Manifest file path (glob key). */
   path: string;
   notes: NoteBlock[];
@@ -35,6 +38,35 @@ export interface ValidatedLesson {
   valid: boolean;
   errors: Issue[];
   warnings: Issue[];
+}
+
+/** The hierarchy + lesson-id segments encoded by a manifest's directory path. */
+interface PathHierarchy {
+  subject: string;
+  topic: string;
+  topicArea: string;
+  lessonId: string;
+}
+
+const EXPECTED_PATH_SHAPE =
+  "/content/<subject>/<topic>/<topic-area>/<lesson-id>/lesson.json";
+
+/**
+ * Derive { subject, topic, topicArea, lessonId } from a manifest path of the
+ * shape /content/<subject>/<topic>/<topic-area>/<lesson-id>/lesson.json.
+ * Returns null when the path has the wrong depth/shape.
+ */
+function deriveHierarchy(manifestPath: string): PathHierarchy | null {
+  const marker = "/content/";
+  const start = manifestPath.indexOf(marker);
+  if (start === -1) return null;
+  const rest = manifestPath.slice(start + marker.length);
+  const segments = rest.split("/");
+  // [subject, topic, topicArea, lessonId, "lesson.json"]
+  if (segments.length !== 5 || segments[4] !== "lesson.json") return null;
+  const [subject, topic, topicArea, lessonId] = segments;
+  if (!subject || !topic || !topicArea || !lessonId) return null;
+  return { subject, topic, topicArea, lessonId };
 }
 
 export interface LessonRegistry {
@@ -81,6 +113,16 @@ export function buildLessonRegistry(
       raw && typeof raw === "object"
         ? (raw as { lesson?: Record<string, unknown> }).lesson
         : undefined;
+
+    // Hierarchy comes from the directory path, not the manifest.
+    const hierarchy = deriveHierarchy(manifestPath);
+    if (hierarchy === null) {
+      errors.push({
+        path: manifestPath,
+        message:
+          `lesson manifest path has an unexpected shape — expected ${EXPECTED_PATH_SHAPE}`,
+      });
+    }
 
     const dir = dirOf(manifestPath);
 
@@ -143,13 +185,13 @@ export function buildLessonRegistry(
     seenIds.add(id);
 
     const title = typeof lesson?.["title"] === "string" ? (lesson["title"] as string) : "";
-    const subject =
-      typeof lesson?.["subject"] === "string" ? (lesson["subject"] as string) : "";
 
     lessons.push({
       id,
       title,
-      subject,
+      subject: hierarchy?.subject ?? "",
+      topic: hierarchy?.topic ?? "",
+      topicArea: hierarchy?.topicArea ?? "",
       path: manifestPath,
       notes,
       questions,
