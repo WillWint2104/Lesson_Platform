@@ -34,46 +34,15 @@
     },
     {
       "type": "geometry",
-      "prompt": "Find the area of right-angled triangle $ABC$.",
+      "prompt": "Find the area of a triangle with base $6$ and height $4$.",
       "skill": "triangle-area",
       "difficulty": "medium",
-      "figure": {
-        "kind": "triangle-figure",
-        "specVersion": 1,
-        "data": {
-          "vertices": [
-            { "x": 0, "y": 0 },
-            { "x": 4, "y": 0 },
-            { "x": 0, "y": 3 }
-          ],
-          "labels": ["A", "B", "C"],
-          "sideLabels": ["", "5 cm", ""],
-          "rightAngleAt": 0
-        }
-      },
-      "answer": "$6\\,\\text{cm}^2$",
+      "geometryData": { "shape": "triangle", "base": 6, "height": 4 },
+      "answer": "$12$",
       "working": [
         "Area $= \\frac{1}{2} \\times b \\times h$",
-        "$= \\frac{1}{2} \\times 4 \\times 3 = 6$"
+        "$= \\frac{1}{2} \\times 6 \\times 4 = 12$"
       ]
-    },
-    {
-      "type": "geometry",
-      "prompt": "Buoy $B$ is on a bearing of $037^\\circ$ from harbour $A$. Read the bearing from the diagram.",
-      "skill": "bearings",
-      "difficulty": "medium",
-      "figure": {
-        "kind": "bearing-diagram",
-        "specVersion": 1,
-        "data": {
-          "points": [
-            { "id": "A", "x": 0, "y": 0, "label": "Harbour" },
-            { "id": "B", "x": 3, "y": 4, "label": "Buoy" }
-          ],
-          "bearings": [{ "from": "A", "to": "B", "degrees": 37 }]
-        }
-      },
-      "answer": "$037^\\circ$"
     },
     {
       "type": "text",

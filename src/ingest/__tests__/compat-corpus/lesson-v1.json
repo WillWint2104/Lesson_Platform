@@ -1,0 +1,12 @@
+{
+  "lesson": {
+    "id": "single-brackets-1",
+    "title": "Expanding a Single Bracket",
+    "video": {
+      "src": "videos/single-brackets-1.mp4",
+      "duration": null
+    },
+    "notes": "notes.json",
+    "questions": "questions.json"
+  }
+}

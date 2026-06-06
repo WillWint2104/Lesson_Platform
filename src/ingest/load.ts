@@ -22,6 +22,21 @@ import {
   validateQuestionsFile,
   type Issue,
 } from "./validate";
+import { resolveFigure, type FigureSchemaRegistry } from "./figure";
+
+export interface LoadOptions {
+  /** Per-kind figure schemas; enables per-kind figure data validation at load. */
+  figureSchemas?: FigureSchemaRegistry;
+}
+
+/** Stamp canonical figures (explicit specVersion; legacy aliases mapped) so the
+ * runtime never relies on an implicit version or a deprecated field. */
+function normalizeFigures(questions: Question[]): Question[] {
+  return questions.map((q) => {
+    const resolved = resolveFigure(q as unknown as Record<string, unknown>);
+    return resolved.figure ? ({ ...q, figure: resolved.figure } as Question) : q;
+  });
+}
 
 export interface ValidatedLesson {
   /** Lesson id from the manifest, or the manifest path when id is unusable. */
@@ -95,7 +110,9 @@ function prefixIssues(issues: Issue[], filePath: string): Issue[] {
  */
 export function buildLessonRegistry(
   files: Record<string, unknown>,
+  options: LoadOptions = {},
 ): LessonRegistry {
+  const figureSchemas = options.figureSchemas;
   const lessons: ValidatedLesson[] = [];
   const seenIds = new Set<string>();
 
@@ -105,7 +122,7 @@ export function buildLessonRegistry(
 
   for (const manifestPath of manifestPaths) {
     const raw = files[manifestPath];
-    const manifestResult = validateManifest(raw);
+    const manifestResult = validateManifest(raw, { figureSchemas });
     const errors: Issue[] = [...manifestResult.errors];
     const warnings: Issue[] = [...manifestResult.warnings];
 
@@ -156,11 +173,11 @@ export function buildLessonRegistry(
       const questionsPath = dir + questionsField.replace(/^\.\//, "");
       if (questionsPath in files) {
         const questionsRaw = files[questionsPath];
-        const qres = validateQuestionsFile(questionsRaw);
+        const qres = validateQuestionsFile(questionsRaw, { figureSchemas });
         errors.push(...prefixIssues(qres.errors, questionsPath));
         warnings.push(...prefixIssues(qres.warnings, questionsPath));
-        questions = asArray<Question>(
-          (questionsRaw as { questions?: unknown } | null)?.questions,
+        questions = normalizeFigures(
+          asArray<Question>((questionsRaw as { questions?: unknown } | null)?.questions),
         );
       } else {
         errors.push({
@@ -169,7 +186,7 @@ export function buildLessonRegistry(
         });
       }
     } else {
-      questions = asArray<Question>(questionsField);
+      questions = normalizeFigures(asArray<Question>(questionsField));
     }
 
     const rawId = lesson?.["id"];
@@ -226,10 +243,10 @@ export function buildLessonRegistry(
  * validated registry. Runtime entry point (browser/dev); the pure core is
  * `buildLessonRegistry`.
  */
-export function loadAllLessons(): LessonRegistry {
+export function loadAllLessons(options: LoadOptions = {}): LessonRegistry {
   const files = import.meta.glob<unknown>("/content/**/*.json", {
     eager: true,
     import: "default",
   });
-  return buildLessonRegistry(files);
+  return buildLessonRegistry(files, options);
 }

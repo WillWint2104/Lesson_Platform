@@ -11,6 +11,13 @@
  */
 
 import { CALLOUT_STYLES, NOTE_BLOCK_TYPES, QUESTION_TYPES } from "./types";
+import { resolveFigure, schemaKey, type FigureSchemaRegistry } from "./figure";
+
+export interface ValidateOptions {
+  /** Per-kind figure schemas (kind@specVersion → validator). When provided,
+   * canonical figure `data` is validated per kind. */
+  figureSchemas?: FigureSchemaRegistry;
+}
 
 export interface Issue {
   path: string;
@@ -123,7 +130,12 @@ function requireString(
 const QUESTION_BASE_FIELDS = ["type", "prompt", "skill", "difficulty"] as const;
 const DIFFICULTIES = ["easy", "medium", "hard"];
 
-function validateQuestion(report: Report, path: string, raw: unknown): void {
+function validateQuestion(
+  report: Report,
+  path: string,
+  raw: unknown,
+  figureSchemas?: FigureSchemaRegistry,
+): void {
   if (!isPlainObject(raw)) {
     report.error(path, "must be an object");
     return;
@@ -167,10 +179,13 @@ function validateQuestion(report: Report, path: string, raw: unknown): void {
   // multiple-choice (whose options carry correctness).
   const ANSWER_FIELDS = ["answer", "working"] as const;
 
+  const FIGURE_FIELD = "figure";
+
   switch (type) {
     case "text":
-      knownFields = [...QUESTION_BASE_FIELDS, ...ANSWER_FIELDS];
+      knownFields = [...QUESTION_BASE_FIELDS, ...ANSWER_FIELDS, FIGURE_FIELD];
       validateAnswerWorking(report, path, raw);
+      validateFigure(report, path, raw, figureSchemas);
       // A text question with no answer is allowed, but warn: the runtime can
       // only self-mark (no reveal) without one.
       if (raw["answer"] === undefined) {
@@ -181,23 +196,20 @@ function validateQuestion(report: Report, path: string, raw: unknown): void {
       }
       break;
     case "table":
-      knownFields = [...QUESTION_BASE_FIELDS, "rows", ...ANSWER_FIELDS];
+      knownFields = [...QUESTION_BASE_FIELDS, "rows", ...ANSWER_FIELDS, FIGURE_FIELD];
       validateTableRows(report, `${path} (table)`, raw["rows"]);
       validateAnswerWorking(report, path, raw);
+      validateFigure(report, path, raw, figureSchemas);
       break;
     case "graph":
-      knownFields = [...QUESTION_BASE_FIELDS, "graphData", ...ANSWER_FIELDS];
-      if (raw["graphData"] === undefined) {
-        report.error(`${path} (graph)`, "missing required field 'graphData'");
-      }
+      knownFields = [...QUESTION_BASE_FIELDS, "graphData", ...ANSWER_FIELDS, FIGURE_FIELD];
       validateAnswerWorking(report, path, raw);
+      validateFigure(report, path, raw, figureSchemas);
       break;
     case "geometry":
-      knownFields = [...QUESTION_BASE_FIELDS, "geometryData", ...ANSWER_FIELDS];
-      if (raw["geometryData"] === undefined) {
-        report.error(`${path} (geometry)`, "missing required field 'geometryData'");
-      }
+      knownFields = [...QUESTION_BASE_FIELDS, "geometryData", ...ANSWER_FIELDS, FIGURE_FIELD];
       validateAnswerWorking(report, path, raw);
+      validateFigure(report, path, raw, figureSchemas);
       break;
     case "multiple-choice":
       knownFields = [...QUESTION_BASE_FIELDS, "options"];
@@ -235,6 +247,72 @@ function validateAnswerWorking(
     } else {
       working.forEach((w, i) => scanLatex(report, `${path}.working[${i}]`, w));
     }
+  }
+}
+
+/**
+ * Validate the optional `figure` (or a deprecated graphData/geometryData alias).
+ * The canonical figure has its envelope checked and, when schemas are provided,
+ * its `data` validated per (kind, specVersion). Aliases get a deprecation
+ * warning but are NOT re-validated against the new schemas (lenient back-compat).
+ */
+function validateFigure(
+  report: Report,
+  path: string,
+  raw: Record<string, unknown>,
+  figureSchemas?: FigureSchemaRegistry,
+): void {
+  const resolved = resolveFigure(raw);
+  if (resolved.source === "none") return;
+
+  if (resolved.source === "graphData") {
+    report.warn(
+      path,
+      'field \'graphData\' is deprecated — use figure: { kind: "function-graph", data: ... }',
+    );
+    return;
+  }
+  if (resolved.source === "geometryData") {
+    report.warn(
+      path,
+      'field \'geometryData\' is deprecated — use figure: { kind: "<shape>-figure", data: ... }',
+    );
+    return;
+  }
+
+  // Canonical `figure` field — validate the envelope.
+  const figPath = `${path}.figure`;
+  const fig = raw["figure"] as Record<string, unknown>;
+  if (!isNonEmptyString(fig["kind"])) {
+    report.error(figPath, "missing or empty required field 'kind'");
+    return;
+  }
+  if (
+    fig["specVersion"] !== undefined &&
+    (typeof fig["specVersion"] !== "number" ||
+      !Number.isInteger(fig["specVersion"]) ||
+      (fig["specVersion"] as number) < 1)
+  ) {
+    report.error(figPath, "field 'specVersion' must be a positive integer");
+  }
+  if (!isPlainObject(fig["data"])) {
+    report.error(figPath, "field 'data' must be an object");
+    return;
+  }
+  warnUnknownFields(report, figPath, fig, ["kind", "specVersion", "data"]);
+
+  const canonical = resolved.figure!;
+  const key = schemaKey(canonical.kind, canonical.specVersion ?? 1);
+  const schema = figureSchemas?.get(key);
+  if (schema) {
+    for (const issue of schema(canonical.data, `${figPath}.data`)) {
+      report.error(issue.path, issue.message);
+    }
+  } else if (figureSchemas) {
+    report.warn(
+      figPath,
+      `no schema registered for figure kind '${canonical.kind}' specVersion ${canonical.specVersion} (data not validated)`,
+    );
   }
 }
 
@@ -379,13 +457,16 @@ function validateStringArray(
 // ---------------------------------------------------------------------------
 
 /** Validate a `questions.json` (or any { questions: [...] } payload). */
-export function validateQuestionsFile(raw: unknown): ValidationResult {
+export function validateQuestionsFile(
+  raw: unknown,
+  options: ValidateOptions = {},
+): ValidationResult {
   const report = new Report();
   if (!isPlainObject(raw)) {
     report.error("questions", "file must be an object with a 'questions' array");
     return report.result();
   }
-  validateQuestionArray(report, "questions", raw["questions"]);
+  validateQuestionArray(report, "questions", raw["questions"], options.figureSchemas);
   return report.result();
 }
 
@@ -401,7 +482,7 @@ export function validateNotesFile(raw: unknown): ValidationResult {
 }
 
 /** Validate a `lesson.json` manifest, including any inline notes/questions. */
-export function validateManifest(raw: unknown): ValidationResult {
+export function validateManifest(raw: unknown, options: ValidateOptions = {}): ValidationResult {
   const report = new Report();
 
   if (!isPlainObject(raw)) {
@@ -444,7 +525,7 @@ export function validateManifest(raw: unknown): ValidationResult {
       report.error("lesson.questions", "questions path must not be empty");
     }
   } else {
-    validateQuestionArray(report, "lesson.questions", questions);
+    validateQuestionArray(report, "lesson.questions", questions, options.figureSchemas);
   }
 
   // Hierarchy fields are reported as errors above; list them as "known" so they
@@ -479,12 +560,17 @@ function validateVideo(report: Report, path: string, video: unknown): void {
 }
 
 /** Walk a questions array (shared by file + inline-manifest paths). */
-function validateQuestionArray(report: Report, path: string, arr: unknown): void {
+function validateQuestionArray(
+  report: Report,
+  path: string,
+  arr: unknown,
+  figureSchemas?: FigureSchemaRegistry,
+): void {
   if (!Array.isArray(arr)) {
     report.error(path, "must be an array of questions");
     return;
   }
-  arr.forEach((q, i) => validateQuestion(report, `${path}[${i}]`, q));
+  arr.forEach((q, i) => validateQuestion(report, `${path}[${i}]`, q, figureSchemas));
 }
 
 /** Walk a notes array (shared by file + inline-manifest paths). */
