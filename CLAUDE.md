@@ -141,18 +141,32 @@ for minimal valid examples of all three files.
 
 - **Stack: Vite + React + TypeScript** — chosen for a fast, zero-config dev
   server and first-class TS support with a minimal dependency surface.
-- **Dependencies kept minimal:** `react`, `react-dom` + dev `vite`,
+- **Dependencies:** runtime `react`, `react-dom`, **`katex`**; dev `vite`,
   `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`,
-  `@types/node`. **Testing exception:** `vitest` (the only approved addition
-  beyond the minimal set). No router, state lib, UI kit, or KaTeX yet (KaTeX
-  arrives with the notes-renderer PR).
+  `@types/node`, `@types/katex`, **`vitest`**, `@testing-library/react`,
+  `@testing-library/dom`, `jsdom`. No router, state lib, or UI kit.
 - **TypeScript strict mode is on;** path alias `@` → `/src`.
 - **Video hosting: YouTube unlisted embeds** (no embed implementation yet).
 - **App hosting: TBD.**
 - **`/src/ingest` is implemented:** `types.ts` (contracts), `validate.ts`
   (pure, non-throwing validators with actionable path-precise errors + the
   un-doubled-LaTeX control-character tripwire), and `load.ts` (discovery +
-  loader). `render`/`state`/`shared` remain TypeScript stubs.
+  loader).
+- **Notes renderer is implemented:** `/src/render/notes/` (one component per
+  block type + `NotesRenderer`) and the shared `/src/shared/MathText.tsx`.
+  Still stubs: `/src/render/question-runtime.tsx`, `/src/render/video-embed.tsx`,
+  `/src/state`, `/src/shared/builders.ts`.
+- **All math goes through `MathText` — never call `katex` directly in a
+  component.** `MathText` is the single shared math renderer (CLAUDE.md §c rule
+  4); the question runtime will reuse it. It segments `$...$`/`$$...$$`, renders
+  with `throwOnError: false` (errors show KaTeX's red fallback, never crash),
+  and only ever injects KaTeX output — authored text is rendered as React text
+  nodes, never via `dangerouslySetInnerHTML`.
+- **KaTeX via npm, not CDN:** the handoff doc suggested a CDN `<link>`, but we
+  have a bundler, so `katex` is an npm dependency and `katex/dist/katex.min.css`
+  is imported globally in `main.tsx`. Rationale: versioned/locked dependency,
+  offline/dev-server friendly, fonts fingerprinted and served from our own
+  origin (no third-party CDN dependency or SRI concerns), tree-shaken by Vite.
 - **Content discovery:** the loader uses Vite's
   `import.meta.glob('/content/**/*.json', { eager: true })`. `/content` sits at
   the repo root (the Vite root), so the absolute glob resolves it directly — no
