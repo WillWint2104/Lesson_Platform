@@ -1,0 +1,12 @@
+{
+  "area": {
+    "title": "Expanding Brackets",
+    "notes": "notes.json",
+    "sequence": [
+      { "type": "video", "title": "Introduction to expanding brackets", "src": null },
+      { "type": "exercise", "title": "Warm-up", "questions": "exercise-1.json" },
+      { "type": "video", "title": "Worked examples", "src": null },
+      { "type": "exercise", "title": "Practice", "questions": "exercise-2.json" }
+    ]
+  }
+}
