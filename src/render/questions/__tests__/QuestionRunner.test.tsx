@@ -148,4 +148,21 @@ describe("QuestionRunner", () => {
     render(<QuestionRunner questions={bogus} onResult={vi.fn()} onComplete={vi.fn()} />);
     expect(screen.getByRole("alert").textContent).toContain("mystery");
   });
+
+  it("resets safely when the questions prop is swapped (no out-of-bounds)", () => {
+    const onResult = vi.fn();
+    const { rerender } = render(
+      <QuestionRunner questions={[mc(1), mc(0)]} onResult={onResult} onComplete={vi.fn()} />,
+    );
+    // Advance to question 2 of the first set.
+    fireEvent.click(screen.getByRole("button", { name: "Option B" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(screen.getByText("Question 2 of 2")).toBeTruthy();
+
+    // Swap in a shorter set — index 1 would be out of bounds without a reset.
+    rerender(
+      <QuestionRunner questions={[mc(2)]} onResult={onResult} onComplete={vi.fn()} />,
+    );
+    expect(screen.getByText("Question 1 of 1")).toBeTruthy();
+  });
 });
