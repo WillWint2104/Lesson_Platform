@@ -129,6 +129,15 @@ function validateQuestion(report: Report, path: string, raw: unknown): void {
     return;
   }
 
+  // `topic` is explicitly forbidden on questions — topic comes from the content
+  // hierarchy (CLAUDE.md §e). This is a hard error, not a forward-compat warning.
+  if ("topic" in raw) {
+    report.error(
+      path,
+      "field 'topic' is not allowed on questions — topic comes from the content hierarchy",
+    );
+  }
+
   const type = raw["type"];
   if (type === undefined || type === null || type === "") {
     report.error(path, "missing required field 'type'");
@@ -183,7 +192,9 @@ function validateQuestion(report: Report, path: string, raw: unknown): void {
       break;
   }
 
-  warnUnknownFields(report, path, raw, knownFields);
+  // `topic` is already reported as an error above; list it here so it is not
+  // also double-reported as an unknown-field warning.
+  warnUnknownFields(report, path, raw, [...knownFields, "topic"]);
 }
 
 function validateTableRows(report: Report, path: string, rows: unknown): void {

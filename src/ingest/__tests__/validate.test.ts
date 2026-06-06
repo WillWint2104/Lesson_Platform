@@ -9,6 +9,7 @@ import {
   validateQuestionsFile,
   type Issue,
 } from "../validate";
+import { buildLessonRegistry } from "../load";
 
 const qfile = (questions: unknown[]) => ({ questions });
 const nfile = (notes: unknown[]) => ({ notes });
@@ -107,6 +108,16 @@ describe("validateQuestionsFile — errors", () => {
         "field 'isCorrect' must be a boolean",
       ),
     ).toBe(true);
+  });
+
+  it("treats a 'topic' field on a question as a hard error (not a warning)", () => {
+    const res = validateQuestionsFile(
+      qfile([{ type: "text", prompt: "x", topic: "algebra" }]),
+    );
+    expect(res.valid).toBe(false);
+    expect(has(res.errors, "questions[0]", "field 'topic' is not allowed")).toBe(true);
+    // And it is not ALSO double-reported as an unknown-field warning.
+    expect(res.warnings.some((w) => w.message.includes("'topic'"))).toBe(false);
   });
 
   it("accepts a well-formed questions file", () => {
@@ -274,6 +285,83 @@ describe("validateManifest", () => {
     });
     expect(has(res.errors, "lesson.notes[0]", "missing required field 'text'")).toBe(true);
     expect(has(res.errors, "lesson.questions[0]", "missing required field 'prompt'")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Loader registry: duplicate-id determinism + stale-ID guard
+// ---------------------------------------------------------------------------
+
+describe("buildLessonRegistry", () => {
+  const mk = (id: string, title: string) => ({
+    lesson: {
+      id,
+      title,
+      subject: "math",
+      video: { src: "v.mp4", duration: null },
+      notes: [],
+      questions: [],
+    },
+  });
+
+  it("keeps the first-seen lesson for a duplicate id and flags the later one", () => {
+    const reg = buildLessonRegistry({
+      "/content/a/lesson.json": mk("dup", "A"),
+      "/content/b/lesson.json": mk("dup", "B"),
+    });
+    expect(reg.lessons).toHaveLength(2);
+    // /content/a sorts first, so it wins the id.
+    expect(reg.getLessonById("dup")?.title).toBe("A");
+    const later = reg.lessons.find((l) => l.path === "/content/b/lesson.json");
+    expect(later?.errors.some((e) => e.message.includes("duplicate lesson id"))).toBe(true);
+  });
+
+  it("getLessonById returns undefined for unknown ids (truthiness is not validity)", () => {
+    const reg = buildLessonRegistry({ "/content/a/lesson.json": mk("real", "A") });
+    expect(reg.getLessonById("real")?.title).toBe("A");
+    expect(reg.getLessonById("missing")).toBeUndefined();
+    expect(reg.getLessonById("")).toBeUndefined();
+  });
+
+  it("resolves referenced notes/questions files relative to the lesson dir", () => {
+    const reg = buildLessonRegistry({
+      "/content/x/lesson.json": {
+        lesson: {
+          id: "x",
+          title: "X",
+          subject: "math",
+          video: { src: "v.mp4", duration: null },
+          notes: "notes.json",
+          questions: "questions.json",
+        },
+      },
+      "/content/x/notes.json": { notes: [{ type: "heading", text: "Hi" }] },
+      "/content/x/questions.json": { questions: [{ type: "text", prompt: "Q" }] },
+    });
+    const lesson = reg.getLessonById("x");
+    expect(lesson?.valid).toBe(true);
+    expect(lesson?.notes).toHaveLength(1);
+    expect(lesson?.questions).toHaveLength(1);
+  });
+
+  it("reports a missing referenced file without throwing", () => {
+    const reg = buildLessonRegistry({
+      "/content/y/lesson.json": {
+        lesson: {
+          id: "y",
+          title: "Y",
+          subject: "math",
+          video: { src: "v.mp4", duration: null },
+          notes: "missing.json",
+          questions: [],
+        },
+      },
+    });
+    const lesson = reg.getLessonById("y");
+    expect(lesson?.valid).toBe(false);
+    expect(lesson?.errors.some((e) => e.message.includes("referenced notes file not found"))).toBe(
+      true,
+    );
   });
 });
 

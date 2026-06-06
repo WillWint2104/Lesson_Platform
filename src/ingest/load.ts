@@ -162,8 +162,12 @@ export function buildLessonRegistry(
   const issuesByLesson: LessonRegistry["issuesByLesson"] = {};
   const byId = new Map<string, ValidatedLesson>();
   for (const lesson of lessons) {
-    issuesByLesson[lesson.id] = { errors: lesson.errors, warnings: lesson.warnings };
-    byId.set(lesson.id, lesson);
+    // Keep the first lesson seen for a given id deterministic; a later duplicate
+    // (already flagged with an error above) must not overwrite it.
+    if (!byId.has(lesson.id)) {
+      byId.set(lesson.id, lesson);
+      issuesByLesson[lesson.id] = { errors: lesson.errors, warnings: lesson.warnings };
+    }
   }
 
   return {
