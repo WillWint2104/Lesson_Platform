@@ -74,6 +74,17 @@ describe("Library", () => {
     expect(screen.getByText("more soon")).toBeTruthy();
   });
 
+  it("shows the local-progress notice once and persists dismissal via the store", () => {
+    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
+    const store = buildStore(registry);
+    renderAt("/", registry, store);
+    expect(screen.getByText(/saved in this browser/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText(/saved in this browser/i)).toBeNull();
+    expect(store.isNoticeDismissed("local-progress")).toBe(true);
+  });
+
   it("hides the continue hero when there is no last-visited lesson", () => {
     const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
     renderAt("/", registry, buildStore(registry));
