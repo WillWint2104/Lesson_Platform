@@ -87,6 +87,12 @@ never hardcode hex** — always reference tokens.
 - **Math:** KaTeX for ALL math (`$...$` inline / `$$...$$` block). Backslashes are
   **doubled in JSON** (e.g. `"\\frac{1}{2}"`).
 - **Dark videos** sit in **bold-framed dark panels**.
+- **Layout tokens** (in `tokens.css`, also authoritative): a **4px spacing scale**
+  `--space-1..8`, corner radii `--radius-sm/md/lg/pill`, per-screen container
+  widths `--container-wide` (1120, hub/grid) / `--container-list` (880, lesson
+  list) / `--container-reading` (720, lesson content), and page padding
+  `--page-pad-inline`/`--page-pad-block`. Screens consume these — **no literal
+  sizes in component CSS** (radius/padding/width all go through tokens).
 
 **Navigation:** Map-based topic navigation was explored and **ABANDONED**. Topic pages
 are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
@@ -211,6 +217,14 @@ for minimal valid examples of all three files.
   + each lesson's `areaIndex`/`areaCount`. Sequential unlock logic lives in the
   pure `/src/app/unlock.ts`. The old multi-lesson harness is retained DORMANT at
   `/debug` (lesson 8/9), linked nowhere.
+- **Responsive layout system:** `.app-page` is a centered container, fluid
+  below a per-screen max-width (`--app-page--wide` Library / `--list` lesson list
+  / `--reading` lesson page). The **Library is a hub**: greeting + day/date
+  kicker, registry-driven subject pills, an **always-present** hero ("Continue
+  where you left off" when there is a last-visited lesson, else "Start here" at
+  the first lesson), and a responsive topic grid (1/2/3 cols) of topic cards with
+  in-card area rows; a dashed empty-room placeholder tile keeps a one-topic
+  library reading as "early", not broken. Tuned at 360/768/1280/1920.
 - **Lesson page** (`LessonPage`): framed video + Notes/Practice tabs (default
   Notes). Practice resumes at the first unanswered question for incomplete
   lessons; the summary offers "Back to <area>" + "Next lesson →" (when the next
@@ -223,7 +237,7 @@ for minimal valid examples of all three files.
 
   | Route | Screen |
   |-------|--------|
-  | `/` | Library (subject pills, continue hero, topic cards) |
+  | `/` | Library **hub** (greeting + day/date kicker, subject pills, always-present hero, responsive topic grid with in-card area rows + empty-room placeholder) |
   | `/:subject/:topic/:topicArea` | Lesson-selection list + locked checkpoint |
   | `/:subject/:topic/:topicArea/:lessonId` | Lesson page (framed video, Notes/Practice tabs, resume + review mode, next-lesson CTA) |
   | `/debug` | Dormant dev harness |
