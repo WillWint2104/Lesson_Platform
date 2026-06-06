@@ -212,6 +212,19 @@ describe("encapsulation and guards", () => {
     expect(backend.getItem(PROGRESS_KEY)).toBeNull();
   });
 
+  it("keeps a notice dismissed for the session even if the persistent write fails", () => {
+    const failing = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error("quota exceeded");
+      },
+      removeItem: () => {},
+    };
+    const store = createProgressStore({ backend: failing, persistent: true });
+    store.dismissNotice("local-progress");
+    expect(store.isNoticeDismissed("local-progress")).toBe(true);
+  });
+
   it("persistent is false when stored data is a newer version", () => {
     const backend = createMemoryBackend();
     backend.setItem(

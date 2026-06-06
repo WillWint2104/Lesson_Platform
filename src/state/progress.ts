@@ -191,6 +191,8 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   const now = options.now ?? (() => new Date().toISOString());
 
   const listeners = new Set<() => void>();
+  // Session-level fallback so a dismissal still hides even if the write fails.
+  const dismissedNotices = new Set<string>();
 
   // ---- Load (robust) ----
   const load = loadRaw(backend);
@@ -400,6 +402,7 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     },
 
     isNoticeDismissed(noticeId) {
+      if (dismissedNotices.has(noticeId)) return true;
       try {
         return backend.getItem(`lp:notice:${noticeId}`) === "1";
       } catch {
@@ -408,10 +411,13 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     },
 
     dismissNotice(noticeId) {
+      // Hold it in memory first so the dismissal sticks for this session even if
+      // the persistent write below fails.
+      dismissedNotices.add(noticeId);
       try {
         backend.setItem(`lp:notice:${noticeId}`, "1");
       } catch {
-        // Best effort — a dismissal that can't persist still hides for the session.
+        // Best effort — the in-memory flag still hides it for the session.
       }
       notify();
     },
