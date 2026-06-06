@@ -86,9 +86,11 @@ function areaProgress(area: ValidatedArea, store: ProgressStore): { done: number
 
 function firstAreaOf(registry: AreaRegistry, subject: string | null): ValidatedArea | undefined {
   if (!subject) return undefined;
-  const topic = registry.getTopics(subject)[0];
-  if (!topic) return undefined;
-  return registry.getAreasInTopic(subject, topic).find((a) => a.valid);
+  for (const topic of registry.getTopics(subject)) {
+    const firstValid = registry.getAreasInTopic(subject, topic).find((a) => a.valid);
+    if (firstValid) return firstValid;
+  }
+  return undefined;
 }
 
 function Hero({ subject }: { subject: string | null }) {
@@ -96,10 +98,12 @@ function Hero({ subject }: { subject: string | null }) {
   const store = useProgressStore();
   const lastId = store.getLastVisitedAreaId();
   const lastArea = lastId ? registry.getAreaById(lastId) : undefined;
-  const target = lastArea ?? firstAreaOf(registry, subject);
+  // Only continue to a *valid* last-visited area; otherwise fall back to "start here".
+  const resume = lastArea?.valid ? lastArea : undefined;
+  const target = resume ?? firstAreaOf(registry, subject);
   if (!target) return null;
 
-  const kicker = lastArea ? "Continue where you left off" : "Start here";
+  const kicker = resume ? "Continue where you left off" : "Start here";
   return (
     <Link className="hero" to={areaPath(target)}>
       <span className="hero__kicker">{kicker}</span>

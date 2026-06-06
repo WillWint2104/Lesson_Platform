@@ -158,6 +158,30 @@ describe("stale-id guard + encapsulation", () => {
     expect(store.getState().areas["ghost"]).toBeDefined(); // retained
   });
 
+  it("rejects writes to unknown area ids (guards reads AND writes)", () => {
+    const store = createProgressStore({
+      backend: createMemoryBackend(),
+      areaIds: ["real"],
+      now: () => "T",
+    });
+    store.recordOutcome("ghost", 0, 0, "correct");
+    store.recordAttempt("ghost", 0, true);
+    store.setLastVisited("ghost");
+    expect(store.getState().areas["ghost"]).toBeUndefined(); // never persisted
+    expect(store.getState().lastVisitedAreaId).toBeNull();
+
+    store.recordOutcome("real", 0, 0, "correct"); // known id still writes
+    expect(store.getExerciseProgress("real", 0)?.questionOutcomes[0]).toBe("correct");
+  });
+
+  it("an empty areaIds registry rejects all writes (truthiness is not validity)", () => {
+    const store = createProgressStore({ backend: createMemoryBackend(), areaIds: [] });
+    store.recordOutcome("anything", 0, 0, "correct");
+    store.setLastVisited("anything");
+    expect(store.getState().areas).toEqual({});
+    expect(store.getState().lastVisitedAreaId).toBeNull();
+  });
+
   it("getState returns a copy that cannot mutate the store", () => {
     const store = createProgressStore({ backend: createMemoryBackend() });
     store.recordOutcome("A", 0, 0, "correct");

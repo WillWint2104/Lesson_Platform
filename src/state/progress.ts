@@ -198,8 +198,16 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   const backendPersistent = detected.persistent;
 
   const knownAreaIds = new Set(options.areaIds ?? []);
-  const hasRegistry = knownAreaIds.size > 0;
+  // Truthiness is not validity (CLAUDE.md §c rule 7): the registry is "present"
+  // whenever areaIds was supplied — even as an empty array (which then means
+  // *nothing* is known) — not merely when it is non-empty.
+  const hasRegistry = options.areaIds !== undefined;
   const now = options.now ?? (() => new Date().toISOString());
+
+  /** Stale-id guard: with a registry present, only known area ids are valid. */
+  function isKnownAreaId(areaId: string): boolean {
+    return !hasRegistry || knownAreaIds.has(areaId);
+  }
 
   const listeners = new Set<() => void>();
   const dismissedNotices = new Set<string>();
@@ -300,23 +308,25 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
 
     getLastVisitedAreaId() {
       const id = state.lastVisitedAreaId;
-      if (id !== null && hasRegistry && !knownAreaIds.has(id)) return null;
+      if (id !== null && !isKnownAreaId(id)) return null;
       return id;
     },
 
     getExerciseProgress(areaId, segmentIndex) {
-      if (hasRegistry && !knownAreaIds.has(areaId)) return null;
+      if (!isKnownAreaId(areaId)) return null;
       const seg = state.areas[areaId]?.segments[segmentIndex];
       return seg ? cloneExercise(seg) : null;
     },
 
     recordOutcome(areaId, segmentIndex, questionIndex, outcome) {
+      if (!isKnownAreaId(areaId)) return; // never persist ghost area records
       ensureExercise(areaId, segmentIndex).questionOutcomes[questionIndex] = outcome;
       persist();
       notify();
     },
 
     recordAttempt(areaId, segmentIndex, completed) {
+      if (!isKnownAreaId(areaId)) return; // never persist ghost area records
       const seg = ensureExercise(areaId, segmentIndex);
       seg.attempts += 1;
       if (completed && seg.completedAt === null) seg.completedAt = now();
@@ -325,6 +335,7 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     },
 
     setLastVisited(areaId) {
+      if (!isKnownAreaId(areaId)) return; // never persist a stale last-visited id
       state.lastVisitedAreaId = areaId;
       persist();
       notify();

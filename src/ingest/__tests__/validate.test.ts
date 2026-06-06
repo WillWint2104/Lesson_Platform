@@ -526,7 +526,20 @@ describe("/content is a living fixture", () => {
     else if (base === "notes.json") res = validateNotesFile(raw);
     else if (raw && typeof raw === "object" && "questions" in raw)
       res = validateQuestionsFile(raw, { figureSchemas });
-    else res = { valid: true, errors: [] as Issue[], warnings: [] as Issue[] };
+    // Never silently pass unrecognized content (CLAUDE.md §c rule 6): a misnamed
+    // or malformed file under /content must fail this CI guard, not slip through.
+    else
+      res = {
+        valid: false,
+        errors: [
+          {
+            path: rel,
+            message:
+              "unrecognized content file — expected area.json, notes.json, or a { questions: [...] } payload",
+          },
+        ] as Issue[],
+        warnings: [] as Issue[],
+      };
     if (!res.valid) {
       throw new Error(
         `${rel} failed validation:\n` +
