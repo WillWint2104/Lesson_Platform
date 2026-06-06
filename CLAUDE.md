@@ -125,6 +125,13 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 **video `src` + notes + questions** together into one lesson. `notes`/`questions`
 are either inline arrays or a file path relative to the lesson dir.
 
+`video.src` is a **YouTube source** (a `youtube.com/watch` URL, a `youtu.be`
+short link, a `youtube.com/embed` URL, or a bare 11-char id) **or `null`**.
+`null` is a first-class "authored before its video was recorded" state
+(generation may run ahead of studio recording). An unparseable `src` is an
+error. All parsing goes through `parseYouTubeId` (`/src/shared/youtube.ts`) —
+the single resolver used by both the validator and `<VideoEmbed>`.
+
 **Hierarchy is path-derived, never in the manifest.** `subject`, `topic`, and
 `topicArea` come from the directory path
 (`/content/<subject>/<topic>/<topic-area>/<lesson-id>/`) and are stamped on the
@@ -186,7 +193,11 @@ for minimal valid examples of all three files.
   per-kind modules dispatched by (kind, specVersion); see §g. Two proof kinds
   ship: `triangle-figure` and `bearing-diagram`. The question runtime renders
   figures through the registry's `FigureSlot`.
-- **Still stubs:** `/src/render/video-embed.tsx`, `/src/shared/builders.ts`.
+- **Video embed is implemented:** `/src/render/VideoEmbed.tsx` — a bold-framed
+  near-black 16:9 stage with a privacy-friendly `youtube-nocookie` iframe
+  (lazy-loaded, `rel=0`, no API keys/tracking). `src: null` renders a
+  studio-mint "video coming soon" panel (honest state, not an error).
+- **Still stubs:** `/src/shared/builders.ts`.
 - **All math goes through `MathText` — never call `katex` directly in a
   component.** `MathText` is the single shared math renderer (CLAUDE.md §c rule
   4); the question runtime will reuse it. It segments `$...$`/`$$...$$`, renders
