@@ -110,6 +110,46 @@ describe("validateQuestionsFile — errors", () => {
     ).toBe(true);
   });
 
+  it("flags a multiple-choice question with more than one correct option", () => {
+    const res = validateQuestionsFile(
+      qfile([
+        {
+          type: "multiple-choice",
+          prompt: "x",
+          options: [
+            { text: "a", isCorrect: true },
+            { text: "b", isCorrect: true },
+            { text: "c", isCorrect: false },
+          ],
+        },
+      ]),
+    );
+    expect(res.valid).toBe(false);
+    expect(
+      has(
+        res.errors,
+        "questions[0] (multiple-choice)",
+        "exactly one option may have isCorrect: true (found 2)",
+      ),
+    ).toBe(true);
+  });
+
+  it("accepts a multiple-choice question with exactly one correct option", () => {
+    const res = validateQuestionsFile(
+      qfile([
+        {
+          type: "multiple-choice",
+          prompt: "x",
+          options: [
+            { text: "a", isCorrect: true },
+            { text: "b", isCorrect: false },
+          ],
+        },
+      ]),
+    );
+    expect(res.valid).toBe(true);
+  });
+
   it("treats a 'topic' field on a question as a hard error (not a warning)", () => {
     const res = validateQuestionsFile(
       qfile([{ type: "text", prompt: "x", topic: "algebra" }]),
@@ -252,7 +292,6 @@ describe("validateManifest", () => {
     lesson: {
       id: "x-1",
       title: "Lesson",
-      subject: "math",
       video: { src: "v.mp4", duration: null },
       notes: "notes.json",
       questions: "questions.json",
@@ -262,6 +301,17 @@ describe("validateManifest", () => {
   it("accepts a well-formed manifest with file-path references", () => {
     expect(validateManifest(goodManifest).valid).toBe(true);
   });
+
+  it.each(["subject", "topic", "topicArea"])(
+    "rejects a manifest carrying the hierarchy field '%s'",
+    (field) => {
+      const res = validateManifest({
+        lesson: { ...goodManifest.lesson, [field]: "math" },
+      });
+      expect(res.valid).toBe(false);
+      expect(has(res.errors, `lesson.${field}`, "hierarchy fields are not allowed")).toBe(true);
+    },
+  );
 
   it("flags a manifest missing the lesson wrapper", () => {
     const res = validateManifest({ id: "x" });
@@ -293,50 +343,79 @@ describe("validateManifest", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildLessonRegistry", () => {
-  const mk = (id: string, title: string) => ({
+  // Well-formed manifest body (no hierarchy fields — those come from the path).
+  const body = (id: string, title: string, extra: Record<string, unknown> = {}) => ({
     lesson: {
       id,
       title,
-      subject: "math",
       video: { src: "v.mp4", duration: null },
       notes: [],
       questions: [],
+      ...extra,
     },
+  });
+  // /content/<subject>/<topic>/<topic-area>/<lesson-id>/lesson.json
+  const at = (topicArea: string, id: string) =>
+    `/content/math/algebra/${topicArea}/${id}/lesson.json`;
+
+  it("derives subject/topic/topicArea from the directory path", () => {
+    const reg = buildLessonRegistry({
+      "/content/science/biology/cells/intro/lesson.json": body("intro", "Intro"),
+    });
+    const lesson = reg.getLessonById("intro");
+    expect(lesson?.valid).toBe(true);
+    expect(lesson?.subject).toBe("science");
+    expect(lesson?.topic).toBe("biology");
+    expect(lesson?.topicArea).toBe("cells");
+  });
+
+  it("errors on a malformed (wrong-depth) manifest path, naming it", () => {
+    const reg = buildLessonRegistry({ "/content/oops/lesson.json": body("oops", "Oops") });
+    const lesson = reg.lessons[0];
+    expect(lesson?.valid).toBe(false);
+    expect(
+      lesson?.errors.some(
+        (e) =>
+          e.path === "/content/oops/lesson.json" &&
+          e.message.includes("unexpected shape") &&
+          e.message.includes("/content/<subject>/<topic>/<topic-area>/<lesson-id>/lesson.json"),
+      ),
+    ).toBe(true);
   });
 
   it("keeps the first-seen lesson for a duplicate id and flags the later one", () => {
     const reg = buildLessonRegistry({
-      "/content/a/lesson.json": mk("dup", "A"),
-      "/content/b/lesson.json": mk("dup", "B"),
+      [at("a-area", "dup")]: body("dup", "A"),
+      [at("b-area", "dup")]: body("dup", "B"),
     });
     expect(reg.lessons).toHaveLength(2);
-    // /content/a sorts first, so it wins the id.
+    // a-area sorts before b-area, so it wins the id.
     expect(reg.getLessonById("dup")?.title).toBe("A");
-    const later = reg.lessons.find((l) => l.path === "/content/b/lesson.json");
+    const later = reg.lessons.find((l) => l.path === at("b-area", "dup"));
     expect(later?.errors.some((e) => e.message.includes("duplicate lesson id"))).toBe(true);
   });
 
   it("getLessonById returns undefined for unknown ids (truthiness is not validity)", () => {
-    const reg = buildLessonRegistry({ "/content/a/lesson.json": mk("real", "A") });
+    const reg = buildLessonRegistry({ [at("expanding", "real")]: body("real", "A") });
     expect(reg.getLessonById("real")?.title).toBe("A");
     expect(reg.getLessonById("missing")).toBeUndefined();
     expect(reg.getLessonById("")).toBeUndefined();
   });
 
   it("resolves referenced notes/questions files relative to the lesson dir", () => {
+    const dir = "/content/math/algebra/expanding/x/";
     const reg = buildLessonRegistry({
-      "/content/x/lesson.json": {
+      [`${dir}lesson.json`]: {
         lesson: {
           id: "x",
           title: "X",
-          subject: "math",
           video: { src: "v.mp4", duration: null },
           notes: "notes.json",
           questions: "questions.json",
         },
       },
-      "/content/x/notes.json": { notes: [{ type: "heading", text: "Hi" }] },
-      "/content/x/questions.json": { questions: [{ type: "text", prompt: "Q" }] },
+      [`${dir}notes.json`]: { notes: [{ type: "heading", text: "Hi" }] },
+      [`${dir}questions.json`]: { questions: [{ type: "text", prompt: "Q" }] },
     });
     const lesson = reg.getLessonById("x");
     expect(lesson?.valid).toBe(true);
@@ -346,11 +425,10 @@ describe("buildLessonRegistry", () => {
 
   it("reports a missing referenced file without throwing", () => {
     const reg = buildLessonRegistry({
-      "/content/y/lesson.json": {
+      [at("expanding", "y")]: {
         lesson: {
           id: "y",
           title: "Y",
-          subject: "math",
           video: { src: "v.mp4", duration: null },
           notes: "missing.json",
           questions: [],
