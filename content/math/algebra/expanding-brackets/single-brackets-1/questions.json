@@ -4,7 +4,12 @@
       "type": "text",
       "prompt": "Expand $4(x + 3)$.",
       "skill": "expanding-single-brackets",
-      "difficulty": "easy"
+      "difficulty": "easy",
+      "answer": "$4x + 12$",
+      "working": [
+        "$4 \\times x = 4x$",
+        "$4 \\times 3 = 12$"
+      ]
     },
     {
       "type": "multiple-choice",
@@ -24,7 +29,26 @@
       "rows": [
         ["$5(x + 1)$", ""],
         ["$3(2x - 4)$", ""]
+      ],
+      "answer": "$5(x + 1) = 5x + 5$ and $3(2x - 4) = 6x - 12$"
+    },
+    {
+      "type": "geometry",
+      "prompt": "Find the area of a triangle with base $6$ and height $4$.",
+      "skill": "triangle-area",
+      "difficulty": "medium",
+      "geometryData": { "shape": "triangle", "base": 6, "height": 4 },
+      "answer": "$12$",
+      "working": [
+        "Area $= \\frac{1}{2} \\times b \\times h$",
+        "$= \\frac{1}{2} \\times 6 \\times 4 = 12$"
       ]
+    },
+    {
+      "type": "text",
+      "prompt": "In your own words, explain what it means to expand a bracket.",
+      "skill": "expanding-single-brackets",
+      "difficulty": "easy"
     }
   ]
 }
