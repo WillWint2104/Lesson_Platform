@@ -59,7 +59,10 @@ export interface ScopedProgress {
 
 export interface ProgressStore {
   readonly persistent: boolean;
+  /** Deep copy of the current state — callers cannot mutate the store through it. */
   getState(): ProgressState;
+  /** Stale-id-guarded: null when the stored id is absent from the registry. */
+  getLastVisitedLessonId(): string | null;
   getLessonProgress(lessonId: string): LessonRecord | null;
   getTopicProgress(subject: string, topic: string): ScopedProgress;
   getTopicAreaProgress(subject: string, topic: string, topicArea: string): ScopedProgress;
@@ -152,7 +155,7 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     ? { backend: options.backend, persistent: options.persistent ?? true }
     : detectBackend();
   const backend = detected.backend;
-  const persistent = detected.persistent;
+  const backendPersistent = detected.persistent;
 
   const index = options.lessons ?? [];
   const knownIds = new Set(index.map((l) => l.id));
@@ -180,8 +183,12 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
       break;
   }
 
+  // Persistence is OFF if the backend can't persist OR a future-schema blob
+  // forced an in-memory session.
+  const persistent = backendPersistent && !persistDisabled;
+
   // ---- One-time warnings (per store instance ~ per session) ----
-  if (!persistent) {
+  if (!backendPersistent) {
     console.warn(
       "[progress] localStorage is unavailable; progress will be kept in memory for this session only.",
     );
@@ -227,6 +234,16 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     return rec;
   }
 
+  // Reads hand out copies so callers can never mutate the store's state
+  // outside the single recordOutcome/recordAttempt/... mutation path.
+  function cloneRecord(rec: LessonRecord): LessonRecord {
+    return {
+      questionOutcomes: { ...rec.questionOutcomes },
+      attempts: rec.attempts,
+      completedAt: rec.completedAt,
+    };
+  }
+
   function scope(filter: (l: LessonIndexEntry) => boolean): ScopedProgress {
     const records: Record<string, LessonRecord> = {};
     const lessonIds: string[] = [];
@@ -241,7 +258,7 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
       if (!filter(lesson)) continue;
       const rec = state.lessons[lesson.id];
       if (!rec) continue;
-      records[lesson.id] = rec;
+      records[lesson.id] = cloneRecord(rec);
       lessonIds.push(lesson.id);
       if (rec.completedAt) completedCount += 1;
       attemptCount += rec.attempts;
@@ -258,13 +275,24 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     persistent,
 
     getState() {
-      return state;
+      const lessons: Record<string, LessonRecord> = {};
+      for (const [id, rec] of Object.entries(state.lessons)) lessons[id] = cloneRecord(rec);
+      return { version: state.version, lastVisitedLessonId: state.lastVisitedLessonId, lessons };
+    },
+
+    getLastVisitedLessonId() {
+      // Stale-id guard (lesson 7): a stored id absent from the registry is not
+      // acted on, though it is retained in storage.
+      const id = state.lastVisitedLessonId;
+      if (id !== null && hasRegistry && !knownIds.has(id)) return null;
+      return id;
     },
 
     getLessonProgress(lessonId) {
       // Stale-id guard: validate against the registry when one is loaded.
       if (hasRegistry && !knownIds.has(lessonId)) return null;
-      return state.lessons[lessonId] ?? null;
+      const rec = state.lessons[lessonId];
+      return rec ? cloneRecord(rec) : null;
     },
 
     getTopicProgress(subject, topic) {

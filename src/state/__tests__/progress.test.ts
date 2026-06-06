@@ -160,6 +160,56 @@ describe("robustness", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Encapsulation + lastVisited stale-id guard + persistent accuracy
+// ---------------------------------------------------------------------------
+
+describe("encapsulation and guards", () => {
+  it("getState returns a copy that cannot mutate the store", () => {
+    const store = createProgressStore({
+      backend: createMemoryBackend(),
+      lessons: [{ id: "a", subject: "s", topic: "t", topicArea: "x" }],
+    });
+    store.recordOutcome("a", 0, "correct");
+
+    const snap = store.getState();
+    snap.lessons["a"]!.attempts = 999;
+    snap.lessons["hacked"] = { questionOutcomes: {}, attempts: 1, completedAt: null };
+
+    expect(store.getState().lessons["a"]!.attempts).toBe(0);
+    expect(store.getState().lessons["hacked"]).toBeUndefined();
+  });
+
+  it("getLastVisitedLessonId excludes ids absent from the registry", () => {
+    const backend = createMemoryBackend();
+    backend.setItem(
+      PROGRESS_KEY,
+      JSON.stringify({ version: 1, lastVisitedLessonId: "ghost", lessons: {} }),
+    );
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = createProgressStore({
+      backend,
+      persistent: true,
+      lessons: [{ id: "a", subject: "s", topic: "t", topicArea: "x" }],
+    });
+
+    expect(store.getLastVisitedLessonId()).toBeNull(); // stale → excluded
+    store.setLastVisited("a");
+    expect(store.getLastVisitedLessonId()).toBe("a"); // valid → returned
+  });
+
+  it("persistent is false when stored data is a newer version", () => {
+    const backend = createMemoryBackend();
+    backend.setItem(
+      PROGRESS_KEY,
+      JSON.stringify({ version: 99, lastVisitedLessonId: null, lessons: {} }),
+    );
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const store = createProgressStore({ backend, persistent: true });
+    expect(store.persistent).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // completedAt semantics
 // ---------------------------------------------------------------------------
 

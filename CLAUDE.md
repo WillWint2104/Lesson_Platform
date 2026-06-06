@@ -163,10 +163,10 @@ for minimal valid examples of all three files.
   `QuestionRunner` (one question at a time, progress dots + difficulty badge,
   end-of-set summary), per-type bodies (MC, text, table, graph/geometry), and
   one shared self-mark/reveal flow + result type (`Outcome`/`QuestionResult`,
-  CLAUDE.md §c rule 4). The runtime emits results via `onResult`/`onComplete`
-  callbacks only — **no persistence** (the progress store is a later PR). Graph
-  and geometry render a token-styled `FigurePlaceholder` (a swappable slot for
-  the upcoming figure-renderer PR), not real figures.
+  CLAUDE.md §c rule 4). The runtime itself holds no persistence — it emits
+  results via `onResult`/`onComplete` callbacks, which the progress store layer
+  consumes. Graph and geometry render a token-styled `FigurePlaceholder` (a
+  swappable slot for the upcoming figure-renderer PR), not real figures.
 - **Progress store is implemented:** `/src/state/` — `progress.ts`
   (localStorage-backed, single versioned key `lp:progress:v1`; ONE
   serialize/restore pair with an explicit field whitelist; hierarchy-scoped
