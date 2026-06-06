@@ -167,6 +167,12 @@ for minimal valid examples of all three files.
 - **TypeScript strict mode is on;** path alias `@` → `/src`.
 - **Video hosting: YouTube unlisted embeds** (no embed implementation yet).
 - **App hosting: TBD.**
+- **Soft-launch: `noindex` active** — `index.html` carries
+  `<meta name="robots" content="noindex">` for the testing period; **remove it at
+  public launch**. A one-time dismissible "progress is local to this browser"
+  notice shows on the Library; its dismissal persists through the progress
+  store's storage layer (`isNoticeDismissed`/`dismissNotice`, a separate
+  `lp:notice:*` key — UI state, not in the versioned progress key).
 - **`/src/ingest` is implemented:** `types.ts` (contracts), `validate.ts`
   (pure, non-throwing validators with actionable path-precise errors + the
   un-doubled-LaTeX control-character tripwire), and `load.ts` (discovery +
