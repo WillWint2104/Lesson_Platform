@@ -1,35 +1,58 @@
 /**
- * @file unlock.ts — sequential lesson-unlock logic (pure, unit-tested).
+ * @file unlock.ts — sequential segment-unlock logic for an area (pure, tested).
  *
- * Lesson i is unlocked iff i === 0 OR lesson i−1 is completed. "Current" is the
- * first unlocked-but-incomplete lesson. Completed lessons stay openable (Review).
+ * Within an area's ordered sequence: VIDEO segments never block and are always
+ * open. An EXERCISE segment is unlocked iff every exercise segment BEFORE it is
+ * complete. "Current" is the first unlocked-but-incomplete exercise. Completed
+ * exercises stay open.
  */
 
-export type LessonStatus = "done" | "current" | "locked";
+export type SegmentStatus = "video" | "done" | "current" | "locked";
 
-export interface UnlockState {
+export interface SegmentInput {
+  type: "video" | "exercise";
+  /** For exercises: whether the segment is complete. Ignored for videos. */
+  complete: boolean;
+}
+
+export interface SegmentState {
   index: number;
-  status: LessonStatus;
-  /** Whether the lesson can be opened (done or current). */
+  type: "video" | "exercise";
+  status: SegmentStatus;
+  /** Whether the segment can be opened (videos + done/current exercises). */
   unlocked: boolean;
 }
 
-/** Given each lesson's completed flag (in order), classify every lesson. */
-export function computeUnlockStates(completed: boolean[]): UnlockState[] {
-  const states: UnlockState[] = [];
+export function computeSegmentUnlock(segments: SegmentInput[]): SegmentState[] {
+  const states: SegmentState[] = [];
+  let priorExerciseIncomplete = false; // once true, later exercises lock
   let currentTaken = false;
-  for (let i = 0; i < completed.length; i++) {
-    const prevDone = i === 0 || completed[i - 1] === true;
-    let status: LessonStatus;
-    if (completed[i]) {
+
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i]!;
+    if (seg.type === "video") {
+      states.push({ index: i, type: "video", status: "video", unlocked: true });
+      continue;
+    }
+    const unlocked = !priorExerciseIncomplete;
+    let status: SegmentStatus;
+    if (seg.complete) {
       status = "done";
-    } else if (prevDone && !currentTaken) {
+    } else if (unlocked && !currentTaken) {
       status = "current";
       currentTaken = true;
     } else {
       status = "locked";
     }
-    states.push({ index: i, status, unlocked: status !== "locked" });
+    if (!seg.complete) priorExerciseIncomplete = true;
+    states.push({ index: i, type: "exercise", status, unlocked: status !== "locked" });
   }
+
   return states;
+}
+
+/** True when every exercise segment is complete (area complete). Videos ignored. */
+export function isAreaComplete(segments: SegmentInput[]): boolean {
+  const exercises = segments.filter((s) => s.type === "exercise");
+  return exercises.length > 0 && exercises.every((s) => s.complete);
 }
