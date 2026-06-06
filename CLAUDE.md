@@ -103,6 +103,11 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
   - `table` carries `rows` (`string[][]`).
   - `graph` / `geometry` carry `graphData` / `geometryData`.
 - **Optional:** `skill`, `difficulty`.
+- **Optional reveal (non-MC only):** `answer?: string` and `working?: string[]`
+  on `text` / `table` / `graph` / `geometry` — both render through MathText. The
+  runtime reveals them, then self-marks. `multiple-choice` does NOT take these
+  (its options carry correctness). A `text` question with **no `answer`** is
+  valid but **warns** — the runtime falls back to self-marking with no reveal.
 - **NO `topic` field inside questions** (topic comes from the content hierarchy).
 
 ### Notes JSON — block types
@@ -154,8 +159,16 @@ for minimal valid examples of all three files.
   loader).
 - **Notes renderer is implemented:** `/src/render/notes/` (one component per
   block type + `NotesRenderer`) and the shared `/src/shared/MathText.tsx`.
-  Still stubs: `/src/render/question-runtime.tsx`, `/src/render/video-embed.tsx`,
-  `/src/state`, `/src/shared/builders.ts`.
+- **Question runtime is implemented:** `/src/render/questions/` —
+  `QuestionRunner` (one question at a time, progress dots + difficulty badge,
+  end-of-set summary), per-type bodies (MC, text, table, graph/geometry), and
+  one shared self-mark/reveal flow + result type (`Outcome`/`QuestionResult`,
+  CLAUDE.md §c rule 4). The runtime emits results via `onResult`/`onComplete`
+  callbacks only — **no persistence** (the progress store is a later PR). Graph
+  and geometry render a token-styled `FigurePlaceholder` (a swappable slot for
+  the upcoming figure-renderer PR), not real figures.
+- **Still stubs:** `/src/render/video-embed.tsx`, `/src/state`,
+  `/src/shared/builders.ts`.
 - **All math goes through `MathText` — never call `katex` directly in a
   component.** `MathText` is the single shared math renderer (CLAUDE.md §c rule
   4); the question runtime will reuse it. It segments `$...$`/`$$...$$`, renders
