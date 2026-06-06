@@ -1,6 +1,151 @@
 /*
  * components.css — Component styles for the Lesson Platform.
  *
- * Empty for now. When adding styles here, reference the design tokens in
- * tokens.css via var(--...). NEVER hardcode hex values (CLAUDE.md §d).
+ * Reference design tokens from tokens.css via var(--...). NEVER hardcode hex
+ * values (CLAUDE.md §d). Headings/labels use --font-heading (Plus Jakarta Sans);
+ * body text uses --font-body (Manrope).
  */
+
+/* ---- Notes container ---- */
+.notes-renderer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  font-family: var(--font-body);
+  color: var(--brand-ink);
+  text-align: left;
+}
+
+/* ---- Heading ---- */
+.note-heading {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.35rem;
+  color: var(--brand-ink);
+  margin: 0.4rem 0 0;
+}
+
+/* ---- Paragraph ---- */
+.note-paragraph {
+  font-family: var(--font-body);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ---- List ---- */
+.note-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.note-list__item {
+  line-height: 1.55;
+}
+
+/* ---- Callout (tinted, left-accented card) ---- */
+.note-callout {
+  font-family: var(--font-body);
+  line-height: 1.55;
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-left-width: 6px;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+}
+
+.note-callout--key {
+  background: var(--green-tint);
+  border-left-color: var(--green);
+}
+
+.note-callout--warning {
+  background: var(--gold-tint);
+  border-left-color: var(--gold-deep);
+}
+
+.note-callout--info {
+  background: var(--cyan-tint);
+  border-left-color: var(--cyan-deep);
+}
+
+/* ---- Worked example (white card) ---- */
+.note-example {
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: 14px;
+  padding: 1rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.note-example__tag {
+  align-self: flex-start;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  background: var(--gold-tint);
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+}
+
+.note-example__prompt {
+  font-family: var(--font-body);
+  font-weight: 600;
+  margin: 0;
+}
+
+.note-example__working {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.note-example__working-line {
+  color: var(--muted-ink);
+  line-height: 1.5;
+}
+
+.note-example__answer-row {
+  margin-top: 0.2rem;
+}
+
+.note-example__answer {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--card-bg);
+  background: var(--green);
+  border-bottom: 3px solid var(--green-edge);
+  border-radius: 999px;
+  padding: 0.3rem 0.85rem;
+}
+
+/* ---- Unknown-block error chip (defence in depth) ---- */
+.note-error {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--coral-deep);
+  background: var(--coral);
+  border: var(--card-border-width) solid var(--coral-deep);
+  border-radius: 10px;
+  padding: 0.5rem 0.8rem;
+}
+
+.note-error code {
+  font-family: ui-monospace, monospace;
+}
+
+/* ---- Math segments ---- */
+.mathtext-display {
+  display: block;
+  margin: 0.4rem 0;
+  overflow-x: auto;
+}

@@ -6,6 +6,8 @@ import App from "@/App";
 // here, so every component can reference the CSS custom properties.
 import "../styles/tokens.css";
 import "../styles/components.css";
+// KaTeX stylesheet (npm, not CDN — see CLAUDE.md §f). Required for math layout.
+import "katex/dist/katex.min.css";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {

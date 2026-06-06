@@ -1,17 +1,18 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { loadAllLessons } from "@/ingest/load";
+import { NotesRenderer } from "@/render/notes/NotesRenderer";
 
 /**
- * Scaffold smoke test + temporary ingest debug harness. NOT a real screen.
- * The card proves the token pipeline; the list below proves lesson discovery +
- * validation end to end. Remove the debug section once real lesson routing
- * exists.
+ * Scaffold smoke test + temporary ingest/notes debug harness. NOT a real screen.
+ * The card proves the token pipeline; the list proves lesson discovery +
+ * validation; selecting a valid lesson renders its notes via NotesRenderer.
+ * Remove the debug section once real lesson routing exists.
  */
 
 const page: CSSProperties = {
   minHeight: "100vh",
   display: "grid",
-  placeItems: "center",
+  placeItems: "start center",
   background: "var(--page-bg)",
   fontFamily: "var(--font-body)",
   color: "var(--brand-ink)",
@@ -25,7 +26,7 @@ const card: CSSProperties = {
   borderBottomWidth: "var(--card-edge-width)",
   borderRadius: "12px",
   padding: "2rem 2.5rem",
-  maxWidth: "40rem",
+  maxWidth: "44rem",
   width: "100%",
   textAlign: "center",
 };
@@ -34,20 +35,6 @@ const heading: CSSProperties = {
   fontFamily: "var(--font-heading)",
   color: "var(--brand-ink)",
   margin: "0 0 0.5rem",
-};
-
-const button: CSSProperties = {
-  marginTop: "1.25rem",
-  padding: "0.6rem 1.4rem",
-  border: "none",
-  borderBottom: "4px solid var(--green-edge)",
-  borderRadius: "10px",
-  background: "var(--green)",
-  color: "var(--card-bg)",
-  fontFamily: "var(--font-heading)",
-  fontWeight: 700,
-  fontSize: "1rem",
-  cursor: "pointer",
 };
 
 // --- temporary debug-harness styling (tokens only) ---
@@ -66,6 +53,18 @@ const lessonRow: CSSProperties = {
   flexWrap: "wrap",
 };
 
+const selectButton: CSSProperties = {
+  fontFamily: "var(--font-heading)",
+  fontWeight: 700,
+  fontSize: "0.8rem",
+  border: "var(--card-border-width) solid var(--green-edge)",
+  borderRadius: "8px",
+  background: "var(--green)",
+  color: "var(--card-bg)",
+  padding: "0.25rem 0.7rem",
+  cursor: "pointer",
+};
+
 const tagBase: CSSProperties = {
   fontFamily: "var(--font-heading)",
   fontWeight: 700,
@@ -74,30 +73,26 @@ const tagBase: CSSProperties = {
   padding: "0.15rem 0.6rem",
 };
 
-const validTag: CSSProperties = {
-  ...tagBase,
-  background: "var(--green)",
-  color: "var(--card-bg)",
-};
+const validTag: CSSProperties = { ...tagBase, background: "var(--green)", color: "var(--card-bg)" };
+const issueTag: CSSProperties = { ...tagBase, background: "var(--coral)", color: "var(--coral-deep)" };
 
-const issueTag: CSSProperties = {
-  ...tagBase,
-  background: "var(--coral)",
-  color: "var(--coral-deep)",
+const notesPanel: CSSProperties = {
+  marginTop: "1.25rem",
+  paddingTop: "1.25rem",
+  borderTop: "var(--card-border-width) solid var(--card-border)",
 };
 
 export default function App() {
   // Temporary: discover + validate lessons at module render. Synchronous (eager glob).
   const registry = loadAllLessons();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = selectedId ? registry.getLessonById(selectedId) : undefined;
 
   return (
     <main style={page}>
       <section style={card}>
         <h1 style={heading}>Lesson Platform</h1>
-        <p>Vite + React + TypeScript scaffold. Token pipeline is live.</p>
-        <button type="button" style={button}>
-          scaffold OK
-        </button>
+        <p>Vite + React + TypeScript. Notes renderer + KaTeX are live.</p>
 
         {/* TEMPORARY DEBUG HARNESS — remove once real lesson routing exists. */}
         <section style={debugSection}>
@@ -107,7 +102,16 @@ export default function App() {
               <code>{lesson.id}</code>
               <span>{lesson.title || "(untitled)"}</span>
               {lesson.valid ? (
-                <span style={validTag}>valid</span>
+                <>
+                  <span style={validTag}>valid</span>
+                  <button
+                    type="button"
+                    style={selectButton}
+                    onClick={() => setSelectedId(lesson.id === selectedId ? null : lesson.id)}
+                  >
+                    {lesson.id === selectedId ? "Hide notes" : "View notes"}
+                  </button>
+                </>
               ) : (
                 <span style={issueTag}>
                   {lesson.errors.length} error
@@ -118,6 +122,13 @@ export default function App() {
               )}
             </div>
           ))}
+
+          {selected && selected.valid ? (
+            <div style={notesPanel}>
+              <h3 style={heading}>{selected.title}</h3>
+              <NotesRenderer blocks={selected.notes} />
+            </div>
+          ) : null}
         </section>
       </section>
     </main>
