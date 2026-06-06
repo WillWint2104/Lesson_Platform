@@ -250,6 +250,11 @@ function validateMcOptions(report: Report, path: string, options: unknown): void
 
   if (correctCount === 0) {
     report.error(path, "options must contain at least one isCorrect: true");
+  } else if (correctCount > 1) {
+    report.error(
+      path,
+      `exactly one option may have isCorrect: true (found ${correctCount})`,
+    );
   }
 }
 
@@ -370,8 +375,19 @@ export function validateManifest(raw: unknown): ValidationResult {
 
   requireString(report, "lesson", lesson, "id");
   requireString(report, "lesson", lesson, "title");
-  requireString(report, "lesson", lesson, "subject");
   validateVideo(report, "lesson.video", lesson["video"]);
+
+  // Hierarchy (subject/topic/topicArea) is derived from the directory path by
+  // the loader and must NOT appear in the manifest.
+  for (const field of ["subject", "topic", "topicArea"]) {
+    if (field in lesson) {
+      report.error(
+        `lesson.${field}`,
+        "manifest: hierarchy fields are not allowed — subject/topic/topicArea " +
+          "are derived from the directory path",
+      );
+    }
+  }
 
   // notes/questions may be inline arrays or a string path (resolved by loader).
   const notes = lesson["notes"];
@@ -390,13 +406,17 @@ export function validateManifest(raw: unknown): ValidationResult {
     validateQuestionArray(report, "lesson.questions", questions);
   }
 
+  // Hierarchy fields are reported as errors above; list them as "known" so they
+  // are not also double-reported as unknown-field warnings.
   warnUnknownFields(report, "lesson", lesson, [
     "id",
     "title",
-    "subject",
     "video",
     "notes",
     "questions",
+    "subject",
+    "topic",
+    "topicArea",
   ]);
 
   return report.result();
