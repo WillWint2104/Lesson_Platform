@@ -24,10 +24,11 @@ single-line by design — structure comes from blocks, not in-string line breaks
 ## Lesson manifest (`lesson.json`)
 
 ```json
-{ "lesson": { "id": "...", "title": "...", "video": { "src": "...", "duration": null }, "notes": "notes.json", "questions": "questions.json" } }
+{ "lesson": { "id": "...", "title": "...", "order": 1, "video": { "src": "...", "duration": null }, "notes": "notes.json", "questions": "questions.json" } }
 ```
 `notes`/`questions` are an inline array or a path relative to the lesson dir.
-No `subject`/`topic`/`topicArea` (path-derived).
+No `subject`/`topic`/`topicArea` (path-derived). Optional `order` (integer)
+sorts lessons within a topic area (ties/absences fall back to id-alphabetical).
 
 ## Notes blocks (`notes.json` → `{ "notes": [ ... ] }`)
 
