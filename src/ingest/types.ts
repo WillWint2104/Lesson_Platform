@@ -27,6 +27,22 @@ export interface QuestionBase {
 export interface AnswerableBase extends QuestionBase {
   answer?: string;
   working?: string[];
+  /**
+   * Optional figure, dispatched by sealed (kind, specVersion) — see
+   * /src/render/figures. Supersedes the deprecated graphData/geometryData.
+   */
+  figure?: Figure;
+}
+
+/**
+ * A question figure. `kind` selects a sealed renderer family; `specVersion`
+ * (default 1) pins the interpretation of `data` so existing content can never
+ * be re-rendered under new semantics (CLAUDE.md §g, append-only policy).
+ */
+export interface Figure {
+  kind: string;
+  specVersion?: number;
+  data: Record<string, unknown>;
 }
 
 export interface TextQuestion extends AnswerableBase {
@@ -40,12 +56,14 @@ export interface TableQuestion extends AnswerableBase {
 
 export interface GraphQuestion extends AnswerableBase {
   type: "graph";
-  graphData: unknown;
+  /** @deprecated Use `figure` ({ kind: "function-graph", data }). */
+  graphData?: unknown;
 }
 
 export interface GeometryQuestion extends AnswerableBase {
   type: "geometry";
-  geometryData: unknown;
+  /** @deprecated Use `figure` ({ kind: "<shape>-figure", data }). */
+  geometryData?: unknown;
 }
 
 export interface MultipleChoiceOption {

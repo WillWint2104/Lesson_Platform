@@ -329,6 +329,19 @@
   font-style: italic;
 }
 
+/* ---- Rendered figures (registry slot) ---- */
+.figure-slot {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem 0;
+}
+
+.figure-canvas {
+  width: 100%;
+  max-width: 260px;
+  height: auto;
+}
+
 /* ---- Reveal + self-mark ---- */
 .qr-selfmark {
   display: flex;

@@ -101,7 +101,10 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
   - `multiple-choice` carries `options: [{ text, isCorrect }]` — **exactly one**
     option may have `isCorrect: true` (zero or two-plus is an error).
   - `table` carries `rows` (`string[][]`).
-  - `graph` / `geometry` carry `graphData` / `geometryData`.
+  - **Figures** attach via an optional `figure: { kind, specVersion?, data }`
+    field (specVersion defaults to 1). `kind` selects a sealed renderer family
+    (see §g). `graphData`/`geometryData` are **deprecated aliases** — still
+    accepted (mapped to a kind, with a warning), but new content uses `figure`.
 - **Optional:** `skill`, `difficulty`.
 - **Optional reveal (non-MC only):** `answer?: string` and `working?: string[]`
   on `text` / `table` / `graph` / `geometry` — both render through MathText. The
@@ -179,6 +182,10 @@ for minimal valid examples of all three files.
   **Bump `SCHEMA_VERSION` (and add a migration) on ANY breaking change to the
   stored shape**, and extend `restoreState`'s whitelist — the round-trip test
   fails otherwise.
+- **Figure-kind registry is implemented:** `/src/render/figures/` — sealed
+  per-kind modules dispatched by (kind, specVersion); see §g. Two proof kinds
+  ship: `triangle-figure` and `bearing-diagram`. The question runtime renders
+  figures through the registry's `FigureSlot`.
 - **Still stubs:** `/src/render/video-embed.tsx`, `/src/shared/builders.ts`.
 - **All math goes through `MathText` — never call `katex` directly in a
   component.** `MathText` is the single shared math renderer (CLAUDE.md §c rule
@@ -211,3 +218,39 @@ npm test                     # vitest run (validator + content fixture suite)
 npm run build                # tsc --noEmit && vite build  -> dist/
 node scripts/check-content.mjs   # validate all /content JSON parses
 ```
+
+---
+
+## g. Figure-kind architecture (SEALED kinds)
+
+Question figures use a **sealed-kind** architecture so problem-family
+conventions (bearings, triangles, grid maps…) can never contaminate each other.
+A figure is `{ kind, specVersion?, data }`; the registry dispatches on
+**(kind, specVersion)**.
+
+**Isolation — HARD RULES (enforced by `src/render/figures/__tests__/structure.test.ts`, treat that test as untouchable):**
+- Each kind lives in `/src/render/figures/kinds/<kind>/` (schema, render, SPEC,
+  fixtures, tests). A **kind NEVER imports a sibling kind.**
+- `/src/render/figures/shared/` is chrome only (SVG canvas, token palette, label
+  styles). **Shared contains NO mathematical/problem-family conventions, and
+  NEVER imports a kind.**
+- **No fallback rendering across kinds.** An unknown kind renders a visible
+  `role="alert"` error chip; a known-but-unimplemented kind renders a distinct
+  placeholder. Never "best-effort with another kind".
+
+**Temporal immutability — APPEND-ONLY specs:**
+- Kind specs are **append-only**. Any change that alters the interpretation or
+  rendering semantics of existing data requires a **new `specVersion`** with the
+  previous renderer **retained and still dispatched** for old content. Renderers
+  for shipped specVersions are never deleted or semantically edited.
+- Each kind commits a **golden snapshot** of its rendered output. The snapshot is
+  a corruption tripwire: changing how existing content renders fails CI until the
+  golden is deliberately updated. **Golden updates require explicit
+  justification in the PR description.**
+- The **back-compat corpus** (`/src/ingest/__tests__/compat-corpus/`) is a frozen,
+  **append-only** snapshot of previously-valid content; validator changes that
+  break it fail CI.
+
+**Authoring:** each kind has a `SPEC.md` written for a lesson-generation session;
+[`/docs/authoring.md`](docs/authoring.md) indexes them plus the question/notes/
+manifest contracts — the single document a generation chat needs.

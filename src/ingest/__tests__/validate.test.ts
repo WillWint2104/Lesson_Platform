@@ -10,6 +10,7 @@ import {
   type Issue,
 } from "@/ingest/validate";
 import { buildLessonRegistry } from "@/ingest/load";
+import { figureSchemas } from "@/render/figures/registry";
 
 const qfile = (questions: unknown[]) => ({ questions });
 const nfile = (notes: unknown[]) => ({ notes });
@@ -57,13 +58,9 @@ describe("validateQuestionsFile — errors", () => {
     expect(has(res.errors, "questions[0] (table)", "missing required field 'rows'")).toBe(true);
   });
 
-  it("flags graph/geometry questions missing their data field", () => {
-    const g = validateQuestionsFile(qfile([{ type: "graph", prompt: "x" }]));
-    expect(has(g.errors, "questions[0] (graph)", "missing required field 'graphData'")).toBe(true);
-    const geo = validateQuestionsFile(qfile([{ type: "geometry", prompt: "x" }]));
-    expect(
-      has(geo.errors, "questions[0] (geometry)", "missing required field 'geometryData'"),
-    ).toBe(true);
+  it("allows graph/geometry questions with no figure (figure is optional now)", () => {
+    expect(validateQuestionsFile(qfile([{ type: "graph", prompt: "x" }])).valid).toBe(true);
+    expect(validateQuestionsFile(qfile([{ type: "geometry", prompt: "x" }])).valid).toBe(true);
   });
 
   it("flags a multiple-choice question with zero options", () => {
@@ -517,9 +514,9 @@ describe("/content is a living fixture", () => {
     const base = rel.split(/[\\/]/).pop();
     const res =
       base === "lesson.json"
-        ? validateManifest(raw)
+        ? validateManifest(raw, { figureSchemas })
         : base === "questions.json"
-          ? validateQuestionsFile(raw)
+          ? validateQuestionsFile(raw, { figureSchemas })
           : base === "notes.json"
             ? validateNotesFile(raw)
             : { valid: true, errors: [], warnings: [] };
