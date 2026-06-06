@@ -81,10 +81,11 @@ export function MathText({ children }: MathTextProps) {
           throwOnError: false,
           displayMode: seg.type === "display",
         });
+        // Both wrappers are spans (display is block-level via CSS) so that
+        // display math nested inside a <p> stays valid HTML — a <div> inside a
+        // paragraph would be hoisted out by the browser, splitting the text.
         const className = seg.type === "display" ? "mathtext-display" : "mathtext-inline";
-        return seg.type === "display" ? (
-          <div key={index} className={className} dangerouslySetInnerHTML={{ __html: html }} />
-        ) : (
+        return (
           <span key={index} className={className} dangerouslySetInnerHTML={{ __html: html }} />
         );
       })}
