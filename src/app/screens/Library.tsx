@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
-import type { LessonRegistry } from "@/ingest/load";
+import type { AreaRegistry, ValidatedArea } from "@/ingest/load";
 import type { ProgressStore } from "@/state/progress";
-import { titleCase, areaPath } from "@/app/format";
+import { titleCase } from "@/app/format";
 
-/** Library hub: greeting + always-present hero + responsive topic grid. */
+/** Library hub (area model). Lists topics → areas; hero continues/starts an area. */
 export function Library() {
   const registry = useRegistry();
   const subjects = registry.getSubjects();
@@ -16,7 +16,6 @@ export function Library() {
     <main className="app-page app-page--wide lib">
       <header className="lib-header">
         <span className="lib-header__name">Lesson Platform</span>
-        {/* Placeholder identity chip — real profile arrives with accounts. */}
         <span className="lib-header__identity" aria-label="Profile (placeholder)">
           LP
         </span>
@@ -27,7 +26,6 @@ export function Library() {
       <section className="lib-greeting">
         <p className="lib-kicker">{todayKicker()}</p>
         <h1 className="lib-headline">Welcome back</h1>
-        {/* Subject pills — registry-driven, no hardcoded names. Single-select. */}
         <div className="lib-pills" role="group" aria-label="Subjects">
           {subjects.map((s) => (
             <button
@@ -54,14 +52,12 @@ export function Library() {
               <TopicCard key={topic} subject={subject} topic={topic} />
             ))
           : null}
-        {/* Empty-room honesty: a one-topic library reads as "early", not broken. */}
         <div className="topic-placeholder">Future topics drop in as content packs.</div>
       </div>
     </main>
   );
 }
 
-/** "Friday · 6 June" — a quiet day/date kicker (client-only). */
 function todayKicker(): string {
   try {
     return new Date().toLocaleDateString(undefined, {
@@ -74,28 +70,38 @@ function todayKicker(): string {
   }
 }
 
-/** First valid lesson of a subject's first topic/area (for the "start here" hero). */
-function firstLessonOf(registry: LessonRegistry, subject: string | null) {
+const areaPath = (a: ValidatedArea) => `/${a.subject}/${a.topic}/${a.topicArea}`;
+
+/** Exercise-segment completion counts for an area. */
+function areaProgress(area: ValidatedArea, store: ProgressStore): { done: number; total: number } {
+  let done = 0;
+  let total = 0;
+  area.segments.forEach((seg, i) => {
+    if (seg.type !== "exercise") return;
+    total += 1;
+    if (store.getExerciseProgress(area.id, i)?.completedAt) done += 1;
+  });
+  return { done, total };
+}
+
+function firstAreaOf(registry: AreaRegistry, subject: string | null): ValidatedArea | undefined {
   if (!subject) return undefined;
   const topic = registry.getTopics(subject)[0];
   if (!topic) return undefined;
-  const area = registry.getTopicAreas(subject, topic)[0];
-  if (!area) return undefined;
-  return registry.getTopicAreaLessons(subject, topic, area).find((l) => l.valid);
+  return registry.getAreasInTopic(subject, topic).find((a) => a.valid);
 }
 
-/** Hero is ALWAYS present: continue the last lesson, or start the first one. */
 function Hero({ subject }: { subject: string | null }) {
   const registry = useRegistry();
   const store = useProgressStore();
-  const lastId = store.getLastVisitedLessonId();
-  const lastLesson = lastId ? registry.getLessonById(lastId) : undefined;
-  const target = lastLesson ?? firstLessonOf(registry, subject);
-  if (!target) return null; // no content at all
+  const lastId = store.getLastVisitedAreaId();
+  const lastArea = lastId ? registry.getAreaById(lastId) : undefined;
+  const target = lastArea ?? firstAreaOf(registry, subject);
+  if (!target) return null;
 
-  const kicker = lastLesson ? "Continue where you left off" : "Start here";
+  const kicker = lastArea ? "Continue where you left off" : "Start here";
   return (
-    <Link className="hero" to={`${areaPath(target)}/${target.id}`}>
+    <Link className="hero" to={areaPath(target)}>
       <span className="hero__kicker">{kicker}</span>
       <span className="hero__title">{target.title}</span>
       <span className="hero__crumb">
@@ -105,10 +111,6 @@ function Hero({ subject }: { subject: string | null }) {
   );
 }
 
-/**
- * One-time, dismissible "your progress is local to this browser" notice
- * (soft-launch). Dismissal persists through the progress store's storage layer.
- */
 function LocalProgressNotice() {
   const store = useProgressStore();
   if (store.isNoticeDismissed("local-progress")) return null;
@@ -129,33 +131,18 @@ function LocalProgressNotice() {
   );
 }
 
-const GLYPHS = { complete: "✓", progress: "▶", idle: "•" } as const;
-
-function areaState(
-  registry: LessonRegistry,
-  store: ProgressStore,
-  subject: string,
-  topic: string,
-  area: string,
-): { kind: keyof typeof GLYPHS; label: string } {
-  const lessons = registry.getTopicAreaLessons(subject, topic, area).filter((l) => l.valid);
-  if (lessons.length === 0) return { kind: "idle", label: "No lessons yet" };
-  const done = lessons.filter((l) => store.getLessonProgress(l.id)?.completedAt).length;
-  if (done === lessons.length) return { kind: "complete", label: "Complete" };
-  if (done > 0) return { kind: "progress", label: `${done}/${lessons.length} done` };
-  return { kind: "idle", label: "Not started" };
-}
-
 function TopicCard({ subject, topic }: { subject: string; topic: string }) {
   const registry = useRegistry();
   const store = useProgressStore();
-  const areas = registry.getTopicAreas(subject, topic);
-  // Count valid lessons only — consistent with the area rows + lesson list.
-  const total = registry.lessons.filter(
-    (l) => l.subject === subject && l.topic === topic && l.valid,
-  ).length;
-  const progress = store.getTopicProgress(subject, topic);
-  const pct = total > 0 ? Math.round((progress.completedCount / total) * 100) : 0;
+  const areas = registry.getAreasInTopic(subject, topic).filter((a) => a.valid);
+  const totals = areas.reduce(
+    (acc, a) => {
+      const p = areaProgress(a, store);
+      return { done: acc.done + p.done, total: acc.total + p.total };
+    },
+    { done: 0, total: 0 },
+  );
+  const pct = totals.total > 0 ? Math.round((totals.done / totals.total) * 100) : 0;
 
   return (
     <article className="topic-card">
@@ -166,8 +153,7 @@ function TopicCard({ subject, topic }: { subject: string; topic: string }) {
         <div className="topic-card__headtext">
           <h2 className="topic-card__name">{titleCase(topic)}</h2>
           <p className="topic-card__meta">
-            {areas.length} area{areas.length === 1 ? "" : "s"} · {total} lesson
-            {total === 1 ? "" : "s"}
+            {areas.length} area{areas.length === 1 ? "" : "s"}
           </p>
         </div>
         <span className="topic-card__pct">{pct}%</span>
@@ -179,18 +165,22 @@ function TopicCard({ subject, topic }: { subject: string; topic: string }) {
 
       <ul className="topic-card__areas">
         {areas.map((area) => {
-          const state = areaState(registry, store, subject, topic, area);
+          const p = areaProgress(area, store);
+          const kind = p.total > 0 && p.done === p.total ? "complete" : p.done > 0 ? "progress" : "idle";
+          const label =
+            kind === "complete" ? "Complete" : kind === "progress" ? `${p.done}/${p.total} done` : "Not started";
+          const glyph = kind === "complete" ? "✓" : kind === "progress" ? "▶" : "•";
           return (
-            <li key={area}>
-              <Link className="topic-area-row" to={`/${subject}/${topic}/${area}`}>
+            <li key={area.id}>
+              <Link className="topic-area-row" to={areaPath(area)}>
                 <span
-                  className={`topic-area-row__glyph topic-area-row__glyph--${state.kind}`}
+                  className={`topic-area-row__glyph topic-area-row__glyph--${kind}`}
                   aria-hidden="true"
                 >
-                  {GLYPHS[state.kind]}
+                  {glyph}
                 </span>
-                <span className="topic-area-row__name">{titleCase(area)}</span>
-                <span className="topic-area-row__state">{state.label}</span>
+                <span className="topic-area-row__name">{titleCase(area.topicArea)}</span>
+                <span className="topic-area-row__state">{label}</span>
               </Link>
             </li>
           );
