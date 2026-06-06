@@ -8,8 +8,8 @@ import {
   validateNotesFile,
   validateQuestionsFile,
   type Issue,
-} from "../validate";
-import { buildLessonRegistry } from "../load";
+} from "@/ingest/validate";
+import { buildLessonRegistry } from "@/ingest/load";
 
 const qfile = (questions: unknown[]) => ({ questions });
 const nfile = (notes: unknown[]) => ({ notes });
