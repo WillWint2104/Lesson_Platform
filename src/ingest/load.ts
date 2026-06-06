@@ -51,6 +51,12 @@ export interface ValidatedLesson {
   path: string;
   /** Video source (YouTube id/URL or null) + duration, from the manifest. */
   video: { src: string | null; duration: number | null };
+  /** Manifest sort key, or null when absent (falls back to id-alphabetical). */
+  order: number | null;
+  /** 0-based position within its topic area's ordered sequence. */
+  areaIndex: number;
+  /** Total lessons in this lesson's topic area. */
+  areaCount: number;
   notes: NoteBlock[];
   questions: Question[];
   valid: boolean;
@@ -92,6 +98,14 @@ export interface LessonRegistry {
   issuesByLesson: Record<string, { errors: Issue[]; warnings: Issue[] }>;
   /** Stale-ID-safe lookup: returns undefined for unknown ids (never throws). */
   getLessonById: (id: string) => ValidatedLesson | undefined;
+  /** Distinct subjects present in /content, alphabetical. */
+  getSubjects: () => string[];
+  /** Distinct topics within a subject, alphabetical. */
+  getTopics: (subject: string) => string[];
+  /** Distinct topic areas within a topic, alphabetical. */
+  getTopicAreas: (subject: string, topic: string) => string[];
+  /** A topic area's lessons in ordered sequence (by areaIndex). */
+  getTopicAreaLessons: (subject: string, topic: string, topicArea: string) => ValidatedLesson[];
 }
 
 function dirOf(path: string): string {
@@ -217,6 +231,7 @@ export function buildLessonRegistry(
       src: rawSrc === null ? null : parseYouTubeId(rawSrc),
       duration: typeof videoRaw?.["duration"] === "number" ? (videoRaw["duration"] as number) : null,
     };
+    const order = typeof lesson?.["order"] === "number" ? (lesson["order"] as number) : null;
 
     lessons.push({
       id,
@@ -226,12 +241,58 @@ export function buildLessonRegistry(
       topicArea: hierarchy?.topicArea ?? "",
       path: manifestPath,
       video,
+      order,
+      areaIndex: 0, // assigned in the ordering pass below
+      areaCount: 0,
       notes,
       questions,
       valid: errors.length === 0,
       errors,
       warnings,
     });
+  }
+
+  // ---- Ordering pass: sort each topic area, assign areaIndex/areaCount, and
+  //      warn on duplicate order values within an area. ----
+  const areaKey = (l: ValidatedLesson) => `${l.subject}/${l.topic}/${l.topicArea}`;
+  const byArea = new Map<string, ValidatedLesson[]>();
+  for (const lesson of lessons) {
+    const key = areaKey(lesson);
+    const group = byArea.get(key);
+    if (group) group.push(lesson);
+    else byArea.set(key, [lesson]);
+  }
+  for (const group of byArea.values()) {
+    // order (asc) first; absent order sorts last; ties + absences break by id.
+    group.sort((a, b) => {
+      const ao = a.order ?? Number.POSITIVE_INFINITY;
+      const bo = b.order ?? Number.POSITIVE_INFINITY;
+      if (ao !== bo) return ao - bo;
+      return a.id.localeCompare(b.id);
+    });
+    group.forEach((lesson, i) => {
+      lesson.areaIndex = i;
+      lesson.areaCount = group.length;
+    });
+    // Duplicate-order warning (only for explicit, equal, non-null orders).
+    const byOrder = new Map<number, ValidatedLesson[]>();
+    for (const lesson of group) {
+      if (lesson.order === null) continue;
+      const peers = byOrder.get(lesson.order);
+      if (peers) peers.push(lesson);
+      else byOrder.set(lesson.order, [lesson]);
+    }
+    for (const [orderValue, peers] of byOrder) {
+      if (peers.length < 2) continue;
+      const ids = peers.map((l) => l.id);
+      for (const lesson of peers) {
+        const others = ids.filter((id) => id !== lesson.id).join(", ");
+        lesson.warnings.push({
+          path: "lesson.order",
+          message: `order ${orderValue} is shared with ${others} in this topic area — ordering falls back to id`,
+        });
+      }
+    }
   }
 
   const issuesByLesson: LessonRegistry["issuesByLesson"] = {};
@@ -245,12 +306,29 @@ export function buildLessonRegistry(
     }
   }
 
+  const distinctSorted = (values: string[]) => Array.from(new Set(values)).sort();
+
   return {
     lessons,
     issuesByLesson,
     // Stale-ID guard: validate against the registry; truthiness is not validity.
     getLessonById: (id: string) =>
       typeof id === "string" && byId.has(id) ? byId.get(id) : undefined,
+    getSubjects: () => distinctSorted(lessons.map((l) => l.subject)),
+    getTopics: (subject) =>
+      distinctSorted(lessons.filter((l) => l.subject === subject).map((l) => l.topic)),
+    getTopicAreas: (subject, topic) =>
+      distinctSorted(
+        lessons
+          .filter((l) => l.subject === subject && l.topic === topic)
+          .map((l) => l.topicArea),
+      ),
+    getTopicAreaLessons: (subject, topic, topicArea) =>
+      lessons
+        .filter(
+          (l) => l.subject === subject && l.topic === topic && l.topicArea === topicArea,
+        )
+        .sort((a, b) => a.areaIndex - b.areaIndex),
   };
 }
 

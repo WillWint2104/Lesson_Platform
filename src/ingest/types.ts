@@ -133,6 +133,8 @@ export interface LessonVideo {
 export interface Lesson {
   id: string;
   title: string;
+  /** Optional sort key within a topic area; ties/absences fall back to id. */
+  order?: number;
   video: LessonVideo;
   /** Inline blocks, or a path (relative to the lesson dir) to a NotesFile. */
   notes: NoteBlock[] | string;

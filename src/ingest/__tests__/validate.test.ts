@@ -458,6 +458,31 @@ describe("buildLessonRegistry", () => {
     expect(reg.getLessonById("intro")?.video.src).toBe("dQw4w9WgXcQ");
   });
 
+  it("sorts a topic area by order, then by id for ties/absences", () => {
+    const reg = buildLessonRegistry({
+      "/content/math/algebra/brackets/two/lesson.json": body("two", "Two", { order: 2 }),
+      "/content/math/algebra/brackets/one/lesson.json": body("one", "One", { order: 1 }),
+      "/content/math/algebra/brackets/zed/lesson.json": body("zed", "Zed"),
+      "/content/math/algebra/brackets/aaa/lesson.json": body("aaa", "Aaa"),
+    });
+    const ordered = reg.getTopicAreaLessons("math", "algebra", "brackets").map((l) => l.id);
+    expect(ordered).toEqual(["one", "two", "aaa", "zed"]);
+    expect(reg.getLessonById("one")?.areaIndex).toBe(0);
+    expect(reg.getLessonById("one")?.areaCount).toBe(4);
+  });
+
+  it("warns on duplicate order values within a topic area, naming both lessons", () => {
+    const reg = buildLessonRegistry({
+      "/content/math/algebra/brackets/a/lesson.json": body("a", "A", { order: 1 }),
+      "/content/math/algebra/brackets/b/lesson.json": body("b", "B", { order: 1 }),
+    });
+    const a = reg.getLessonById("a");
+    const b = reg.getLessonById("b");
+    expect(a?.valid).toBe(true); // a warning, not an error
+    expect(a?.warnings.some((w) => w.message.includes("order 1 is shared with b"))).toBe(true);
+    expect(b?.warnings.some((w) => w.message.includes("order 1 is shared with a"))).toBe(true);
+  });
+
   it("errors on a malformed (wrong-depth) manifest path, naming it", () => {
     const reg = buildLessonRegistry({ "/content/oops/lesson.json": body("oops", "Oops") });
     const lesson = reg.lessons[0];

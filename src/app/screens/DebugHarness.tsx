@@ -1,18 +1,15 @@
-import { useMemo, useState, type CSSProperties } from "react";
-import { loadAllLessons } from "@/ingest/load";
+/**
+ * @file DebugHarness.tsx — the original multi-lesson dev harness, retained at
+ * /debug (CLAUDE.md §c lesson 8/9 — kept, tested, linked nowhere). Lets you poke
+ * every lesson's notes/practice/video and reset progress without the real shell.
+ */
+import { useState, type CSSProperties } from "react";
+import { useRegistry } from "@/app/RegistryContext";
+import { useProgressStore } from "@/state/ProgressContext";
 import { NotesRenderer } from "@/render/notes/NotesRenderer";
 import { VideoEmbed } from "@/render/VideoEmbed";
 import { QuestionRunner } from "@/render/questions/QuestionRunner";
 import type { QuestionResult } from "@/render/questions/types";
-import { createProgressStore } from "@/state/progress";
-import { ProgressProvider, useProgressStore } from "@/state/ProgressContext";
-import { figureSchemas } from "@/render/figures/registry";
-
-/**
- * Scaffold smoke test + temporary debug harness. NOT a real screen. Proves
- * lesson discovery + validation, the notes/question renderers, AND the progress
- * store (per-lesson counts + reset). Remove once real routing exists.
- */
 
 type Mode = "video" | "notes" | "practice";
 
@@ -25,7 +22,6 @@ const page: CSSProperties = {
   color: "var(--brand-ink)",
   padding: "2rem",
 };
-
 const card: CSSProperties = {
   background: "var(--card-bg)",
   border: "var(--card-border-width) solid var(--card-border)",
@@ -34,30 +30,9 @@ const card: CSSProperties = {
   padding: "2rem 2.5rem",
   maxWidth: "44rem",
   width: "100%",
-  textAlign: "center",
 };
-
-const heading: CSSProperties = {
-  fontFamily: "var(--font-heading)",
-  color: "var(--brand-ink)",
-  margin: "0 0 0.5rem",
-};
-
-const debugSection: CSSProperties = {
-  marginTop: "2rem",
-  textAlign: "left",
-  borderTop: "var(--card-border-width) solid var(--card-border)",
-  paddingTop: "1.25rem",
-};
-
-const lessonRow: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "0.6rem",
-  padding: "0.5rem 0",
-  flexWrap: "wrap",
-};
-
+const heading: CSSProperties = { fontFamily: "var(--font-heading)", color: "var(--brand-ink)", margin: "0 0 0.5rem" };
+const lessonRow: CSSProperties = { display: "flex", alignItems: "center", gap: "0.6rem", padding: "0.5rem 0", flexWrap: "wrap" };
 const toggleButton: CSSProperties = {
   fontFamily: "var(--font-heading)",
   fontWeight: 700,
@@ -69,55 +44,15 @@ const toggleButton: CSSProperties = {
   padding: "0.25rem 0.7rem",
   cursor: "pointer",
 };
-
-const resetButton: CSSProperties = {
-  ...toggleButton,
-  background: "var(--card-bg)",
-  color: "var(--coral-deep)",
-  border: "var(--card-border-width) solid var(--coral-deep)",
-};
-
-const tagBase: CSSProperties = {
-  fontFamily: "var(--font-heading)",
-  fontWeight: 700,
-  fontSize: "0.75rem",
-  borderRadius: "999px",
-  padding: "0.15rem 0.6rem",
-};
+const resetButton: CSSProperties = { ...toggleButton, background: "var(--card-bg)", color: "var(--coral-deep)", border: "var(--card-border-width) solid var(--coral-deep)" };
+const tagBase: CSSProperties = { fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: "0.75rem", borderRadius: "999px", padding: "0.15rem 0.6rem" };
 const validTag: CSSProperties = { ...tagBase, background: "var(--green)", color: "var(--card-bg)" };
 const issueTag: CSSProperties = { ...tagBase, background: "var(--coral)", color: "var(--coral-deep)" };
 const statText: CSSProperties = { fontSize: "0.8rem", color: "var(--muted-ink)" };
+const panel: CSSProperties = { marginTop: "1.25rem", paddingTop: "1.25rem", borderTop: "var(--card-border-width) solid var(--card-border)" };
 
-const panel: CSSProperties = {
-  marginTop: "1.25rem",
-  paddingTop: "1.25rem",
-  borderTop: "var(--card-border-width) solid var(--card-border)",
-};
-
-export default function App() {
-  const registry = useMemo(() => loadAllLessons({ figureSchemas }), []);
-  const store = useMemo(
-    () =>
-      createProgressStore({
-        lessons: registry.lessons.map((l) => ({
-          id: l.id,
-          subject: l.subject,
-          topic: l.topic,
-          topicArea: l.topicArea,
-          questions: l.questions.map((q) => ({ skill: q.skill, difficulty: q.difficulty })),
-        })),
-      }),
-    [registry],
-  );
-
-  return (
-    <ProgressProvider store={store}>
-      <Harness registry={registry} />
-    </ProgressProvider>
-  );
-}
-
-function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) {
+export function DebugHarness() {
+  const registry = useRegistry();
   const store = useProgressStore();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode | null>(null);
@@ -137,10 +72,6 @@ function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) 
     }
   };
 
-  const handleResult = (index: number, outcome: QuestionResult["outcome"]) => {
-    if (selected) store.recordOutcome(selected.id, index, outcome);
-  };
-
   const handleComplete = (results: QuestionResult[]) => {
     if (!selected) return;
     const allCorrect = results.length > 0 && results.every((r) => r.outcome === "correct");
@@ -152,11 +83,9 @@ function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) 
   return (
     <main style={page}>
       <section style={card}>
-        <h1 style={heading}>Lesson Platform</h1>
-        <p>Vite + React + TypeScript. Notes, question runtime, and progress are live.</p>
-
-        {/* TEMPORARY DEBUG HARNESS — remove once real lesson routing exists. */}
-        <section style={debugSection}>
+        <h1 style={heading}>Debug harness</h1>
+        <p>Dormant dev tool (not linked from the app). Poke every lesson directly.</p>
+        <section style={panel}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap" }}>
             <h2 style={{ ...heading, margin: 0 }}>Discovered lessons ({registry.lessons.length})</h2>
             <button type="button" style={resetButton} onClick={() => store.resetAll()}>
@@ -178,15 +107,11 @@ function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) 
                 {lesson.valid ? (
                   <>
                     <span style={validTag}>valid</span>
-                    <button type="button" style={toggleButton} onClick={() => toggle(lesson.id, "video")}>
-                      {active && mode === "video" ? "Hide video" : "Video"}
-                    </button>
-                    <button type="button" style={toggleButton} onClick={() => toggle(lesson.id, "notes")}>
-                      {active && mode === "notes" ? "Hide notes" : "Notes"}
-                    </button>
-                    <button type="button" style={toggleButton} onClick={() => toggle(lesson.id, "practice")}>
-                      {active && mode === "practice" ? "Hide practice" : "Practice"}
-                    </button>
+                    {(["video", "notes", "practice"] as Mode[]).map((m) => (
+                      <button key={m} type="button" style={toggleButton} onClick={() => toggle(lesson.id, m)}>
+                        {active && mode === m ? `Hide ${m}` : m}
+                      </button>
+                    ))}
                     <span style={statText}>
                       {record
                         ? `${record.attempts} attempt${record.attempts === 1 ? "" : "s"} · ${correct}/${answered} correct${record.completedAt ? " · ✓ completed" : ""}`
@@ -195,8 +120,7 @@ function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) 
                   </>
                 ) : (
                   <span style={issueTag}>
-                    {lesson.errors.length} error
-                    {lesson.errors.length === 1 ? "" : "s"}
+                    {lesson.errors.length} error{lesson.errors.length === 1 ? "" : "s"}
                     {lesson.errors[0] ? ` — ${lesson.errors[0].message}` : ""}
                   </span>
                 )}
@@ -206,25 +130,20 @@ function Harness({ registry }: { registry: ReturnType<typeof loadAllLessons> }) 
 
           {selected && selected.valid && mode === "video" ? (
             <div style={panel}>
-              <h3 style={heading}>{selected.title}</h3>
               <VideoEmbed src={selected.video.src} title={selected.title} />
             </div>
           ) : null}
-
           {selected && selected.valid && mode === "notes" ? (
             <div style={panel}>
-              <h3 style={heading}>{selected.title}</h3>
               <NotesRenderer blocks={selected.notes} />
             </div>
           ) : null}
-
           {selected && selected.valid && mode === "practice" ? (
             <div style={panel}>
-              <h3 style={heading}>{selected.title} — practice</h3>
               <QuestionRunner
                 key={selected.id}
                 questions={selected.questions}
-                onResult={handleResult}
+                onResult={(i, o) => store.recordOutcome(selected.id, i, o)}
                 onComplete={handleComplete}
               />
               {summary ? <p style={{ marginTop: "0.8rem", fontWeight: 600 }}>{summary}</p> : null}

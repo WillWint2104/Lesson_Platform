@@ -121,9 +121,11 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 - `list` — `{ items }`
 
 ### Lesson manifest
-`{ lesson: { id, title, video: { src, duration }, notes, questions } }` — ties
-**video `src` + notes + questions** together into one lesson. `notes`/`questions`
-are either inline arrays or a file path relative to the lesson dir.
+`{ lesson: { id, title, order?, video: { src, duration }, notes, questions } }` —
+ties **video `src` + notes + questions** together into one lesson.
+`notes`/`questions` are either inline arrays or a file path relative to the
+lesson dir. Optional `order` (integer) sorts lessons within a topic area; ties
+or absences fall back to id-alphabetical, and duplicate orders in one area warn.
 
 `video.src` is a **YouTube source** (a `youtube.com/watch` URL, a `youtu.be`
 short link, a `youtube.com/embed` URL, or a bare 11-char id) **or `null`**.
@@ -156,10 +158,12 @@ for minimal valid examples of all three files.
 
 - **Stack: Vite + React + TypeScript** — chosen for a fast, zero-config dev
   server and first-class TS support with a minimal dependency surface.
-- **Dependencies:** runtime `react`, `react-dom`, **`katex`**; dev `vite`,
+- **Dependencies:** runtime `react`, `react-dom`, **`katex`**,
+  **`react-router-dom`**; dev `vite`,
   `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`,
   `@types/node`, `@types/katex`, **`vitest`**, `@testing-library/react`,
-  `@testing-library/dom`, `jsdom`. No router, state lib, or UI kit.
+  `@testing-library/dom`, `jsdom`. Routing is `react-router-dom`; no state lib
+  or UI kit.
 - **TypeScript strict mode is on;** path alias `@` → `/src`.
 - **Video hosting: YouTube unlisted embeds** (no embed implementation yet).
 - **App hosting: TBD.**
@@ -193,6 +197,23 @@ for minimal valid examples of all three files.
   per-kind modules dispatched by (kind, specVersion); see §g. Two proof kinds
   ship: `triangle-figure` and `bearing-diagram`. The question runtime renders
   figures through the registry's `FigureSlot`.
+- **App shell is implemented:** `react-router-dom` routing + two screens
+  (`/src/app/`). `main.tsx` builds the registry + progress store and provides
+  them (RegistryProvider + ProgressProvider) under a `BrowserRouter`. Lessons
+  within a topic area are ordered by the manifest's optional `order` (ties/
+  absences fall back to id-alphabetical); the loader exposes the sorted sequence
+  + each lesson's `areaIndex`/`areaCount`. Sequential unlock logic lives in the
+  pure `/src/app/unlock.ts`. The old multi-lesson harness is retained DORMANT at
+  `/debug` (lesson 8/9), linked nowhere.
+
+  | Route | Screen |
+  |-------|--------|
+  | `/` | Library (subject pills, continue hero, topic cards) |
+  | `/:subject/:topic/:topicArea` | Lesson-selection list + locked checkpoint |
+  | `/:subject/:topic/:topicArea/:lessonId` | **Temporary** lesson placeholder (mounts Video/Notes/Practice; real lesson page is next) |
+  | `/debug` | Dormant dev harness |
+  | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
+
 - **Video embed is implemented:** `/src/render/VideoEmbed.tsx` — a bold-framed
   near-black 16:9 stage with a privacy-friendly `youtube-nocookie` iframe
   (lazy-loaded, `rel=0`, no API keys/tracking). `src: null` renders a
