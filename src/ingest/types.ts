@@ -19,21 +19,31 @@ export interface QuestionBase {
   difficulty?: Difficulty;
 }
 
-export interface TextQuestion extends QuestionBase {
+/**
+ * Non-multiple-choice questions may carry an optional reveal `answer` and
+ * `working` steps (both rendered through MathText). Multiple-choice does NOT —
+ * its options carry correctness.
+ */
+export interface AnswerableBase extends QuestionBase {
+  answer?: string;
+  working?: string[];
+}
+
+export interface TextQuestion extends AnswerableBase {
   type: "text";
 }
 
-export interface TableQuestion extends QuestionBase {
+export interface TableQuestion extends AnswerableBase {
   type: "table";
   rows: string[][];
 }
 
-export interface GraphQuestion extends QuestionBase {
+export interface GraphQuestion extends AnswerableBase {
   type: "graph";
   graphData: unknown;
 }
 
-export interface GeometryQuestion extends QuestionBase {
+export interface GeometryQuestion extends AnswerableBase {
   type: "geometry";
   geometryData: unknown;
 }
