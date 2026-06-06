@@ -43,6 +43,9 @@
   /* ---- Video stage (near-black dark panel for the framed video) ---- */
   --video-bg: #0f1a14;
 
+  /* ---- Modal scrim (dim backdrop behind dialogs) ---- */
+  --scrim: rgba(15, 26, 20, 0.55);
+
   /* ---- Surface tints (pale backgrounds for callouts / chips) ---- */
   --green-tint: #e7f4ec;
   --gold-tint: #fbf2d9;
@@ -71,6 +74,7 @@
   --container-wide: 1120px;     /* hub / grid screens (Library) */
   --container-list: 880px;      /* lesson list */
   --container-reading: 720px;   /* lesson content */
+  --container-area: 960px;      /* topic-area worksheet page */
 
   /* ---- Standard page padding (inline gutter / block top-bottom) ---- */
   --page-pad-inline: var(--space-5);

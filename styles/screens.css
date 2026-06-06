@@ -28,6 +28,9 @@
 .app-page--reading {
   max-width: var(--container-reading);
 }
+.app-page--area {
+  max-width: var(--container-area);
+}
 
 /* ---- Shared button / link ---- */
 .btn {
@@ -471,22 +474,80 @@
   color: var(--gold-deep);
 }
 
-/* ===== Area page (temporary) ===== */
+/* ===== Area page (worksheet model) ===== */
+.area-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.area-meta {
+  margin: 0;
+  color: var(--muted-ink);
+  font-size: 0.9rem;
+}
 .area-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
-.area-segment {
+/* A numbered sequence section (Video N / Exercise N). */
+.ws-segment {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  scroll-margin-top: var(--space-5);
 }
-.area-seg-title {
+.ws-section-head {
   font-family: var(--font-heading);
   font-weight: 800;
-  font-size: 1.1rem;
-  margin: var(--space-2) 0 0;
+  font-size: 1.15rem;
+  margin: var(--space-4) 0 0;
+  color: var(--brand-ink);
+}
+/* Video centered, capped narrower than the worksheet column. */
+.ws-video {
+  width: 100%;
+  max-width: 800px;
+  margin-inline: auto;
+}
+/* Locked exercise card — questions are hidden until unlocked. */
+.ws-locked {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  background: var(--card-bg);
+  border: var(--card-border-width) dashed var(--card-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  color: var(--muted-ink);
+}
+.ws-locked__title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+.ws-locked__note {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Area-complete banner + back-to-library CTA. */
+.area-complete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  background: var(--green-tint);
+  border: var(--card-border-width) solid var(--green);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+.area-complete__text {
+  margin: 0;
+  font-weight: 700;
   color: var(--brand-ink);
 }
 
