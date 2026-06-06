@@ -36,11 +36,19 @@ export function LessonPage() {
     lesson.topicArea === topicArea;
 
   const [tab, setTab] = useState<Tab>("notes");
-  // Captured ONCE at mount: was the lesson already complete when we arrived?
-  // Drives the runner's seed + key so completing mid-session never remounts it.
-  const [enteredCompleted] = useState(() =>
-    Boolean(lessonId && store.getLessonProgress(lessonId)?.completedAt),
-  );
+  // Captured per lessonId (not just per mount): react-router reuses this
+  // component across :lessonId changes, so we recompute entry mode when the
+  // lesson changes. Drives the runner's seed + key so completing mid-session
+  // never remounts the runner, but navigating to a new lesson re-evaluates.
+  const [entry, setEntry] = useState(() => ({
+    id: lessonId,
+    completed: Boolean(lessonId && store.getLessonProgress(lessonId)?.completedAt),
+  }));
+  let enteredCompleted = entry.completed;
+  if (entry.id !== lessonId) {
+    enteredCompleted = Boolean(lessonId && store.getLessonProgress(lessonId)?.completedAt);
+    setEntry({ id: lessonId, completed: enteredCompleted });
+  }
 
   useEffect(() => {
     if (ok && lesson) store.setLastVisited(lesson.id);

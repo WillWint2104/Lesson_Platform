@@ -138,6 +138,27 @@ describe("LessonPage", () => {
     expect(rec?.questionOutcomes[0]).toBe("incorrect"); // fresh outcome
     expect(rec?.attempts).toBe(2); // pre-complete + this run
   });
+
+  it("re-evaluates entry mode when navigating to another lesson (no stale review)", () => {
+    const registry = buildRegistry(
+      mkLesson("brackets", "one", { order: 1, questions: [mcQuestion] }),
+      mkLesson("brackets", "two", { order: 2, title: "Two", questions: [mcQuestion] }),
+    );
+    const store = buildStore(registry);
+    store.recordAttempt("one", true); // lesson one complete
+    renderAt("/math/algebra/brackets/one", registry, store);
+    expect(screen.getByText(/review mode/)).toBeTruthy();
+
+    // Jump from the completed lesson to the next (incomplete) one — same
+    // component instance, only the :lessonId param changes.
+    fireEvent.click(screen.getByRole("button", { name: /Practice/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Wrong" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+    fireEvent.click(screen.getByRole("link", { name: "Next lesson →" }));
+
+    expect(screen.getByRole("heading", { name: "Two" })).toBeTruthy();
+    expect(screen.queryByText(/review mode/)).toBeNull(); // not carried over
+  });
 });
 
 describe("LessonSelection routing + cards", () => {
