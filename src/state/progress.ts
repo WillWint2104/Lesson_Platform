@@ -94,6 +94,11 @@ export interface ProgressStore {
   setLastVisited(lessonId: string): void;
   resetAll(): void;
   subscribe(listener: () => void): () => void;
+  /** One-time UI notice dismissal, persisted through the SAME storage layer as
+   * progress (not a parallel localStorage call). Kept out of the versioned
+   * progress key — it is UI state, not learner progress. */
+  isNoticeDismissed(noticeId: string): boolean;
+  dismissNotice(noticeId: string): void;
 }
 
 export interface CreateProgressStoreOptions {
@@ -186,6 +191,8 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   const now = options.now ?? (() => new Date().toISOString());
 
   const listeners = new Set<() => void>();
+  // Session-level fallback so a dismissal still hides even if the write fails.
+  const dismissedNotices = new Set<string>();
 
   // ---- Load (robust) ----
   const load = loadRaw(backend);
@@ -392,6 +399,27 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
+    },
+
+    isNoticeDismissed(noticeId) {
+      if (dismissedNotices.has(noticeId)) return true;
+      try {
+        return backend.getItem(`lp:notice:${noticeId}`) === "1";
+      } catch {
+        return false;
+      }
+    },
+
+    dismissNotice(noticeId) {
+      // Hold it in memory first so the dismissal sticks for this session even if
+      // the persistent write below fails.
+      dismissedNotices.add(noticeId);
+      try {
+        backend.setItem(`lp:notice:${noticeId}`, "1");
+      } catch {
+        // Best effort — the in-memory flag still hides it for the session.
+      }
+      notify();
     },
   };
 }

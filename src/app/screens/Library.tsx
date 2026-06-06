@@ -24,6 +24,8 @@ export function Library() {
         </span>
       </header>
 
+      <LocalProgressNotice />
+
       {/* Subject pills are driven entirely by the registry — no hardcoded names.
           Single-select segmented control (toggle buttons). */}
       <div className="lib-pills" role="group" aria-label="Subjects">
@@ -65,6 +67,30 @@ export function Library() {
         )}
       </div>
     </main>
+  );
+}
+
+/**
+ * One-time, dismissible "your progress is local to this browser" notice
+ * (soft-launch). Dismissal persists through the progress store's storage layer.
+ */
+function LocalProgressNotice() {
+  const store = useProgressStore();
+  if (store.isNoticeDismissed("local-progress")) return null;
+  return (
+    <aside className="notice" role="note">
+      <p className="notice__text">
+        Your progress is saved in this browser on this device. Clearing site data or switching
+        devices starts fresh.
+      </p>
+      <button
+        type="button"
+        className="notice__dismiss"
+        onClick={() => store.dismissNotice("local-progress")}
+      >
+        Dismiss
+      </button>
+    </aside>
   );
 }
 
