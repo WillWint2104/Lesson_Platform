@@ -43,10 +43,10 @@ export function Library() {
         </span>
       </div>
 
-      {/* Continue hero — hidden when there is no last-visited lesson. */}
+      {/* Continue hero — hidden when there is no last-visited lesson. Deep-links
+          straight to the lesson page. */}
       {lastLesson ? (
-        // TODO: repoint to the lesson page once it exists (currently its topic area).
-        <Link className="lib-hero" to={areaPath(lastLesson)}>
+        <Link className="lib-hero" to={`${areaPath(lastLesson)}/${lastLesson.id}`}>
           <span className="lib-hero__label">Jump back in</span>
           <span className="lib-hero__title">{lastLesson.title}</span>
           <span className="lib-hero__crumb">
