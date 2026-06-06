@@ -255,6 +255,23 @@
   color: var(--muted-ink);
 }
 
+.breadcrumb__link {
+  color: var(--green-edge);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ---- Lesson page ---- */
+.lesson-banner {
+  background: var(--green-tint);
+  border: var(--card-border-width) solid var(--green);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  font-weight: 600;
+  color: var(--brand-ink);
+}
+
 .sel-title {
   font-family: var(--font-heading);
   font-weight: 800;

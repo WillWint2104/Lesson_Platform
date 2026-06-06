@@ -9,6 +9,8 @@ import type {
 import { MultipleChoice } from "@/render/questions/MultipleChoice";
 import { RevealAndSelfMark } from "@/render/questions/RevealAndSelfMark";
 import { QuestionRunner } from "@/render/questions/QuestionRunner";
+import { QuestionView } from "@/render/questions/QuestionView";
+import { validTriangleData } from "@/render/figures/kinds/triangle-figure/fixtures";
 
 afterEach(cleanup);
 
@@ -124,17 +126,14 @@ describe("QuestionRunner", () => {
     fireEvent.click(screen.getByRole("button", { name: "Not yet" }));
     expect(onResult).toHaveBeenCalledWith(1, "incorrect");
 
+    // Finishing enters the summary AND fires onComplete (no separate Done step).
     fireEvent.click(screen.getByRole("button", { name: "Finish" }));
-
-    // Summary: 1 correct / 1 to review.
-    expect(screen.getByText("1 correct")).toBeTruthy();
-    expect(screen.getByText("1 to review")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(onComplete).toHaveBeenCalledWith([
       { index: 0, outcome: "correct" },
       { index: 1, outcome: "incorrect" },
     ]);
+    expect(screen.getByText("1 correct")).toBeTruthy();
+    expect(screen.getByText("1 to review")).toBeTruthy();
   });
 
   it("shows the difficulty badge when present", () => {
@@ -164,5 +163,36 @@ describe("QuestionRunner", () => {
       <QuestionRunner questions={[mc(2)]} onResult={onResult} onComplete={vi.fn()} />,
     );
     expect(screen.getByText("Question 1 of 1")).toBeTruthy();
+  });
+
+  it("resumes at the first unanswered question from initialOutcomes", () => {
+    const { container } = render(
+      <QuestionRunner
+        questions={[mc(1), mc(1), mc(1)]}
+        initialOutcomes={{ 0: "correct" }}
+        onResult={vi.fn()}
+        onComplete={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Question 2 of 3")).toBeTruthy();
+    // The seeded outcome is reflected in the dots.
+    expect(container.querySelectorAll(".qr-dot--correct")).toHaveLength(1);
+  });
+});
+
+describe("QuestionView renders figures on any non-MC type (ruling)", () => {
+  const fig = { kind: "triangle-figure", specVersion: 1, data: validTriangleData };
+
+  it("renders a figure on a TEXT question", () => {
+    const q = { type: "text", prompt: "P", figure: fig } as unknown as Question;
+    const { container } = render(<QuestionView question={q} onOutcome={() => {}} />);
+    expect(container.querySelector(".figure-canvas")).not.toBeNull();
+  });
+
+  it("renders a figure AND the table on a TABLE question", () => {
+    const q = { type: "table", prompt: "P", rows: [["a", "b"]], figure: fig } as unknown as Question;
+    const { container } = render(<QuestionView question={q} onOutcome={() => {}} />);
+    expect(container.querySelector(".figure-canvas")).not.toBeNull();
+    expect(container.querySelector(".qr-table")).not.toBeNull();
   });
 });

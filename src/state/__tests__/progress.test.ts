@@ -228,6 +228,21 @@ describe("recordAttempt / completedAt", () => {
     store.recordAttempt("a", false); // later imperfect run must not erase it
     expect(store.getState().lessons["a"]!.completedAt).toBe("FIXED");
   });
+
+  it("review re-run records fresh outcomes + attempts but NEVER clears completedAt", () => {
+    const store = createProgressStore({ backend: createMemoryBackend(), now: () => "DAY1" });
+    store.recordOutcome("L", 0, "correct");
+    store.recordAttempt("L", true); // completes the lesson
+    expect(store.getState().lessons["L"]!.completedAt).toBe("DAY1");
+
+    // Review re-run: a fresh (worse) outcome + another attempt.
+    store.recordOutcome("L", 0, "incorrect");
+    store.recordAttempt("L", false);
+    const rec = store.getState().lessons["L"]!;
+    expect(rec.completedAt).toBe("DAY1"); // preserved
+    expect(rec.questionOutcomes[0]).toBe("incorrect"); // fresh outcome recorded
+    expect(rec.attempts).toBe(2); // incremented
+  });
 });
 
 // ---------------------------------------------------------------------------

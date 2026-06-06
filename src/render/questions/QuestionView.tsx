@@ -32,48 +32,35 @@ function QuestionBody({
   question: Question;
   onOutcome: OutcomeHandler;
 }) {
-  switch (question.type) {
-    case "multiple-choice":
-      return <MultipleChoice question={question} onOutcome={onOutcome} />;
-    case "text":
-      return (
+  if (question.type === "multiple-choice") {
+    return <MultipleChoice question={question} onOutcome={onOutcome} />;
+  }
+
+  if (
+    question.type === "text" ||
+    question.type === "table" ||
+    question.type === "graph" ||
+    question.type === "geometry"
+  ) {
+    // Figures render wherever present, on ANY non-MC type (agreed ruling).
+    const figure = resolveFigure(question as unknown as Record<string, unknown>).figure;
+    return (
+      <>
+        {figure ? <FigureSlot figure={figure} /> : null}
+        {question.type === "table" ? <QuestionTable rows={question.rows} /> : null}
         <RevealAndSelfMark
           answer={question.answer}
           working={question.working}
           onOutcome={onOutcome}
         />
-      );
-    case "table":
-      return (
-        <>
-          <QuestionTable rows={question.rows} />
-          <RevealAndSelfMark
-            answer={question.answer}
-            working={question.working}
-            onOutcome={onOutcome}
-          />
-        </>
-      );
-    case "graph":
-    case "geometry": {
-      const figure = resolveFigure(question as unknown as Record<string, unknown>).figure;
-      return (
-        <>
-          <FigureSlot figure={figure} />
-          <RevealAndSelfMark
-            answer={question.answer}
-            working={question.working}
-            onOutcome={onOutcome}
-          />
-        </>
-      );
-    }
-    default:
-      // Defence in depth (validator should have caught this).
-      return (
-        <div className="qr-error" role="alert">
-          Unknown question type: <code>{String((question as { type?: unknown }).type)}</code>
-        </div>
-      );
+      </>
+    );
   }
+
+  // Defence in depth (validator should have caught this).
+  return (
+    <div className="qr-error" role="alert">
+      Unknown question type: <code>{String((question as { type?: unknown }).type)}</code>
+    </div>
+  );
 }

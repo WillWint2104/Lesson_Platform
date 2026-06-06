@@ -504,6 +504,13 @@
   font-weight: 600;
 }
 
+.qr-summary__actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
 .qr-summary__correct {
   color: var(--green-edge);
 }
