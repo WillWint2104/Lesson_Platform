@@ -449,6 +449,15 @@ describe("buildLessonRegistry", () => {
     expect(lesson?.topicArea).toBe("cells");
   });
 
+  it("normalizes video.src to the resolved YouTube id", () => {
+    const reg = buildLessonRegistry({
+      "/content/science/biology/cells/intro/lesson.json": body("intro", "Intro", {
+        video: { src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s", duration: null },
+      }),
+    });
+    expect(reg.getLessonById("intro")?.video.src).toBe("dQw4w9WgXcQ");
+  });
+
   it("errors on a malformed (wrong-depth) manifest path, naming it", () => {
     const reg = buildLessonRegistry({ "/content/oops/lesson.json": body("oops", "Oops") });
     const lesson = reg.lessons[0];
