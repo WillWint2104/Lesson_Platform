@@ -1,5 +1,5 @@
 /**
- * @file notes-renderer.js — Notes renderer.
+ * @file notes-renderer.tsx — Notes renderer.
  *
  * Renders a validated notes block list (heading | paragraph | example |
  * callout | list) into the DOM. All math is rendered with KaTeX
@@ -11,3 +11,7 @@
  *
  * Stub only — no logic yet (stack decision pending, CLAUDE.md §f).
  */
+
+// Stub module: no exports yet. Present so the file is a module under
+// isolatedModules (CLAUDE.md §f).
+export {};

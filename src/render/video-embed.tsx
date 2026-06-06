@@ -1,5 +1,5 @@
 /**
- * @file video-embed.js — Video embed.
+ * @file video-embed.tsx — Video embed.
  *
  * Embeds a lesson's recorded video (produced in the HGL-Console studio, dark
  * mint theme) inside a bold-framed dark panel. Studio mint (#beffdc) is the
@@ -7,3 +7,7 @@
  *
  * Stub only — no logic yet (stack decision pending, CLAUDE.md §f).
  */
+
+// Stub module: no exports yet. Present so the file is a module under
+// isolatedModules (CLAUDE.md §f).
+export {};

@@ -1,54 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lesson Platform — Scaffold</title>
-  <link rel="stylesheet" href="styles/tokens.css" />
-  <link rel="stylesheet" href="styles/components.css" />
-  <style>
-    /* Minimal page-level styling, tokens only (CLAUDE.md §d: no hardcoded hex). */
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: var(--page-bg);
-      font-family: var(--font-body);
-      color: var(--brand-ink);
-    }
-    .card {
-      background: var(--card-bg);
-      border: var(--card-border-width) solid var(--card-border);
-      border-bottom-width: var(--card-edge-width);
-      border-radius: 12px;
-      padding: 2rem 2.5rem;
-      max-width: 28rem;
-      text-align: center;
-    }
-    .card h1 {
-      font-family: var(--font-heading);
-      margin: 0 0 0.5rem;
-      color: var(--brand-ink);
-    }
-    .badge {
-      display: inline-block;
-      margin-top: 1rem;
-      padding: 0.4rem 1rem;
-      border-radius: 999px;
-      background: var(--green);
-      border-bottom: 3px solid var(--green-edge);
-      color: var(--card-bg);
-      font-family: var(--font-heading);
-      font-weight: 700;
-    }
-  </style>
-</head>
-<body>
-  <main class="card">
-    <h1>Lesson Platform</h1>
-    <p>Scaffold is in place. Stack decision pending — see CLAUDE.md.</p>
-    <span class="badge">scaffold OK</span>
-  </main>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson Platform</title>
+
+    <!-- Fonts: Plus Jakarta Sans (headings/buttons) + Manrope (body), CLAUDE.md §d -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
