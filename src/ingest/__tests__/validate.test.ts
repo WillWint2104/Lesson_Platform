@@ -4,12 +4,12 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  validateManifest,
+  validateAreaManifest,
   validateNotesFile,
   validateQuestionsFile,
   type Issue,
 } from "@/ingest/validate";
-import { buildLessonRegistry } from "@/ingest/load";
+import { buildAreaRegistry } from "@/ingest/load";
 import { figureSchemas } from "@/render/figures/registry";
 
 const qfile = (questions: unknown[]) => ({ questions });
@@ -336,224 +336,171 @@ describe("warnings", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Manifest
+// Area manifest
 // ---------------------------------------------------------------------------
 
-describe("validateManifest", () => {
-  const goodManifest = {
-    lesson: {
-      id: "x-1",
-      title: "Lesson",
-      video: { src: "dQw4w9WgXcQ", duration: null },
+describe("validateAreaManifest", () => {
+  const goodArea = {
+    area: {
+      title: "Expanding Brackets",
       notes: "notes.json",
-      questions: "questions.json",
+      sequence: [
+        { type: "video", title: "Intro", src: null },
+        { type: "exercise", title: "Warm-up", questions: "exercise-1.json" },
+      ],
     },
   };
 
-  it("accepts a well-formed manifest with file-path references", () => {
-    expect(validateManifest(goodManifest).valid).toBe(true);
+  it("accepts a well-formed area manifest", () => {
+    expect(validateAreaManifest(goodArea).valid).toBe(true);
   });
 
-  it.each(["subject", "topic", "topicArea"])(
-    "rejects a manifest carrying the hierarchy field '%s'",
-    (field) => {
-      const res = validateManifest({
-        lesson: { ...goodManifest.lesson, [field]: "math" },
-      });
-      expect(res.valid).toBe(false);
-      expect(has(res.errors, `lesson.${field}`, "hierarchy fields are not allowed")).toBe(true);
-    },
-  );
-
-  it("flags a manifest missing the lesson wrapper", () => {
-    const res = validateManifest({ id: "x" });
-    expect(has(res.errors, "lesson", "missing required field 'lesson'")).toBe(true);
-  });
-
-  it("flags a video missing its duration field", () => {
-    const res = validateManifest({
-      lesson: { ...goodManifest.lesson, video: { src: "dQw4w9WgXcQ" } },
-    });
-    expect(has(res.errors, "lesson.video", "missing required field 'duration'")).toBe(true);
-  });
-
-  it("accepts a null video src (authored before recording)", () => {
-    const res = validateManifest({
-      lesson: { ...goodManifest.lesson, video: { src: null, duration: null } },
-    });
-    expect(res.valid).toBe(true);
-  });
-
-  it("accepts a full YouTube watch URL as src", () => {
-    const res = validateManifest({
-      lesson: {
-        ...goodManifest.lesson,
-        video: { src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", duration: null },
-      },
-    });
-    expect(res.valid).toBe(true);
-  });
-
-  it("errors on an unparseable video src and lists the accepted formats", () => {
-    const res = validateManifest({
-      lesson: { ...goodManifest.lesson, video: { src: "videos/clip.mp4", duration: null } },
-    });
+  it("rejects the superseded lesson manifest with a migration pointer", () => {
+    const res = validateAreaManifest({ lesson: { id: "x", title: "X" } });
     expect(res.valid).toBe(false);
-    const issue = res.errors.find((e) => e.path === "lesson.video");
-    expect(issue?.message).toContain("could not be parsed as a YouTube video");
-    expect(issue?.message).toContain("youtu.be");
-    expect(issue?.message).toContain("11-character video id");
+    expect(has(res.errors, "lesson", "superseded by area.json")).toBe(true);
   });
 
-  it("validates inline notes/questions arrays", () => {
-    const res = validateManifest({
-      lesson: {
-        ...goodManifest.lesson,
-        notes: [{ type: "heading" }],
-        questions: [{ type: "text" }],
-      },
+  it("errors on a missing 'area' wrapper", () => {
+    expect(has(validateAreaManifest({}).errors, "area", "missing required field 'area'")).toBe(true);
+  });
+
+  it("errors on an empty sequence", () => {
+    const res = validateAreaManifest({ area: { title: "T", notes: [], sequence: [] } });
+    expect(has(res.errors, "area.sequence", "at least one segment")).toBe(true);
+  });
+
+  it("warns (not errors) when an area has no notes", () => {
+    const res = validateAreaManifest({
+      area: { title: "T", sequence: [{ type: "video", title: "v", src: null }] },
     });
-    expect(has(res.errors, "lesson.notes[0]", "missing required field 'text'")).toBe(true);
-    expect(has(res.errors, "lesson.questions[0]", "missing required field 'prompt'")).toBe(true);
+    expect(res.valid).toBe(true);
+    expect(has(res.warnings, "area.notes", "no notes provided")).toBe(true);
+  });
+
+  it("errors on an exercise with zero questions", () => {
+    const res = validateAreaManifest({
+      area: { title: "T", notes: [], sequence: [{ type: "exercise", title: "e", questions: [] }] },
+    });
+    expect(has(res.errors, "area.sequence[0] (exercise)", "at least one question")).toBe(true);
+  });
+
+  it("errors on an unknown segment type", () => {
+    const res = validateAreaManifest({
+      area: { title: "T", notes: [], sequence: [{ type: "audio", title: "a" }] },
+    });
+    expect(has(res.errors, "area.sequence[0]", "unknown segment type")).toBe(true);
+  });
+
+  it("errors on an unparseable video src", () => {
+    const res = validateAreaManifest({
+      area: { title: "T", notes: [], sequence: [{ type: "video", title: "v", src: "not a video!!" }] },
+    });
+    expect(
+      has(res.errors, "area.sequence[0] (video)", "could not be parsed as a YouTube video"),
+    ).toBe(true);
+  });
+
+  it("validates inline exercise questions + figure data per kind", () => {
+    const res = validateAreaManifest(
+      {
+        area: {
+          title: "T",
+          notes: [],
+          sequence: [
+            {
+              type: "exercise",
+              title: "e",
+              questions: [
+                {
+                  type: "geometry",
+                  prompt: "p",
+                  figure: { kind: "triangle-figure", specVersion: 1, data: { vertices: [{ x: 0, y: 0 }] } },
+                },
+              ],
+            },
+          ],
+        },
+      },
+      { figureSchemas },
+    );
+    expect(res.valid).toBe(false);
+    expect(
+      res.errors.some((e) => e.path.includes("figure.data.vertices") && e.message.includes("exactly 3")),
+    ).toBe(true);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Loader registry: duplicate-id determinism + stale-ID guard
+// buildAreaRegistry
 // ---------------------------------------------------------------------------
 
-describe("buildLessonRegistry", () => {
-  // Well-formed manifest body (no hierarchy fields — those come from the path).
-  const body = (id: string, title: string, extra: Record<string, unknown> = {}) => ({
-    lesson: {
-      id,
-      title,
-      video: { src: "dQw4w9WgXcQ", duration: null },
-      notes: [],
-      questions: [],
-      ...extra,
-    },
-  });
-  // /content/<subject>/<topic>/<topic-area>/<lesson-id>/lesson.json
-  const at = (topicArea: string, id: string) =>
-    `/content/math/algebra/${topicArea}/${id}/lesson.json`;
+describe("buildAreaRegistry", () => {
+  const area = (title: string, sequence: unknown[]) => ({ area: { title, notes: [], sequence } });
+  const at = (topicArea: string) => `/content/math/algebra/${topicArea}/area.json`;
 
-  it("derives subject/topic/topicArea from the directory path", () => {
-    const reg = buildLessonRegistry({
-      "/content/science/biology/cells/intro/lesson.json": body("intro", "Intro"),
+  it("derives hierarchy + areaId from the path and resolves segments", () => {
+    const reg = buildAreaRegistry({
+      "/content/science/biology/cells/area.json": area("Cells", [
+        { type: "video", title: "v", src: null },
+        { type: "exercise", title: "e", questions: [{ type: "text", prompt: "Q" }] },
+      ]),
     });
-    const lesson = reg.getLessonById("intro");
-    expect(lesson?.valid).toBe(true);
-    expect(lesson?.subject).toBe("science");
-    expect(lesson?.topic).toBe("biology");
-    expect(lesson?.topicArea).toBe("cells");
+    const a = reg.getAreaById("science/biology/cells");
+    expect(a?.valid).toBe(true);
+    expect(a?.subject).toBe("science");
+    expect(a?.segments).toHaveLength(2);
+    expect(a?.segments[1]).toMatchObject({ type: "exercise" });
   });
 
-  it("normalizes video.src to the resolved YouTube id", () => {
-    const reg = buildLessonRegistry({
-      "/content/science/biology/cells/intro/lesson.json": body("intro", "Intro", {
-        video: { src: "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10s", duration: null },
-      }),
+  it("resolves a referenced exercise questions file relative to the area dir", () => {
+    const reg = buildAreaRegistry({
+      [at("brackets")]: area("B", [{ type: "exercise", title: "e", questions: "ex.json" }]),
+      "/content/math/algebra/brackets/ex.json": { questions: [{ type: "text", prompt: "Q" }] },
     });
-    expect(reg.getLessonById("intro")?.video.src).toBe("dQw4w9WgXcQ");
+    const a = reg.getAreaById("math/algebra/brackets");
+    expect(a?.valid).toBe(true);
+    const seg = a?.segments[0];
+    expect(seg && seg.type === "exercise" ? seg.questions.length : 0).toBe(1);
   });
 
-  it("sorts a topic area by order, then by id for ties/absences", () => {
-    const reg = buildLessonRegistry({
-      "/content/math/algebra/brackets/two/lesson.json": body("two", "Two", { order: 2 }),
-      "/content/math/algebra/brackets/one/lesson.json": body("one", "One", { order: 1 }),
-      "/content/math/algebra/brackets/zed/lesson.json": body("zed", "Zed"),
-      "/content/math/algebra/brackets/aaa/lesson.json": body("aaa", "Aaa"),
+  it("errors on a missing referenced questions file without throwing", () => {
+    const reg = buildAreaRegistry({
+      [at("brackets")]: area("B", [{ type: "exercise", title: "e", questions: "missing.json" }]),
     });
-    const ordered = reg.getTopicAreaLessons("math", "algebra", "brackets").map((l) => l.id);
-    expect(ordered).toEqual(["one", "two", "aaa", "zed"]);
-    expect(reg.getLessonById("one")?.areaIndex).toBe(0);
-    expect(reg.getLessonById("one")?.areaCount).toBe(4);
+    const a = reg.getAreaById("math/algebra/brackets");
+    expect(a?.valid).toBe(false);
+    expect(a?.errors.some((e) => e.message.includes("referenced questions file not found"))).toBe(true);
   });
 
-  it("warns on duplicate order values within a topic area, naming both lessons", () => {
-    const reg = buildLessonRegistry({
-      "/content/math/algebra/brackets/a/lesson.json": body("a", "A", { order: 1 }),
-      "/content/math/algebra/brackets/b/lesson.json": body("b", "B", { order: 1 }),
+  it("surfaces a superseded lesson.json as an invalid area with the migration error", () => {
+    const reg = buildAreaRegistry({
+      "/content/math/algebra/brackets/single-1/lesson.json": { lesson: { id: "x", title: "X" } },
     });
-    const a = reg.getLessonById("a");
-    const b = reg.getLessonById("b");
-    expect(a?.valid).toBe(true); // a warning, not an error
-    expect(a?.warnings.some((w) => w.message.includes("order 1 is shared with b"))).toBe(true);
-    expect(b?.warnings.some((w) => w.message.includes("order 1 is shared with a"))).toBe(true);
+    const a = reg.areas[0];
+    expect(a?.valid).toBe(false);
+    expect(a?.errors.some((e) => e.message.includes("superseded by area.json"))).toBe(true);
   });
 
-  it("errors on a malformed (wrong-depth) manifest path, naming it", () => {
-    const reg = buildLessonRegistry({ "/content/oops/lesson.json": body("oops", "Oops") });
-    const lesson = reg.lessons[0];
-    expect(lesson?.valid).toBe(false);
-    expect(
-      lesson?.errors.some(
-        (e) =>
-          e.path === "/content/oops/lesson.json" &&
-          e.message.includes("unexpected shape") &&
-          e.message.includes("/content/<subject>/<topic>/<topic-area>/<lesson-id>/lesson.json"),
-      ),
-    ).toBe(true);
+  it("getAreaById returns undefined for unknown ids (truthiness is not validity)", () => {
+    const reg = buildAreaRegistry({ [at("brackets")]: area("B", [{ type: "video", title: "v", src: null }]) });
+    expect(reg.getAreaById("math/algebra/brackets")?.title).toBe("B");
+    expect(reg.getAreaById("nope")).toBeUndefined();
+    expect(reg.getAreaById("")).toBeUndefined();
   });
 
-  it("keeps the first-seen lesson for a duplicate id and flags the later one", () => {
-    const reg = buildLessonRegistry({
-      [at("a-area", "dup")]: body("dup", "A"),
-      [at("b-area", "dup")]: body("dup", "B"),
+  it("exposes hierarchy queries", () => {
+    const reg = buildAreaRegistry({
+      "/content/math/algebra/brackets/area.json": area("B", [{ type: "video", title: "v", src: null }]),
+      "/content/math/algebra/factoring/area.json": area("F", [{ type: "video", title: "v", src: null }]),
     });
-    expect(reg.lessons).toHaveLength(2);
-    // a-area sorts before b-area, so it wins the id.
-    expect(reg.getLessonById("dup")?.title).toBe("A");
-    const later = reg.lessons.find((l) => l.path === at("b-area", "dup"));
-    expect(later?.errors.some((e) => e.message.includes("duplicate lesson id"))).toBe(true);
-  });
-
-  it("getLessonById returns undefined for unknown ids (truthiness is not validity)", () => {
-    const reg = buildLessonRegistry({ [at("expanding", "real")]: body("real", "A") });
-    expect(reg.getLessonById("real")?.title).toBe("A");
-    expect(reg.getLessonById("missing")).toBeUndefined();
-    expect(reg.getLessonById("")).toBeUndefined();
-  });
-
-  it("resolves referenced notes/questions files relative to the lesson dir", () => {
-    const dir = "/content/math/algebra/expanding/x/";
-    const reg = buildLessonRegistry({
-      [`${dir}lesson.json`]: {
-        lesson: {
-          id: "x",
-          title: "X",
-          video: { src: "dQw4w9WgXcQ", duration: null },
-          notes: "notes.json",
-          questions: "questions.json",
-        },
-      },
-      [`${dir}notes.json`]: { notes: [{ type: "heading", text: "Hi" }] },
-      [`${dir}questions.json`]: { questions: [{ type: "text", prompt: "Q" }] },
-    });
-    const lesson = reg.getLessonById("x");
-    expect(lesson?.valid).toBe(true);
-    expect(lesson?.notes).toHaveLength(1);
-    expect(lesson?.questions).toHaveLength(1);
-  });
-
-  it("reports a missing referenced file without throwing", () => {
-    const reg = buildLessonRegistry({
-      [at("expanding", "y")]: {
-        lesson: {
-          id: "y",
-          title: "Y",
-          video: { src: "dQw4w9WgXcQ", duration: null },
-          notes: "missing.json",
-          questions: [],
-        },
-      },
-    });
-    const lesson = reg.getLessonById("y");
-    expect(lesson?.valid).toBe(false);
-    expect(lesson?.errors.some((e) => e.message.includes("referenced notes file not found"))).toBe(
-      true,
-    );
+    expect(reg.getSubjects()).toEqual(["math"]);
+    expect(reg.getTopics("math")).toEqual(["algebra"]);
+    expect(reg.getTopicAreas("math", "algebra")).toEqual(["brackets", "factoring"]);
+    expect(reg.getAreasInTopic("math", "algebra").map((a) => a.topicArea)).toEqual([
+      "brackets",
+      "factoring",
+    ]);
   });
 });
 
@@ -574,14 +521,25 @@ describe("/content is a living fixture", () => {
   it.each(jsonFiles)("validates cleanly: %s", (rel) => {
     const raw = JSON.parse(readFileSync(join(contentDir, rel), "utf8"));
     const base = rel.split(/[\\/]/).pop();
-    const res =
-      base === "lesson.json"
-        ? validateManifest(raw, { figureSchemas })
-        : base === "questions.json"
-          ? validateQuestionsFile(raw, { figureSchemas })
-          : base === "notes.json"
-            ? validateNotesFile(raw)
-            : { valid: true, errors: [], warnings: [] };
+    let res;
+    if (base === "area.json") res = validateAreaManifest(raw, { figureSchemas });
+    else if (base === "notes.json") res = validateNotesFile(raw);
+    else if (raw && typeof raw === "object" && "questions" in raw)
+      res = validateQuestionsFile(raw, { figureSchemas });
+    // Never silently pass unrecognized content (CLAUDE.md §c rule 6): a misnamed
+    // or malformed file under /content must fail this CI guard, not slip through.
+    else
+      res = {
+        valid: false,
+        errors: [
+          {
+            path: rel,
+            message:
+              "unrecognized content file — expected area.json, notes.json, or a { questions: [...] } payload",
+          },
+        ] as Issue[],
+        warnings: [] as Issue[],
+      };
     if (!res.valid) {
       throw new Error(
         `${rel} failed validation:\n` +

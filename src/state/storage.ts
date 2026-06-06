@@ -2,18 +2,18 @@
  * @file storage.ts — Storage backend + robust load for the progress store.
  *
  * Keeps the unsafe edges (a possibly-absent localStorage, corrupt or
- * future-versioned stored JSON) away from the store core. Detection and parsing
- * never throw and never destroy data:
+ * future-versioned stored JSON, and a v1→v2 migration) away from the store core.
+ *
  *   - localStorage unavailable (private mode / SSR) → in-memory fallback
  *   - unparseable JSON → backed up to lp:progress:corrupt, then fresh
  *   - newer schema version → left untouched, in-memory session
- * The store emits the user-facing warnings (once per instance) based on the
- * results returned here.
+ *   - older (v1) data, no v2 yet → returned for migration (v1 key left intact)
  */
 
-export const PROGRESS_KEY = "lp:progress:v1";
+export const PROGRESS_KEY_V1 = "lp:progress:v1";
+export const PROGRESS_KEY = "lp:progress:v2"; // current
 export const CORRUPT_KEY = "lp:progress:corrupt";
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export interface StorageBackend {
   getItem(key: string): string | null;
@@ -21,7 +21,6 @@ export interface StorageBackend {
   removeItem(key: string): void;
 }
 
-/** A volatile Map-backed backend used when localStorage is unavailable. */
 export function createMemoryBackend(): StorageBackend {
   const map = new Map<string, string>();
   return {
@@ -35,7 +34,6 @@ export function createMemoryBackend(): StorageBackend {
   };
 }
 
-/** Detect a usable persistent backend, falling back to memory. Never throws. */
 export function detectBackend(): { backend: StorageBackend; persistent: boolean } {
   try {
     if (typeof localStorage === "undefined") throw new Error("no localStorage");
@@ -50,50 +48,64 @@ export function detectBackend(): { backend: StorageBackend; persistent: boolean 
 
 export type LoadResult =
   | { status: "empty" }
-  | { status: "ok"; parsed: Record<string, unknown> }
-  | { status: "corrupt" } // raw already backed up to CORRUPT_KEY
+  | { status: "ok"; parsed: Record<string, unknown> } // current-version data
+  | { status: "migrate"; fromVersion: number; parsed: Record<string, unknown> } // older data
+  | { status: "corrupt" } // raw already backed up
   | { status: "future" }; // newer schema version; caller must not persist
 
-/**
- * Read + parse the stored progress, classifying the outcome. Side effects are
- * limited to backing up a corrupt blob; it never overwrites or deletes good
- * data and never throws.
- */
-export function loadRaw(backend: StorageBackend): LoadResult {
-  let raw: string | null = null;
+function safeGet(backend: StorageBackend, key: string): string | null {
   try {
-    raw = backend.getItem(PROGRESS_KEY);
+    return backend.getItem(key);
   } catch {
-    return { status: "empty" };
+    return null;
   }
-  if (raw == null) return { status: "empty" };
+}
 
-  let parsed: unknown;
+function parseObject(raw: string): Record<string, unknown> | null {
   try {
-    parsed = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
   } catch {
-    backupCorrupt(backend, raw);
-    return { status: "corrupt" };
+    return null;
   }
-
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    backupCorrupt(backend, raw);
-    return { status: "corrupt" };
-  }
-
-  const version = (parsed as Record<string, unknown>)["version"];
-  if (typeof version === "number" && version > SCHEMA_VERSION) {
-    return { status: "future" };
-  }
-
-  return { status: "ok", parsed: parsed as Record<string, unknown> };
 }
 
 function backupCorrupt(backend: StorageBackend, raw: string): void {
   try {
     backend.setItem(CORRUPT_KEY, raw);
   } catch {
-    // Best effort — if we can't back up, we still must not destroy the original
-    // until we overwrite it on the next successful save.
+    /* best effort */
   }
+}
+
+/**
+ * Read + classify stored progress. Prefers the current (v2) key; falls back to
+ * the v1 key for migration (leaving v1 intact). Never throws, never destroys.
+ */
+export function loadRaw(backend: StorageBackend): LoadResult {
+  const raw2 = safeGet(backend, PROGRESS_KEY);
+  if (raw2 != null) {
+    const parsed = parseObject(raw2);
+    if (!parsed) {
+      backupCorrupt(backend, raw2);
+      return { status: "corrupt" };
+    }
+    const version = parsed["version"];
+    if (typeof version === "number" && version > SCHEMA_VERSION) return { status: "future" };
+    return { status: "ok", parsed };
+  }
+
+  const raw1 = safeGet(backend, PROGRESS_KEY_V1);
+  if (raw1 != null) {
+    const parsed = parseObject(raw1);
+    if (!parsed) {
+      backupCorrupt(backend, raw1);
+      return { status: "corrupt" };
+    }
+    const fromVersion = typeof parsed["version"] === "number" ? (parsed["version"] as number) : 1;
+    return { status: "migrate", fromVersion, parsed };
+  }
+
+  return { status: "empty" };
 }

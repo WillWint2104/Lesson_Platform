@@ -113,46 +113,55 @@ export const NOTE_BLOCK_TYPES = [
 /** Allowed callout styles. */
 export const CALLOUT_STYLES = ["key", "warning", "info"] as const;
 
-export interface LessonVideo {
-  /**
-   * YouTube source (watch/short/embed URL or bare 11-char id), or `null` when
-   * the lesson was authored before its video was recorded — a first-class state
-   * (generation may run ahead of studio recording).
-   */
+/**
+ * A video segment in an area's sequence. `src` is a YouTube source (watch/short/
+ * embed URL or bare 11-char id) or `null` when the video isn't recorded yet
+ * (a first-class state — generation may run ahead of studio recording).
+ */
+export interface VideoSegment {
+  type: "video";
+  title: string;
   src: string | null;
-  /** Length in seconds, or null when not yet known. */
-  duration: number | null;
 }
 
+/** An exercise segment: an ordered set of questions (inline or a file path). */
+export interface ExerciseSegment {
+  type: "exercise";
+  title: string;
+  questions: Question[] | string;
+}
+
+export type AreaSegment = VideoSegment | ExerciseSegment;
+
+export const SEGMENT_TYPES = ["video", "exercise"] as const;
+
 /**
- * The inner lesson object of a manifest.
+ * The inner area object of an `area.json` manifest. ONE page per topic area:
+ * area-level notes + an ordered `sequence` of video/exercise segments. The
+ * normal pattern is video→exercise pulses, but the contract does not enforce
+ * any ordering or mix.
  *
  * NOTE: no `subject`/`topic`/`topicArea` — the hierarchy is derived from the
  * directory path by the loader (CLAUDE.md §a), not stored in the manifest.
  */
-export interface Lesson {
-  id: string;
+export interface Area {
   title: string;
-  /** Optional sort key within a topic area; ties/absences fall back to id. */
-  order?: number;
-  video: LessonVideo;
-  /** Inline blocks, or a path (relative to the lesson dir) to a NotesFile. */
+  /** Area-level notes: inline blocks or a path (relative to the area dir). */
   notes: NoteBlock[] | string;
-  /** Inline questions, or a path to a QuestionsFile. */
-  questions: Question[] | string;
+  sequence: AreaSegment[];
 }
 
-/** A `lesson.json` manifest ties video + notes + questions together. */
-export interface LessonManifest {
-  lesson: Lesson;
+/** An `area.json` manifest. */
+export interface AreaManifest {
+  area: Area;
 }
 
-/** A standalone `questions.json`. */
+/** A standalone `questions.json` (contract UNCHANGED). */
 export interface QuestionsFile {
   questions: Question[];
 }
 
-/** A standalone `notes.json`. */
+/** A standalone `notes.json` (contract UNCHANGED). */
 export interface NotesFile {
   notes: NoteBlock[];
 }

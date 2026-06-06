@@ -2,7 +2,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import { buildLessonRegistry, type LessonRegistry } from "@/ingest/load";
+import { buildAreaRegistry, type AreaRegistry } from "@/ingest/load";
 import { createProgressStore, type ProgressStore } from "@/state/progress";
 import { createMemoryBackend } from "@/state/storage";
 import { RegistryProvider } from "@/app/RegistryContext";
@@ -11,53 +11,47 @@ import { AppRoutes } from "@/app/AppRoutes";
 
 afterEach(cleanup);
 
-type LessonOpts = { order?: number; title?: string; questions?: unknown[] };
+const exercise = (title: string, right: string, wrong: string) => ({
+  type: "exercise",
+  title,
+  questions: [
+    {
+      type: "multiple-choice",
+      prompt: title,
+      options: [
+        { text: right, isCorrect: true },
+        { text: wrong, isCorrect: false },
+      ],
+    },
+  ],
+});
 
-function mkLesson(area: string, id: string, opts: LessonOpts = {}): Record<string, unknown> {
+function mkArea(topicArea: string, opts: { title?: string; sequence?: unknown[] } = {}) {
   return {
-    [`/content/math/algebra/${area}/${id}/lesson.json`]: {
-      lesson: {
-        id,
-        title: opts.title ?? id,
-        ...(opts.order != null ? { order: opts.order } : {}),
-        video: { src: null, duration: null },
-        notes: [],
-        questions: opts.questions ?? [{ type: "text", prompt: "Q" }],
+    [`/content/math/algebra/${topicArea}/area.json`]: {
+      area: {
+        title: opts.title ?? topicArea,
+        notes: [{ type: "heading", text: "Notes heading" }],
+        sequence:
+          opts.sequence ?? [
+            { type: "video", title: "Intro", src: null },
+            exercise("Practice", "Right", "Wrong"),
+          ],
       },
     },
   };
 }
 
-const mcQuestion = {
-  type: "multiple-choice",
-  prompt: "Pick",
-  options: [
-    { text: "Right", isCorrect: true },
-    { text: "Wrong", isCorrect: false },
-  ],
-};
-
-function buildRegistry(...lessons: Record<string, unknown>[]): LessonRegistry {
-  return buildLessonRegistry(Object.assign({}, ...lessons));
+function buildReg(...areas: Record<string, unknown>[]): AreaRegistry {
+  return buildAreaRegistry(Object.assign({}, ...areas));
 }
-
-function buildStore(registry: LessonRegistry): ProgressStore {
-  return createProgressStore({
-    backend: createMemoryBackend(),
-    lessons: registry.lessons.map((l) => ({
-      id: l.id,
-      subject: l.subject,
-      topic: l.topic,
-      topicArea: l.topicArea,
-      questions: l.questions.map((q) => ({ skill: q.skill, difficulty: q.difficulty })),
-    })),
-  });
+function buildStore(reg: AreaRegistry): ProgressStore {
+  return createProgressStore({ backend: createMemoryBackend(), areaIds: reg.areas.map((a) => a.id) });
 }
-
-function renderAt(path: string, registry: LessonRegistry, store: ProgressStore) {
+function renderAt(path: string, reg: AreaRegistry, store: ProgressStore) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <RegistryProvider registry={registry}>
+      <RegistryProvider registry={reg}>
         <ProgressProvider store={store}>
           <AppRoutes />
         </ProgressProvider>
@@ -67,169 +61,85 @@ function renderAt(path: string, registry: LessonRegistry, store: ProgressStore) 
 }
 
 describe("Library", () => {
-  it("renders subject pills from the registry (not hardcoded) + a 'more soon' pill", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
-    renderAt("/", registry, buildStore(registry));
+  it("renders registry-driven subject pills + a 'more soon' pill", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt("/", reg, buildStore(reg));
     expect(screen.getByRole("button", { name: "Math" })).toBeTruthy();
     expect(screen.getByText("more soon")).toBeTruthy();
   });
 
-  it("shows the local-progress notice once and persists dismissal via the store", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
-    const store = buildStore(registry);
-    renderAt("/", registry, store);
+  it("shows the local-progress notice once and persists dismissal", () => {
+    const reg = buildReg(mkArea("brackets"));
+    const store = buildStore(reg);
+    renderAt("/", reg, store);
     expect(screen.getByText(/saved in this browser/i)).toBeTruthy();
-
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByText(/saved in this browser/i)).toBeNull();
     expect(store.isNoticeDismissed("local-progress")).toBe(true);
   });
 
-  it("hero is in 'start here' mode (always present) with no last-visited lesson", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1, title: "Brackets One" }));
-    renderAt("/", registry, buildStore(registry));
+  it("hero is 'start here' (always present) with no last-visited area", () => {
+    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
+    renderAt("/", reg, buildStore(reg));
     expect(screen.getByText("Start here")).toBeTruthy();
-    // Points at the first lesson of the first topic/area.
     expect(screen.getByText("Start here").closest("a")?.getAttribute("href")).toBe(
-      "/math/algebra/brackets/one",
+      "/math/algebra/brackets",
     );
   });
 
-  it("hero is in 'continue' mode when a lesson was last visited (deep link)", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1, title: "Brackets One" }));
-    const store = buildStore(registry);
-    store.setLastVisited("one");
-    renderAt("/", registry, store);
+  it("hero is 'continue' when an area was last visited", () => {
+    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
+    const store = buildStore(reg);
+    store.setLastVisited("math/algebra/brackets");
+    renderAt("/", reg, store);
     expect(screen.getByText("Continue where you left off")).toBeTruthy();
-    expect(screen.getByText("Continue where you left off").closest("a")?.getAttribute("href")).toBe(
-      "/math/algebra/brackets/one",
-    );
+    expect(
+      screen.getByText("Continue where you left off").closest("a")?.getAttribute("href"),
+    ).toBe("/math/algebra/brackets");
   });
 
-  it("renders topic-area rows inside the topic card, each linking to its lesson list", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
-    const { container } = renderAt("/", registry, buildStore(registry));
+  it("renders topic-area rows linking to the area page, + grid + placeholder", () => {
+    const reg = buildReg(mkArea("brackets"));
+    const { container } = renderAt("/", reg, buildStore(reg));
     const row = screen.getByText("Brackets").closest("a");
     expect(row?.getAttribute("href")).toBe("/math/algebra/brackets");
     expect(row?.className).toContain("topic-area-row");
-    // Responsive grid container + the empty-room placeholder tile are present.
     expect(container.querySelector(".topic-grid")).not.toBeNull();
     expect(screen.getByText(/Future topics drop in/)).toBeTruthy();
   });
-
-  it("topic card counts only valid lessons", () => {
-    const registry = buildRegistry(
-      mkLesson("brackets", "good", { order: 1 }),
-      // Missing prompt → invalid lesson; must not be counted.
-      mkLesson("brackets", "bad", { order: 2, questions: [{ type: "text" }] }),
-    );
-    renderAt("/", registry, buildStore(registry));
-    expect(screen.getByText(/1 area · 1 lesson/)).toBeTruthy();
-  });
 });
 
-describe("LessonPage", () => {
-  it("defaults to the Notes tab and shows the coming-soon stage for a null video", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
-    renderAt("/math/algebra/brackets/one", registry, buildStore(registry));
-    expect(screen.getByRole("button", { name: "Notes" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByText("Video coming soon.")).toBeTruthy();
+describe("AreaPage", () => {
+  it("renders notes + the sequence (video stage + first exercise runner)", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt("/math/algebra/brackets", reg, buildStore(reg));
+    expect(screen.getByRole("heading", { name: "Notes" })).toBeTruthy();
+    expect(screen.getByText("Video coming soon.")).toBeTruthy(); // null-src video stage
+    expect(screen.getByRole("button", { name: "Right" })).toBeTruthy(); // exercise runner
   });
 
-  it("renders not-found for an invalid lessonId", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
-    renderAt("/math/algebra/brackets/ghost", registry, buildStore(registry));
+  it("renders not-found for an unknown area", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt("/no/such/area", reg, buildStore(reg));
     expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
   });
 
-  it("offers a Next-lesson CTA after completing a lesson when the next unlocks", () => {
-    const registry = buildRegistry(
-      mkLesson("brackets", "one", { order: 1, questions: [mcQuestion] }),
-      mkLesson("brackets", "two", { order: 2 }),
+  it("locks a later exercise until the previous one is complete, then unlocks it", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        sequence: [exercise("First", "R0", "W0"), exercise("Second", "R1", "W1")],
+      }),
     );
-    renderAt("/math/algebra/brackets/one", registry, buildStore(registry));
-    fireEvent.click(screen.getByRole("button", { name: /Practice/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Right" })); // correct
-    fireEvent.click(screen.getByRole("button", { name: "Finish" })); // completes → unlocks two
-    expect(screen.getByRole("link", { name: "Next lesson →" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: /Back to/ })).toBeTruthy();
-  });
+    renderAt("/math/algebra/brackets", reg, buildStore(reg));
 
-  it("opens a completed lesson in review mode (banner) and keeps it complete on a fresh run", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1, questions: [mcQuestion] }));
-    const store = buildStore(registry);
-    store.recordAttempt("one", true); // pre-complete
-    const before = store.getLessonProgress("one")?.completedAt;
-    renderAt("/math/algebra/brackets/one", registry, store);
-    expect(screen.getByText(/review mode/)).toBeTruthy();
+    // First exercise is current; second is locked.
+    expect(screen.getByRole("button", { name: "R0" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "R1" })).toBeNull();
+    expect(screen.getByText(/Complete the previous exercise/)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: /Practice/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Wrong" })); // fresh, incorrect
+    // Complete the first exercise → the second unlocks.
+    fireEvent.click(screen.getByRole("button", { name: "R0" }));
     fireEvent.click(screen.getByRole("button", { name: "Finish" }));
-
-    const rec = store.getLessonProgress("one");
-    expect(rec?.completedAt).toBe(before); // never cleared
-    expect(rec?.questionOutcomes[0]).toBe("incorrect"); // fresh outcome
-    expect(rec?.attempts).toBe(2); // pre-complete + this run
-  });
-
-  it("re-evaluates entry mode when navigating to another lesson (no stale review)", () => {
-    const registry = buildRegistry(
-      mkLesson("brackets", "one", { order: 1, questions: [mcQuestion] }),
-      mkLesson("brackets", "two", { order: 2, title: "Two", questions: [mcQuestion] }),
-    );
-    const store = buildStore(registry);
-    store.recordAttempt("one", true); // lesson one complete
-    renderAt("/math/algebra/brackets/one", registry, store);
-    expect(screen.getByText(/review mode/)).toBeTruthy();
-
-    // Jump from the completed lesson to the next (incomplete) one — same
-    // component instance, only the :lessonId param changes.
-    fireEvent.click(screen.getByRole("button", { name: /Practice/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Wrong" }));
-    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
-    fireEvent.click(screen.getByRole("link", { name: "Next lesson →" }));
-
-    expect(screen.getByRole("heading", { name: "Two" })).toBeTruthy();
-    expect(screen.queryByText(/review mode/)).toBeNull(); // not carried over
-  });
-});
-
-describe("LessonSelection routing + cards", () => {
-  it("renders not-found for invalid hierarchy params", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
-    renderAt("/nope/nope/nope", registry, buildStore(registry));
-    expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
-  });
-
-  it("maps the first lesson to Continue and a later one to a locked unlock note", () => {
-    const registry = buildRegistry(
-      mkLesson("brackets", "one", { order: 1 }),
-      mkLesson("brackets", "two", { order: 2 }),
-    );
-    renderAt("/math/algebra/brackets", registry, buildStore(registry));
-    expect(screen.getByRole("link", { name: "Continue" })).toBeTruthy();
-    expect(screen.getByText("Complete lesson 1 to unlock")).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Review" })).toBeNull();
-  });
-
-  it("maps a completed lesson to Review and unlocks the next as Continue", () => {
-    const registry = buildRegistry(
-      mkLesson("brackets", "one", { order: 1 }),
-      mkLesson("brackets", "two", { order: 2 }),
-    );
-    const store = buildStore(registry);
-    store.recordAttempt("one", true); // complete lesson one
-    renderAt("/math/algebra/brackets", registry, store);
-    expect(screen.getByRole("link", { name: "Review" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Continue" })).toBeTruthy();
-    // No lesson-card is locked now (the checkpoint's "unlocks after" is separate).
-    expect(screen.queryByText(/Complete lesson/)).toBeNull();
-  });
-
-  it("shows the locked checkpoint card", () => {
-    const registry = buildRegistry(mkLesson("brackets", "one", { order: 1 }));
-    renderAt("/math/algebra/brackets", registry, buildStore(registry));
-    expect(screen.getByText(/unlocks after lesson 1/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "R1" })).toBeTruthy();
   });
 });

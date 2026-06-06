@@ -3,21 +3,21 @@
  * Built once at the app root (main.tsx); injected in tests.
  */
 import { createContext, useContext, type ReactNode } from "react";
-import type { LessonRegistry } from "@/ingest/load";
+import type { AreaRegistry } from "@/ingest/load";
 
-const RegistryContext = createContext<LessonRegistry | null>(null);
+const RegistryContext = createContext<AreaRegistry | null>(null);
 
 export function RegistryProvider({
   registry,
   children,
 }: {
-  registry: LessonRegistry;
+  registry: AreaRegistry;
   children: ReactNode;
 }) {
   return <RegistryContext.Provider value={registry}>{children}</RegistryContext.Provider>;
 }
 
-export function useRegistry(): LessonRegistry {
+export function useRegistry(): AreaRegistry {
   const registry = useContext(RegistryContext);
   if (!registry) throw new Error("useRegistry must be used within a <RegistryProvider>");
   return registry;

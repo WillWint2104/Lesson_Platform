@@ -8,10 +8,14 @@ authoritative; when in doubt, defer to the per-kind `SPEC.md`.
 
 ## Content hierarchy
 
-Content lives at `/content/<subject>/<topic>/<topic-area>/<lesson-id>/`, each
-lesson directory containing `lesson.json`, `notes.json`, `questions.json`. The
-hierarchy (`subject`/`topic`/`topicArea`) is **derived from the path** — it must
-NOT appear in the manifest.
+The unit of content is the **topic area**. Content lives at
+`/content/<subject>/<topic>/<topic-area>/`, and the topic-area directory contains
+one `area.json` manifest plus the notes/exercise files it references (e.g.
+`notes.json`, `exercise-1.json`). The hierarchy (`subject`/`topic`/`topicArea`)
+is **derived from the path** — it must NOT appear in the manifest.
+
+> The earlier per-lesson model (`lesson.json` + one lesson directory per lesson)
+> is **superseded**. A `lesson.json` manifest is now a load error pointing here.
 
 ## JSON escaping (read this first)
 
@@ -21,14 +25,44 @@ un-doubled backslash decays to a control character on parse and is a **load
 error** (e.g. `\f`/`\t`/`\n` from `\frac`/`\theta`/`\neq`). Content strings are
 single-line by design — structure comes from blocks, not in-string line breaks.
 
-## Lesson manifest (`lesson.json`)
+## Area manifest (`area.json`)
 
 ```json
-{ "lesson": { "id": "...", "title": "...", "order": 1, "video": { "src": "...", "duration": null }, "notes": "notes.json", "questions": "questions.json" } }
+{
+  "area": {
+    "title": "Expanding brackets",
+    "notes": "notes.json",
+    "sequence": [
+      { "type": "video", "title": "Single brackets", "src": null },
+      { "type": "exercise", "title": "Practice: single brackets", "questions": "exercise-1.json" },
+      { "type": "video", "title": "Double brackets", "src": "https://youtu.be/abc123def45" },
+      { "type": "exercise", "title": "Practice: double brackets", "questions": "exercise-2.json" }
+    ]
+  }
+}
 ```
-`notes`/`questions` are an inline array or a path relative to the lesson dir.
-No `subject`/`topic`/`topicArea` (path-derived). Optional `order` (integer)
-sorts lessons within a topic area (ties/absences fall back to id-alphabetical).
+
+An area is **notes + an ordered `sequence` of pulses**. The teaching rhythm is
+video → exercise → video → exercise, but **any mix and order is legal** (e.g. two
+videos in a row, or an exercise with no preceding video).
+
+- **`title`** — string, required.
+- **`notes`** — a `NoteBlock[]` inline array, or a path (relative to the area
+  dir) to a `notes.json`. An area with no notes is allowed but **warns**.
+- **`sequence`** — ordered array of segments; **must be non-empty** (empty is an
+  error). Each segment is one of:
+  - **`video`** — `{ "type": "video", "title", "src": string | null }`. `src` is
+    a YouTube source (a `watch`/`youtu.be`/`embed` URL or a bare 11-char id) or
+    `null`. `null` is a first-class "authored before the video was recorded"
+    state (generation may run ahead of studio recording); an **unparseable** src
+    is an error. All parsing goes through `parseYouTubeId`.
+  - **`exercise`** — `{ "type": "exercise", "title", "questions": Question[] | string }`.
+    `questions` is an inline array or a path (relative to the area dir) to a
+    `questions.json`. An exercise **must have ≥1 question** (zero is an error).
+
+No `subject`/`topic`/`topicArea` (path-derived; their presence is an error).
+Within an area, **exercise segments unlock sequentially** (an exercise opens once
+every earlier exercise is complete); video segments never block.
 
 ## Notes blocks (`notes.json` → `{ "notes": [ ... ] }`)
 

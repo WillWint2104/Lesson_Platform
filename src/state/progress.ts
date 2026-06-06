@@ -1,19 +1,17 @@
 /**
- * @file progress.ts — Learner progress store (CLAUDE.md §a, §c rules 3 & 7).
+ * @file progress.ts — Learner progress store, SCHEMA v2 (CLAUDE.md §a, §c 3 & 7).
  *
- * localStorage-backed, single versioned key `lp:progress:v1`. Records are keyed
- * by the path-derived lesson id, so they are naturally namespaced by lesson
- * identity; hierarchy-scoped query helpers (getTopicProgress / getTopicArea-
- * Progress) ensure NO consumer ever aggregates across topics by accident
- * (content-isolation rule).
+ * v2 keys progress by **areaId + segment index**: each exercise segment has its
+ * own questionOutcomes / attempts / completedAt. An area is complete when all
+ * its exercise segments are complete (computed by consumers from the registry).
  *
- * Save/restore symmetry (lesson 3): ONE serialize + ONE restore, colocated,
- * each with an explicit field whitelist. The round-trip test derives the field
- * list from a fully-populated state and fails if any field is dropped — so the
- * schema cannot be extended without updating `restoreState`.
+ * Save/restore symmetry (lesson 3): ONE serialize + ONE restore, colocated, with
+ * an explicit whitelist. The round-trip test fails if a field is dropped.
  *
- * IMPORTANT: bump SCHEMA_VERSION (and add a migration) on ANY breaking change to
- * the stored shape.
+ * Migration: v1 (per-lesson) data is migrated to v2 on load — v1 lesson records
+ * are NOT derivably mappable to v2 area/segments in this pure layer, so they are
+ * **preserved verbatim under `legacy`, never destroyed**, and the v1 key is left
+ * intact. Bump SCHEMA_VERSION + add a migration on ANY breaking shape change.
  */
 
 import {
@@ -27,151 +25,165 @@ import {
 
 export type Outcome = "correct" | "incorrect";
 
-export interface LessonRecord {
+/** Progress within one exercise segment. */
+export interface ExerciseRecord {
   questionOutcomes: Record<number, Outcome>;
   attempts: number;
   completedAt: string | null;
 }
 
-export interface ProgressState {
-  version: 1;
+/** Per-area record: exercise progress keyed by segment index. */
+export interface AreaRecord {
+  segments: Record<number, ExerciseRecord>;
+}
+
+/** Preserved v1 data that has no derivable v2 mapping (never destroyed). */
+export interface LegacyV1 {
+  lessons: Record<string, unknown>;
   lastVisitedLessonId: string | null;
-  lessons: Record<string, LessonRecord>;
 }
 
-/** Per-question metadata (by position) used for skill/difficulty scoping. */
-export interface QuestionMeta {
-  skill?: string;
-  difficulty?: string;
-}
-
-/** Minimal hierarchy index entry (derived from the loaded registry). */
-export interface LessonIndexEntry {
-  id: string;
-  subject: string;
-  topic: string;
-  topicArea: string;
-  /** Per-question skill/difficulty, indexed by question position. */
-  questions?: QuestionMeta[];
-}
-
-/** Outcome counts for a skill/difficulty within a topic boundary. */
-export interface ScopedQuestionProgress {
-  correct: number;
-  incorrect: number;
-  answered: number;
-}
-
-/** Result of a hierarchy-scoped query. Only in-scope, registry-known lessons. */
-export interface ScopedProgress {
-  lessonIds: string[];
-  records: Record<string, LessonRecord>;
-  completedCount: number;
-  correctCount: number;
-  incorrectCount: number;
-  attemptCount: number;
+export interface ProgressState {
+  version: 2;
+  lastVisitedAreaId: string | null;
+  areas: Record<string, AreaRecord>;
+  legacy: LegacyV1 | null;
 }
 
 export interface ProgressStore {
   readonly persistent: boolean;
-  /** Deep copy of the current state — callers cannot mutate the store through it. */
+  /** Deep copy — callers cannot mutate the store through it. */
   getState(): ProgressState;
-  /** Stale-id-guarded: null when the stored id is absent from the registry. */
-  getLastVisitedLessonId(): string | null;
-  getLessonProgress(lessonId: string): LessonRecord | null;
-  getTopicProgress(subject: string, topic: string): ScopedProgress;
-  getTopicAreaProgress(subject: string, topic: string, topicArea: string): ScopedProgress;
-  /** Outcomes for a skill, scoped to a topic (never cross-topic). */
-  getSkillProgress(subject: string, topic: string, skill: string): ScopedQuestionProgress;
-  /** Outcomes for a difficulty, scoped to a topic (never cross-topic). */
-  getDifficultyProgress(
-    subject: string,
-    topic: string,
-    difficulty: string,
-  ): ScopedQuestionProgress;
-  recordOutcome(lessonId: string, questionIndex: number, outcome: Outcome): void;
-  recordAttempt(lessonId: string, completed: boolean): void;
-  setLastVisited(lessonId: string): void;
+  /** Stale-id-guarded: null when the stored area id is absent from the registry. */
+  getLastVisitedAreaId(): string | null;
+  /** Exercise record for (area, segment), or null (stale area excluded). */
+  getExerciseProgress(areaId: string, segmentIndex: number): ExerciseRecord | null;
+  recordOutcome(
+    areaId: string,
+    segmentIndex: number,
+    questionIndex: number,
+    outcome: Outcome,
+  ): void;
+  recordAttempt(areaId: string, segmentIndex: number, completed: boolean): void;
+  setLastVisited(areaId: string): void;
   resetAll(): void;
   subscribe(listener: () => void): () => void;
-  /** One-time UI notice dismissal, persisted through the SAME storage layer as
-   * progress (not a parallel localStorage call). Kept out of the versioned
-   * progress key — it is UI state, not learner progress. */
   isNoticeDismissed(noticeId: string): boolean;
   dismissNotice(noticeId: string): void;
 }
 
 export interface CreateProgressStoreOptions {
-  /** Inject a backend (tests); when provided, `persistent` defaults to true. */
   backend?: StorageBackend;
   persistent?: boolean;
-  /** Hierarchy index from the registry; enables stale-id guards + scoped queries. */
-  lessons?: LessonIndexEntry[];
-  /** Injectable clock for completedAt (default: real ISO time). */
+  /** Known area ids (from the registry) — enables the stale-id guard on reads. */
+  areaIds?: string[];
   now?: () => string;
 }
 
 function freshState(): ProgressState {
-  return { version: SCHEMA_VERSION, lastVisitedLessonId: null, lessons: {} };
+  return { version: SCHEMA_VERSION, lastVisitedAreaId: null, areas: {}, legacy: null };
+}
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
 }
 
 // ---------------------------------------------------------------------------
-// Save / restore symmetry — ONE serialize + ONE restore, explicit whitelist.
+// Save / restore — ONE serialize + ONE restore, explicit whitelist.
 // ---------------------------------------------------------------------------
 
-export function serializeState(state: ProgressState): string {
-  const lessons: Record<string, LessonRecord> = {};
-  for (const [id, rec] of Object.entries(state.lessons)) {
-    lessons[id] = {
-      questionOutcomes: { ...rec.questionOutcomes },
-      attempts: rec.attempts,
-      completedAt: rec.completedAt,
-    };
+function cloneExercise(rec: ExerciseRecord): ExerciseRecord {
+  return {
+    questionOutcomes: { ...rec.questionOutcomes },
+    attempts: rec.attempts,
+    completedAt: rec.completedAt,
+  };
+}
+
+function cloneAreas(areas: Record<string, AreaRecord>): Record<string, AreaRecord> {
+  const out: Record<string, AreaRecord> = {};
+  for (const [areaId, rec] of Object.entries(areas)) {
+    const segments: Record<number, ExerciseRecord> = {};
+    for (const [seg, ex] of Object.entries(rec.segments)) segments[Number(seg)] = cloneExercise(ex);
+    out[areaId] = { segments };
   }
+  return out;
+}
+
+export function serializeState(state: ProgressState): string {
   return JSON.stringify({
     version: SCHEMA_VERSION,
-    lastVisitedLessonId: state.lastVisitedLessonId,
-    lessons,
+    lastVisitedAreaId: state.lastVisitedAreaId,
+    areas: cloneAreas(state.areas),
+    legacy: state.legacy,
   });
 }
 
-export function restoreState(parsed: Record<string, unknown>): ProgressState {
-  const lessonsIn =
-    parsed["lessons"] && typeof parsed["lessons"] === "object"
-      ? (parsed["lessons"] as Record<string, unknown>)
-      : {};
+function restoreOutcomes(raw: unknown): Record<number, Outcome> {
+  const out: Record<number, Outcome> = {};
+  if (isObject(raw)) {
+    for (const [k, v] of Object.entries(raw)) {
+      if (v === "correct" || v === "incorrect") out[Number(k)] = v;
+    }
+  }
+  return out;
+}
 
-  const lessons: Record<string, LessonRecord> = {};
-  for (const [id, recRaw] of Object.entries(lessonsIn)) {
-    if (!recRaw || typeof recRaw !== "object") continue;
-    const rec = recRaw as Record<string, unknown>;
-    lessons[id] = {
-      questionOutcomes: restoreOutcomes(rec["questionOutcomes"]),
-      attempts: typeof rec["attempts"] === "number" ? rec["attempts"] : 0,
-      completedAt: typeof rec["completedAt"] === "string" ? rec["completedAt"] : null,
+function restoreExercise(raw: unknown): ExerciseRecord {
+  const r = isObject(raw) ? raw : {};
+  return {
+    questionOutcomes: restoreOutcomes(r["questionOutcomes"]),
+    attempts: typeof r["attempts"] === "number" ? (r["attempts"] as number) : 0,
+    completedAt: typeof r["completedAt"] === "string" ? (r["completedAt"] as string) : null,
+  };
+}
+
+export function restoreState(parsed: Record<string, unknown>): ProgressState {
+  const areasIn = isObject(parsed["areas"]) ? (parsed["areas"] as Record<string, unknown>) : {};
+  const areas: Record<string, AreaRecord> = {};
+  for (const [areaId, recRaw] of Object.entries(areasIn)) {
+    const segIn = isObject(recRaw) && isObject((recRaw as Record<string, unknown>)["segments"])
+      ? ((recRaw as Record<string, unknown>)["segments"] as Record<string, unknown>)
+      : {};
+    const segments: Record<number, ExerciseRecord> = {};
+    for (const [seg, exRaw] of Object.entries(segIn)) segments[Number(seg)] = restoreExercise(exRaw);
+    areas[areaId] = { segments };
+  }
+
+  let legacy: LegacyV1 | null = null;
+  if (isObject(parsed["legacy"])) {
+    const l = parsed["legacy"] as Record<string, unknown>;
+    legacy = {
+      lessons: isObject(l["lessons"]) ? (l["lessons"] as Record<string, unknown>) : {},
+      lastVisitedLessonId:
+        typeof l["lastVisitedLessonId"] === "string" ? (l["lastVisitedLessonId"] as string) : null,
     };
   }
 
   return {
     version: SCHEMA_VERSION,
-    lastVisitedLessonId:
-      typeof parsed["lastVisitedLessonId"] === "string"
-        ? (parsed["lastVisitedLessonId"] as string)
+    lastVisitedAreaId:
+      typeof parsed["lastVisitedAreaId"] === "string"
+        ? (parsed["lastVisitedAreaId"] as string)
         : null,
-    lessons,
+    areas,
+    legacy,
   };
 }
 
-function restoreOutcomes(raw: unknown): Record<number, Outcome> {
-  const out: Record<number, Outcome> = {};
-  if (raw && typeof raw === "object") {
-    for (const [key, value] of Object.entries(raw)) {
-      if (value === "correct" || value === "incorrect") {
-        out[Number(key)] = value;
-      }
-    }
-  }
-  return out;
+/** Migrate v1 (per-lesson) data to v2. v1 lesson records are preserved verbatim
+ * under `legacy` (no derivable area/segment mapping in this pure layer). */
+export function migrateV1ToV2(v1: Record<string, unknown>): ProgressState {
+  return {
+    version: SCHEMA_VERSION,
+    lastVisitedAreaId: null,
+    areas: {},
+    legacy: {
+      lessons: isObject(v1["lessons"]) ? (v1["lessons"] as Record<string, unknown>) : {},
+      lastVisitedLessonId:
+        typeof v1["lastVisitedLessonId"] === "string" ? (v1["lastVisitedLessonId"] as string) : null,
+    },
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -185,25 +197,35 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   const backend = detected.backend;
   const backendPersistent = detected.persistent;
 
-  const index = options.lessons ?? [];
-  const knownIds = new Set(index.map((l) => l.id));
-  const hasRegistry = knownIds.size > 0;
+  const knownAreaIds = new Set(options.areaIds ?? []);
+  // Truthiness is not validity (CLAUDE.md §c rule 7): the registry is "present"
+  // whenever areaIds was supplied — even as an empty array (which then means
+  // *nothing* is known) — not merely when it is non-empty.
+  const hasRegistry = options.areaIds !== undefined;
   const now = options.now ?? (() => new Date().toISOString());
 
+  /** Stale-id guard: with a registry present, only known area ids are valid. */
+  function isKnownAreaId(areaId: string): boolean {
+    return !hasRegistry || knownAreaIds.has(areaId);
+  }
+
   const listeners = new Set<() => void>();
-  // Session-level fallback so a dismissal still hides even if the write fails.
   const dismissedNotices = new Set<string>();
 
-  // ---- Load (robust) ----
   const load = loadRaw(backend);
   let persistDisabled = false;
   let state: ProgressState;
+  let migrated = false;
   switch (load.status) {
     case "ok":
       state = restoreState(load.parsed);
       break;
+    case "migrate":
+      state = migrateV1ToV2(load.parsed);
+      migrated = true; // persist the migrated v2 (leaving the v1 key intact)
+      break;
     case "future":
-      persistDisabled = true; // never overwrite newer data
+      persistDisabled = true;
       state = freshState();
       break;
     case "corrupt":
@@ -213,11 +235,17 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
       break;
   }
 
-  // Persistence is OFF if the backend can't persist OR a future-schema blob
-  // forced an in-memory session.
   const persistent = backendPersistent && !persistDisabled;
 
-  // ---- One-time warnings (per store instance ~ per session) ----
+  function persist(): void {
+    if (persistDisabled) return;
+    try {
+      backend.setItem(PROGRESS_KEY, serializeState(state));
+    } catch {
+      /* quota/serialisation failure must not crash */
+    }
+  }
+
   if (!backendPersistent) {
     console.warn(
       "[progress] localStorage is unavailable; progress will be kept in memory for this session only.",
@@ -225,7 +253,7 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   }
   if (load.status === "corrupt") {
     console.warn(
-      `[progress] stored progress was unparseable; the raw value was backed up to "${CORRUPT_KEY}" and a fresh store was started.`,
+      `[progress] stored progress was unparseable; backed up to "${CORRUPT_KEY}" and started fresh.`,
     );
   }
   if (load.status === "future") {
@@ -233,21 +261,18 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
       "[progress] stored progress is from a newer version; leaving it untouched and using an in-memory session.",
     );
   }
+  if (migrated) {
+    console.warn(
+      "[progress] migrated v1 progress to v2 — v1 lesson records preserved under `legacy` (the v1 key is left intact).",
+    );
+    persist(); // write the migrated v2 snapshot
+  }
   if (hasRegistry) {
-    const stale = Object.keys(state.lessons).filter((id) => !knownIds.has(id));
+    const stale = Object.keys(state.areas).filter((id) => !knownAreaIds.has(id));
     if (stale.length > 0) {
       console.warn(
-        `[progress] ${stale.length} stored lesson id(s) are not in the current registry and are excluded from queries (retained in storage): ${stale.join(", ")}`,
+        `[progress] ${stale.length} stored area id(s) are not in the registry and are excluded from queries (retained): ${stale.join(", ")}`,
       );
-    }
-  }
-
-  function persist(): void {
-    if (persistDisabled) return;
-    try {
-      backend.setItem(PROGRESS_KEY, serializeState(state));
-    } catch {
-      // Quota/serialisation failure must not crash the app.
     }
   }
 
@@ -255,143 +280,71 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     for (const listener of listeners) listener();
   }
 
-  function ensure(lessonId: string): LessonRecord {
-    let rec = state.lessons[lessonId];
-    if (!rec) {
-      rec = { questionOutcomes: {}, attempts: 0, completedAt: null };
-      state.lessons[lessonId] = rec;
+  function ensureExercise(areaId: string, segmentIndex: number): ExerciseRecord {
+    let area = state.areas[areaId];
+    if (!area) {
+      area = { segments: {} };
+      state.areas[areaId] = area;
     }
-    return rec;
-  }
-
-  // Reads hand out copies so callers can never mutate the store's state
-  // outside the single recordOutcome/recordAttempt/... mutation path.
-  function cloneRecord(rec: LessonRecord): LessonRecord {
-    return {
-      questionOutcomes: { ...rec.questionOutcomes },
-      attempts: rec.attempts,
-      completedAt: rec.completedAt,
-    };
-  }
-
-  function scope(filter: (l: LessonIndexEntry) => boolean): ScopedProgress {
-    const records: Record<string, LessonRecord> = {};
-    const lessonIds: string[] = [];
-    let completedCount = 0;
-    let correctCount = 0;
-    let incorrectCount = 0;
-    let attemptCount = 0;
-
-    // Iterate the REGISTRY (not storage), so stale/unknown ids are naturally
-    // excluded and topics never co-mingle.
-    for (const lesson of index) {
-      if (!filter(lesson)) continue;
-      const rec = state.lessons[lesson.id];
-      if (!rec) continue;
-      records[lesson.id] = cloneRecord(rec);
-      lessonIds.push(lesson.id);
-      if (rec.completedAt) completedCount += 1;
-      attemptCount += rec.attempts;
-      for (const outcome of Object.values(rec.questionOutcomes)) {
-        if (outcome === "correct") correctCount += 1;
-        else incorrectCount += 1;
-      }
+    let seg = area.segments[segmentIndex];
+    if (!seg) {
+      seg = { questionOutcomes: {}, attempts: 0, completedAt: null };
+      area.segments[segmentIndex] = seg;
     }
-
-    return { lessonIds, records, completedCount, correctCount, incorrectCount, attemptCount };
-  }
-
-  // Per-question scoping (skill/difficulty) — always bounded by the topic filter
-  // so it can never aggregate across topics.
-  function scopeQuestions(
-    filter: (l: LessonIndexEntry) => boolean,
-    match: (m: QuestionMeta) => boolean,
-  ): ScopedQuestionProgress {
-    let correct = 0;
-    let incorrect = 0;
-    for (const lesson of index) {
-      if (!filter(lesson)) continue;
-      const rec = state.lessons[lesson.id];
-      if (!rec) continue;
-      const metas = lesson.questions ?? [];
-      metas.forEach((meta, i) => {
-        if (!match(meta)) return;
-        const outcome = rec.questionOutcomes[i];
-        if (outcome === "correct") correct += 1;
-        else if (outcome === "incorrect") incorrect += 1;
-      });
-    }
-    return { correct, incorrect, answered: correct + incorrect };
+    return seg;
   }
 
   return {
     persistent,
 
     getState() {
-      const lessons: Record<string, LessonRecord> = {};
-      for (const [id, rec] of Object.entries(state.lessons)) lessons[id] = cloneRecord(rec);
-      return { version: state.version, lastVisitedLessonId: state.lastVisitedLessonId, lessons };
+      return {
+        version: state.version,
+        lastVisitedAreaId: state.lastVisitedAreaId,
+        areas: cloneAreas(state.areas),
+        legacy: state.legacy ? { ...state.legacy, lessons: { ...state.legacy.lessons } } : null,
+      };
     },
 
-    getLastVisitedLessonId() {
-      // Stale-id guard (lesson 7): a stored id absent from the registry is not
-      // acted on, though it is retained in storage.
-      const id = state.lastVisitedLessonId;
-      if (id !== null && hasRegistry && !knownIds.has(id)) return null;
+    getLastVisitedAreaId() {
+      const id = state.lastVisitedAreaId;
+      if (id !== null && !isKnownAreaId(id)) return null;
       return id;
     },
 
-    getLessonProgress(lessonId) {
-      // Stale-id guard: validate against the registry when one is loaded.
-      if (hasRegistry && !knownIds.has(lessonId)) return null;
-      const rec = state.lessons[lessonId];
-      return rec ? cloneRecord(rec) : null;
+    getExerciseProgress(areaId, segmentIndex) {
+      if (!isKnownAreaId(areaId)) return null;
+      const seg = state.areas[areaId]?.segments[segmentIndex];
+      return seg ? cloneExercise(seg) : null;
     },
 
-    getTopicProgress(subject, topic) {
-      return scope((l) => l.subject === subject && l.topic === topic);
-    },
-
-    getTopicAreaProgress(subject, topic, topicArea) {
-      return scope(
-        (l) => l.subject === subject && l.topic === topic && l.topicArea === topicArea,
-      );
-    },
-
-    getSkillProgress(subject, topic, skill) {
-      return scopeQuestions((l) => l.subject === subject && l.topic === topic, (m) => m.skill === skill);
-    },
-
-    getDifficultyProgress(subject, topic, difficulty) {
-      return scopeQuestions(
-        (l) => l.subject === subject && l.topic === topic,
-        (m) => m.difficulty === difficulty,
-      );
-    },
-
-    recordOutcome(lessonId, questionIndex, outcome) {
-      ensure(lessonId).questionOutcomes[questionIndex] = outcome;
+    recordOutcome(areaId, segmentIndex, questionIndex, outcome) {
+      if (!isKnownAreaId(areaId)) return; // never persist ghost area records
+      ensureExercise(areaId, segmentIndex).questionOutcomes[questionIndex] = outcome;
       persist();
       notify();
     },
 
-    recordAttempt(lessonId, completed) {
-      const rec = ensure(lessonId);
-      rec.attempts += 1;
-      // Set completedAt on the first all-correct attempt; never erase it.
-      if (completed && rec.completedAt === null) rec.completedAt = now();
+    recordAttempt(areaId, segmentIndex, completed) {
+      if (!isKnownAreaId(areaId)) return; // never persist ghost area records
+      const seg = ensureExercise(areaId, segmentIndex);
+      seg.attempts += 1;
+      if (completed && seg.completedAt === null) seg.completedAt = now();
       persist();
       notify();
     },
 
-    setLastVisited(lessonId) {
-      state.lastVisitedLessonId = lessonId;
+    setLastVisited(areaId) {
+      if (!isKnownAreaId(areaId)) return; // never persist a stale last-visited id
+      state.lastVisitedAreaId = areaId;
       persist();
       notify();
     },
 
     resetAll() {
+      const keepLegacy = state.legacy; // resetting current progress must not destroy legacy
       state = freshState();
+      state.legacy = keepLegacy;
       persist();
       notify();
     },
@@ -411,13 +364,11 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     },
 
     dismissNotice(noticeId) {
-      // Hold it in memory first so the dismissal sticks for this session even if
-      // the persistent write below fails.
       dismissedNotices.add(noticeId);
       try {
         backend.setItem(`lp:notice:${noticeId}`, "1");
       } catch {
-        // Best effort — the in-memory flag still hides it for the session.
+        /* in-memory flag still hides it for the session */
       }
       notify();
     },

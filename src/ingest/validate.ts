@@ -10,7 +10,7 @@
  * catch that here by scanning content strings for control characters.
  */
 
-import { CALLOUT_STYLES, NOTE_BLOCK_TYPES, QUESTION_TYPES } from "./types";
+import { CALLOUT_STYLES, NOTE_BLOCK_TYPES, QUESTION_TYPES, SEGMENT_TYPES } from "./types";
 import { resolveFigure, schemaKey, type FigureSchemaRegistry } from "./figure";
 import { parseYouTubeId, ACCEPTED_YOUTUBE_FORMATS } from "@/shared/youtube";
 
@@ -482,68 +482,74 @@ export function validateNotesFile(raw: unknown): ValidationResult {
   return report.result();
 }
 
-/** Validate a `lesson.json` manifest, including any inline notes/questions. */
-export function validateManifest(raw: unknown, options: ValidateOptions = {}): ValidationResult {
+/**
+ * Validate an `area.json` manifest: area-level notes + an ordered sequence of
+ * video/exercise segments. Inline notes/questions are validated; referenced
+ * file paths are resolved + validated by the loader. The superseded lesson
+ * manifest is rejected with a migration pointer.
+ */
+export function validateAreaManifest(raw: unknown, options: ValidateOptions = {}): ValidationResult {
   const report = new Report();
 
   if (!isPlainObject(raw)) {
-    report.error("lesson", "manifest must be an object with a 'lesson' field");
-    return report.result();
-  }
-  const lesson = raw["lesson"];
-  if (!isPlainObject(lesson)) {
-    report.error("lesson", "missing required field 'lesson'");
+    report.error("area", "manifest must be an object with an 'area' field");
     return report.result();
   }
 
-  requireString(report, "lesson", lesson, "id");
-  requireString(report, "lesson", lesson, "title");
-  if (
-    lesson["order"] !== undefined &&
-    (typeof lesson["order"] !== "number" || !Number.isInteger(lesson["order"]))
-  ) {
-    report.error("lesson.order", "field 'order' must be an integer");
+  // The per-lesson manifest is superseded — reject it loudly (no silent support).
+  if ("lesson" in raw && !("area" in raw)) {
+    report.error(
+      "lesson",
+      "lesson.json manifests are superseded by area.json — see /docs/authoring.md",
+    );
+    return report.result();
   }
-  validateVideo(report, "lesson.video", lesson["video"]);
 
-  // Hierarchy (subject/topic/topicArea) is derived from the directory path by
-  // the loader and must NOT appear in the manifest.
+  const area = raw["area"];
+  if (!isPlainObject(area)) {
+    report.error("area", "missing required field 'area'");
+    return report.result();
+  }
+
+  requireString(report, "area", area, "title");
+
+  // Hierarchy (subject/topic/topicArea) is path-derived; not allowed in manifest.
   for (const field of ["subject", "topic", "topicArea"]) {
-    if (field in lesson) {
+    if (field in area) {
       report.error(
-        `lesson.${field}`,
+        `area.${field}`,
         "manifest: hierarchy fields are not allowed — subject/topic/topicArea " +
           "are derived from the directory path",
       );
     }
   }
 
-  // notes/questions may be inline arrays or a string path (resolved by loader).
-  const notes = lesson["notes"];
-  if (typeof notes === "string") {
-    if (!isNonEmptyString(notes)) report.error("lesson.notes", "notes path must not be empty");
+  // notes: inline array or path. No notes is a WARNING (areas normally have notes).
+  const notes = area["notes"];
+  if (notes === undefined) {
+    report.warn("area.notes", "no notes provided — an area normally has area-level notes");
+  } else if (typeof notes === "string") {
+    if (!isNonEmptyString(notes)) report.error("area.notes", "notes path must not be empty");
   } else {
-    validateNoteArray(report, "lesson.notes", notes);
+    validateNoteArray(report, "area.notes", notes);
   }
 
-  const questions = lesson["questions"];
-  if (typeof questions === "string") {
-    if (!isNonEmptyString(questions)) {
-      report.error("lesson.questions", "questions path must not be empty");
-    }
+  // sequence: ordered, non-empty array of segments.
+  const sequence = area["sequence"];
+  if (!Array.isArray(sequence)) {
+    report.error("area.sequence", "must be an array of segments");
+  } else if (sequence.length === 0) {
+    report.error("area.sequence", "must contain at least one segment");
   } else {
-    validateQuestionArray(report, "lesson.questions", questions, options.figureSchemas);
+    sequence.forEach((seg, i) =>
+      validateSegment(report, `area.sequence[${i}]`, seg, options.figureSchemas),
+    );
   }
 
-  // Hierarchy fields are reported as errors above; list them as "known" so they
-  // are not also double-reported as unknown-field warnings.
-  warnUnknownFields(report, "lesson", lesson, [
-    "id",
+  warnUnknownFields(report, "area", area, [
     "title",
-    "order",
-    "video",
     "notes",
-    "questions",
+    "sequence",
     "subject",
     "topic",
     "topicArea",
@@ -552,12 +558,54 @@ export function validateManifest(raw: unknown, options: ValidateOptions = {}): V
   return report.result();
 }
 
-function validateVideo(report: Report, path: string, video: unknown): void {
-  if (!isPlainObject(video)) {
-    report.error(path, "missing required field 'video'");
+function validateSegment(
+  report: Report,
+  path: string,
+  raw: unknown,
+  figureSchemas?: FigureSchemaRegistry,
+): void {
+  if (!isPlainObject(raw)) {
+    report.error(path, "must be an object");
     return;
   }
-  // src may be null (authored before recording) or a parseable YouTube source.
+  const type = raw["type"];
+  if (type === undefined || type === null || type === "") {
+    report.error(path, "missing required field 'type'");
+    return;
+  }
+  if (typeof type !== "string" || !SEGMENT_TYPES.includes(type as never)) {
+    report.error(
+      path,
+      `unknown segment type ${JSON.stringify(type)} — expected one of ${SEGMENT_TYPES.join(" | ")}`,
+    );
+    return;
+  }
+
+  requireString(report, path, raw, "title");
+
+  if (type === "video") {
+    validateVideoSrc(report, `${path} (video)`, raw);
+    warnUnknownFields(report, path, raw, ["type", "title", "src"]);
+    return;
+  }
+
+  // exercise
+  const ep = `${path} (exercise)`;
+  const questions = raw["questions"];
+  if (typeof questions === "string") {
+    if (!isNonEmptyString(questions)) report.error(ep, "questions path must not be empty");
+  } else if (!Array.isArray(questions) || questions.length === 0) {
+    report.error(ep, "exercise must contain at least one question");
+  } else {
+    questions.forEach((q, i) =>
+      validateQuestion(report, `${path}.questions[${i}]`, q, figureSchemas),
+    );
+  }
+  warnUnknownFields(report, path, raw, ["type", "title", "questions"]);
+}
+
+/** Validate a video segment's `src` (YouTube source or null). */
+function validateVideoSrc(report: Report, path: string, video: Record<string, unknown>): void {
   const src = video["src"];
   if (src === undefined) {
     report.error(path, "missing required field 'src' (use null if no video yet)");
@@ -571,13 +619,6 @@ function validateVideo(report: Report, path: string, video: unknown): void {
       );
     }
   }
-  const duration = video["duration"];
-  if (duration === undefined) {
-    report.error(path, "missing required field 'duration' (use null if unknown)");
-  } else if (duration !== null && typeof duration !== "number") {
-    report.error(path, "field 'duration' must be a number or null");
-  }
-  warnUnknownFields(report, path, video, ["src", "duration"]);
 }
 
 /** Walk a questions array (shared by file + inline-manifest paths). */

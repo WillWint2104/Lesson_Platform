@@ -471,6 +471,25 @@
   color: var(--gold-deep);
 }
 
+/* ===== Area page (temporary) ===== */
+.area-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.area-segment {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.area-seg-title {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin: var(--space-2) 0 0;
+  color: var(--brand-ink);
+}
+
 /* ===== Lesson page ===== */
 .lesson-banner {
   background: var(--green-tint);

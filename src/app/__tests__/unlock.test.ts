@@ -1,35 +1,44 @@
 import { describe, it, expect } from "vitest";
-import { computeUnlockStates } from "@/app/unlock";
+import { computeSegmentUnlock, isAreaComplete, type SegmentInput } from "@/app/unlock";
 
-const statuses = (completed: boolean[]) => computeUnlockStates(completed).map((s) => s.status);
+const v: SegmentInput = { type: "video", complete: false };
+const ex = (complete: boolean): SegmentInput => ({ type: "exercise", complete });
+const statuses = (segs: SegmentInput[]) => computeSegmentUnlock(segs).map((s) => s.status);
 
-describe("computeUnlockStates", () => {
-  it("makes the first lesson current when nothing is done", () => {
-    expect(statuses([false, false, false])).toEqual(["current", "locked", "locked"]);
+describe("computeSegmentUnlock", () => {
+  it("videos are always open", () => {
+    expect(statuses([v, ex(false)])).toEqual(["video", "current"]);
   });
 
-  it("marks completed lessons done and the next incomplete one current", () => {
-    expect(statuses([true, false, false])).toEqual(["done", "current", "locked"]);
+  it("first incomplete exercise is current; later exercises lock", () => {
+    expect(statuses([ex(false), ex(false)])).toEqual(["current", "locked"]);
   });
 
-  it("treats an all-complete set as all done (no current)", () => {
-    expect(statuses([true, true])).toEqual(["done", "done"]);
+  it("completed exercises are done; the next unlocked-incomplete is current", () => {
+    expect(statuses([ex(true), ex(false)])).toEqual(["done", "current"]);
   });
 
-  it("assigns exactly one current even with a gap", () => {
-    // i0 incomplete → current; i1 done; i2 incomplete but current already taken.
-    expect(statuses([false, true, false])).toEqual(["current", "done", "locked"]);
+  it("videos between exercises never block unlock", () => {
+    expect(statuses([ex(true), v, ex(false), v])).toEqual(["done", "video", "current", "video"]);
   });
 
-  it("reports unlocked (openable) for done and current, not locked", () => {
-    expect(computeUnlockStates([true, false, false]).map((s) => s.unlocked)).toEqual([
+  it("all exercises done → all done (no current)", () => {
+    expect(statuses([ex(true), v, ex(true)])).toEqual(["done", "video", "done"]);
+  });
+
+  it("reports unlocked (openable) for videos + done/current, not locked", () => {
+    expect(computeSegmentUnlock([ex(true), ex(false), ex(false)]).map((s) => s.unlocked)).toEqual([
       true,
       true,
       false,
     ]);
   });
+});
 
-  it("handles an empty set", () => {
-    expect(computeUnlockStates([])).toEqual([]);
+describe("isAreaComplete", () => {
+  it("is true only when every exercise segment is complete", () => {
+    expect(isAreaComplete([ex(true), v, ex(true)])).toBe(true);
+    expect(isAreaComplete([ex(true), ex(false)])).toBe(false);
+    expect(isAreaComplete([v])).toBe(false); // no exercises
   });
 });

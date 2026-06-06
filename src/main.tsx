@@ -10,25 +10,17 @@ import "../styles/screens.css";
 // KaTeX stylesheet (npm, not CDN — see CLAUDE.md §f). Required for math layout.
 import "katex/dist/katex.min.css";
 
-import { loadAllLessons } from "@/ingest/load";
+import { loadAllAreas } from "@/ingest/load";
 import { createProgressStore } from "@/state/progress";
 import { figureSchemas } from "@/render/figures/registry";
 import { RegistryProvider } from "@/app/RegistryContext";
 import { ProgressProvider } from "@/state/ProgressContext";
 import { AppRoutes } from "@/app/AppRoutes";
 
-// Built once at startup. Per-question skill/difficulty meta feeds the progress
-// store's scoped queries; figure schemas validate figure data per kind.
-const registry = loadAllLessons({ figureSchemas });
-const store = createProgressStore({
-  lessons: registry.lessons.map((l) => ({
-    id: l.id,
-    subject: l.subject,
-    topic: l.topic,
-    topicArea: l.topicArea,
-    questions: l.questions.map((q) => ({ skill: q.skill, difficulty: q.difficulty })),
-  })),
-});
+// Built once at startup. Figure schemas validate figure data per kind; the
+// area-id list enables the store's stale-id guard.
+const registry = loadAllAreas({ figureSchemas });
+const store = createProgressStore({ areaIds: registry.areas.map((a) => a.id) });
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {
