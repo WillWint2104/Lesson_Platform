@@ -150,7 +150,10 @@ function TopicCard({ subject, topic }: { subject: string; topic: string }) {
   const registry = useRegistry();
   const store = useProgressStore();
   const areas = registry.getTopicAreas(subject, topic);
-  const total = registry.lessons.filter((l) => l.subject === subject && l.topic === topic).length;
+  // Count valid lessons only — consistent with the area rows + lesson list.
+  const total = registry.lessons.filter(
+    (l) => l.subject === subject && l.topic === topic && l.valid,
+  ).length;
   const progress = store.getTopicProgress(subject, topic);
   const pct = total > 0 ? Math.round((progress.completedCount / total) * 100) : 0;
 

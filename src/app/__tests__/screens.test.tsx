@@ -116,6 +116,16 @@ describe("Library", () => {
     expect(container.querySelector(".topic-grid")).not.toBeNull();
     expect(screen.getByText(/Future topics drop in/)).toBeTruthy();
   });
+
+  it("topic card counts only valid lessons", () => {
+    const registry = buildRegistry(
+      mkLesson("brackets", "good", { order: 1 }),
+      // Missing prompt → invalid lesson; must not be counted.
+      mkLesson("brackets", "bad", { order: 2, questions: [{ type: "text" }] }),
+    );
+    renderAt("/", registry, buildStore(registry));
+    expect(screen.getByText(/1 area · 1 lesson/)).toBeTruthy();
+  });
 });
 
 describe("LessonPage", () => {
