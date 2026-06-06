@@ -223,6 +223,11 @@ describe("encapsulation and guards", () => {
     const store = createProgressStore({ backend: failing, persistent: true });
     store.dismissNotice("local-progress");
     expect(store.isNoticeDismissed("local-progress")).toBe(true);
+
+    // Session-only: a fresh store sharing the failing backend does NOT see it
+    // (the write failed, so nothing was persisted).
+    const reopened = createProgressStore({ backend: failing, persistent: true });
+    expect(reopened.isNoticeDismissed("local-progress")).toBe(false);
   });
 
   it("persistent is false when stored data is a newer version", () => {
