@@ -163,25 +163,41 @@ function validateQuestion(report: Report, path: string, raw: unknown): void {
   }
 
   let knownFields: readonly string[] = QUESTION_BASE_FIELDS;
+  // Optional reveal answer/working — allowed on every type EXCEPT
+  // multiple-choice (whose options carry correctness).
+  const ANSWER_FIELDS = ["answer", "working"] as const;
 
   switch (type) {
     case "text":
+      knownFields = [...QUESTION_BASE_FIELDS, ...ANSWER_FIELDS];
+      validateAnswerWorking(report, path, raw);
+      // A text question with no answer is allowed, but warn: the runtime can
+      // only self-mark (no reveal) without one.
+      if (raw["answer"] === undefined) {
+        report.warn(
+          `${path} (text)`,
+          "no answer provided — the runtime will fall back to self-marking without a reveal",
+        );
+      }
       break;
     case "table":
-      knownFields = [...QUESTION_BASE_FIELDS, "rows"];
+      knownFields = [...QUESTION_BASE_FIELDS, "rows", ...ANSWER_FIELDS];
       validateTableRows(report, `${path} (table)`, raw["rows"]);
+      validateAnswerWorking(report, path, raw);
       break;
     case "graph":
-      knownFields = [...QUESTION_BASE_FIELDS, "graphData"];
+      knownFields = [...QUESTION_BASE_FIELDS, "graphData", ...ANSWER_FIELDS];
       if (raw["graphData"] === undefined) {
         report.error(`${path} (graph)`, "missing required field 'graphData'");
       }
+      validateAnswerWorking(report, path, raw);
       break;
     case "geometry":
-      knownFields = [...QUESTION_BASE_FIELDS, "geometryData"];
+      knownFields = [...QUESTION_BASE_FIELDS, "geometryData", ...ANSWER_FIELDS];
       if (raw["geometryData"] === undefined) {
         report.error(`${path} (geometry)`, "missing required field 'geometryData'");
       }
+      validateAnswerWorking(report, path, raw);
       break;
     case "multiple-choice":
       knownFields = [...QUESTION_BASE_FIELDS, "options"];
@@ -195,6 +211,31 @@ function validateQuestion(report: Report, path: string, raw: unknown): void {
   // `topic` is already reported as an error above; list it here so it is not
   // also double-reported as an unknown-field warning.
   warnUnknownFields(report, path, raw, [...knownFields, "topic"]);
+}
+
+/** Validate the optional reveal `answer` (string) and `working` (string[]). */
+function validateAnswerWorking(
+  report: Report,
+  path: string,
+  raw: Record<string, unknown>,
+): void {
+  const answer = raw["answer"];
+  if (answer !== undefined) {
+    if (typeof answer !== "string") {
+      report.error(path, "field 'answer' must be a string");
+    } else {
+      scanLatex(report, path, answer);
+    }
+  }
+
+  const working = raw["working"];
+  if (working !== undefined) {
+    if (!Array.isArray(working) || !working.every((w) => typeof w === "string")) {
+      report.error(path, "working must be an array of strings (string[])");
+    } else {
+      working.forEach((w, i) => scanLatex(report, `${path}.working[${i}]`, w));
+    }
+  }
 }
 
 function validateTableRows(report: Report, path: string, rows: unknown): void {

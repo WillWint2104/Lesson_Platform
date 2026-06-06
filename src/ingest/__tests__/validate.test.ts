@@ -181,6 +181,61 @@ describe("validateQuestionsFile — errors", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Optional answer / working (non-MC reveal fields)
+// ---------------------------------------------------------------------------
+
+describe("optional answer/working", () => {
+  it("accepts a text question with answer + working", () => {
+    const res = validateQuestionsFile(
+      qfile([
+        { type: "text", prompt: "Expand $4(x+3)$.", answer: "$4x+12$", working: ["a", "b"] },
+      ]),
+    );
+    expect(res.valid).toBe(true);
+  });
+
+  it("errors when answer is not a string", () => {
+    const res = validateQuestionsFile(qfile([{ type: "text", prompt: "x", answer: 42 }]));
+    expect(has(res.errors, "questions[0]", "field 'answer' must be a string")).toBe(true);
+  });
+
+  it("errors when working is not a string[]", () => {
+    const res = validateQuestionsFile(
+      qfile([{ type: "table", prompt: "x", rows: [["a"]], working: "nope" }]),
+    );
+    expect(has(res.errors, "questions[0]", "working must be an array of strings")).toBe(true);
+  });
+
+  it("warns (not errors) when a text question has no answer", () => {
+    const res = validateQuestionsFile(qfile([{ type: "text", prompt: "Discuss." }]));
+    expect(res.valid).toBe(true);
+    expect(
+      has(res.warnings, "questions[0] (text)", "no answer provided — the runtime will fall back"),
+    ).toBe(true);
+  });
+
+  it("does not warn about a missing answer for non-text types", () => {
+    const res = validateQuestionsFile(qfile([{ type: "table", prompt: "x", rows: [["a"]] }]));
+    expect(res.warnings.some((w) => w.message.includes("no answer provided"))).toBe(false);
+  });
+
+  it("allows answer/working on geometry questions", () => {
+    const res = validateQuestionsFile(
+      qfile([
+        {
+          type: "geometry",
+          prompt: "Area?",
+          geometryData: { shape: "triangle" },
+          answer: "$12$",
+          working: ["A = ..."],
+        },
+      ]),
+    );
+    expect(res.valid).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Notes — error classes
 // ---------------------------------------------------------------------------
 
