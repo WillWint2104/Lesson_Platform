@@ -205,12 +205,21 @@ for minimal valid examples of all three files.
   + each lesson's `areaIndex`/`areaCount`. Sequential unlock logic lives in the
   pure `/src/app/unlock.ts`. The old multi-lesson harness is retained DORMANT at
   `/debug` (lesson 8/9), linked nowhere.
+- **Lesson page** (`LessonPage`): framed video + Notes/Practice tabs (default
+  Notes). Practice resumes at the first unanswered question for incomplete
+  lessons; the summary offers "Back to <area>" + "Next lesson →" (when the next
+  lesson unlocks after completion). **Review-rerun ruling:** a completed lesson
+  opens in review mode — re-running practice records fresh outcomes and
+  increments attempts but **NEVER clears `completedAt`** (encoded as a test).
+- **Figures render wherever present (ruling):** ANY non-MC question with a
+  `figure` renders it through the registry — text and table included, not just
+  graph/geometry.
 
   | Route | Screen |
   |-------|--------|
   | `/` | Library (subject pills, continue hero, topic cards) |
   | `/:subject/:topic/:topicArea` | Lesson-selection list + locked checkpoint |
-  | `/:subject/:topic/:topicArea/:lessonId` | **Temporary** lesson placeholder (mounts Video/Notes/Practice; real lesson page is next) |
+  | `/:subject/:topic/:topicArea/:lessonId` | Lesson page (framed video, Notes/Practice tabs, resume + review mode, next-lesson CTA) |
   | `/debug` | Dormant dev harness |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
 

@@ -38,6 +38,23 @@ lessons stay openable (Review). Logic lives in the pure `/src/app/unlock.ts`.
 **Checkpoint card:** gold dashed, trophy circle, "mixed questions from this topic
 only · unlocks after lesson N". Locked-only for now.
 
+## Lesson page (`/:subject/:topic/:topicArea/:lessonId`)
+
+Breadcrumb (Subject / Topic / Topic area / lesson) → title + meta → framed
+**VideoEmbed** (the coming-soon stage still shows when `src` is null — honest
+state) → tab row **Notes | Practice (N)** (default **Notes**) → tab content.
+
+- **Practice** is the `QuestionRunner` wired to the progress store. For an
+  **incomplete** lesson it **resumes** at the first unanswered question (dots
+  seeded from recorded outcomes — strictly forward, no restart).
+- **Summary CTAs:** always "Back to <topic area>"; "Next lesson →" when a next
+  lesson exists and is now unlocked (unlock recomputed after completion).
+- **Review mode:** a **completed** lesson shows a completion banner and re-runs
+  practice fresh — recording new outcomes + incrementing attempts but **never
+  clearing `completedAt`**.
+- **Stale-id guard:** an invalid `lessonId` (or mismatched hierarchy) → the
+  not-found treatment. Tab state is local (no URL state this PR).
+
 ## Not-found
 
 Unknown routes AND invalid hierarchy params (no such topic area / lesson in the
