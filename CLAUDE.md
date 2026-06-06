@@ -163,12 +163,23 @@ for minimal valid examples of all three files.
   `QuestionRunner` (one question at a time, progress dots + difficulty badge,
   end-of-set summary), per-type bodies (MC, text, table, graph/geometry), and
   one shared self-mark/reveal flow + result type (`Outcome`/`QuestionResult`,
-  CLAUDE.md §c rule 4). The runtime emits results via `onResult`/`onComplete`
-  callbacks only — **no persistence** (the progress store is a later PR). Graph
-  and geometry render a token-styled `FigurePlaceholder` (a swappable slot for
-  the upcoming figure-renderer PR), not real figures.
-- **Still stubs:** `/src/render/video-embed.tsx`, `/src/state`,
-  `/src/shared/builders.ts`.
+  CLAUDE.md §c rule 4). The runtime itself holds no persistence — it emits
+  results via `onResult`/`onComplete` callbacks, which the progress store layer
+  consumes. Graph and geometry render a token-styled `FigurePlaceholder` (a
+  swappable slot for the upcoming figure-renderer PR), not real figures.
+- **Progress store is implemented:** `/src/state/` — `progress.ts`
+  (localStorage-backed, single versioned key `lp:progress:v1`; ONE
+  serialize/restore pair with an explicit field whitelist; hierarchy-scoped
+  query helpers so topics never co-mingle; stale-id guard against the registry),
+  `storage.ts` (backend detection + in-memory fallback + corrupt/future-version
+  robustness), and `ProgressContext.tsx` (`ProgressProvider` + hooks). Writes go
+  through store functions only — no component touches localStorage. Results are
+  fed from the question runtime's `onResult`/`onComplete` callbacks. **No
+  gamification fields yet** (stars/XP/streak get their own design pass).
+  **Bump `SCHEMA_VERSION` (and add a migration) on ANY breaking change to the
+  stored shape**, and extend `restoreState`'s whitelist — the round-trip test
+  fails otherwise.
+- **Still stubs:** `/src/render/video-embed.tsx`, `/src/shared/builders.ts`.
 - **All math goes through `MathText` — never call `katex` directly in a
   component.** `MathText` is the single shared math renderer (CLAUDE.md §c rule
   4); the question runtime will reuse it. It segments `$...$`/`$$...$$`, renders
