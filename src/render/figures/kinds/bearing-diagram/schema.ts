@@ -54,7 +54,7 @@ export function validateBearingData(data: unknown, path: string): Issue[] {
           issues.push({ path: `${bp}.to`, message: "must reference an existing point id" });
         }
         const deg = b["degrees"];
-        if (typeof deg !== "number" || deg < 0 || deg > 360) {
+        if (typeof deg !== "number" || !Number.isFinite(deg) || deg < 0 || deg > 360) {
           issues.push({
             path: `${bp}.degrees`,
             message: "must be a number 0–360 (clockwise from north)",

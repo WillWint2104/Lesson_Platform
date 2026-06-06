@@ -9,6 +9,7 @@ right-angle mark. Use it for triangle geometry questions (areas, Pythagoras,
 trigonometry set-ups).
 
 ## Data schema (`figure.data`)
+
 | field          | type                                   | required | notes |
 |----------------|----------------------------------------|----------|-------|
 | `vertices`     | array of exactly 3 `{ x:number, y:number }` | **yes** | the three corners, in order |

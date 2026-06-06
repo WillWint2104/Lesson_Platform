@@ -25,13 +25,11 @@ describe("frozen back-compat corpus", () => {
 
   it.each(files)("still validates with zero errors: %s", (rel) => {
     const raw = JSON.parse(readFileSync(join(corpusDir, rel), "utf8"));
-    const res = rel.startsWith("lesson")
-      ? validateManifest(raw, { figureSchemas })
-      : rel.startsWith("questions")
-        ? validateQuestionsFile(raw, { figureSchemas })
-        : rel.startsWith("notes")
-          ? validateNotesFile(raw)
-          : { valid: true, errors: [] as { path: string; message: string }[] };
+    let res;
+    if (rel.startsWith("lesson")) res = validateManifest(raw, { figureSchemas });
+    else if (rel.startsWith("questions")) res = validateQuestionsFile(raw, { figureSchemas });
+    else if (rel.startsWith("notes")) res = validateNotesFile(raw);
+    else throw new Error(`corpus file '${rel}' has an unrecognised prefix — name it lesson-*/notes-*/questions-*`);
     if (!res.valid) {
       throw new Error(
         `${rel} broke back-compat:\n` +

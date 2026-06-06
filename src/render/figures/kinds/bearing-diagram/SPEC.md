@@ -8,6 +8,7 @@ Draw labelled points with north arrows and bearing lines between them. Use it fo
 navigation/bearings questions.
 
 ## Data schema (`figure.data`)
+
 | field      | type                                                    | required | notes |
 |------------|---------------------------------------------------------|----------|-------|
 | `points`   | non-empty array of `{ id:string, x:number, y:number, label?:string }` | **yes** | `id` must be unique; `label` defaults to `id` |

@@ -62,6 +62,7 @@ function readBearings(v: unknown): Bearing[] {
 
 /** Three-figure bearing label, e.g. 45 → "045°". */
 export function threeFigureBearing(degrees: number): string {
+  if (!Number.isFinite(degrees)) return "—";
   const d = ((Math.round(degrees) % 360) + 360) % 360;
   return `${String(d).padStart(3, "0")}°`;
 }

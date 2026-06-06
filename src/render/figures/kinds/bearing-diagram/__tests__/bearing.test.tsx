@@ -14,6 +14,15 @@ describe("bearing-diagram schema", () => {
     expect(issues.some((i) => i.path === "f.points[0]")).toBe(true);
     expect(issues.some((i) => i.path.startsWith("f.bearings[0]"))).toBe(true);
   });
+
+  it("rejects a non-finite degrees value (NaN slips past a bare typeof check)", () => {
+    const data = {
+      points: [{ id: "A", x: 0, y: 0 }, { id: "B", x: 1, y: 1 }],
+      bearings: [{ from: "A", to: "B", degrees: Number.NaN }],
+    };
+    const issues = validateBearingData(data, "f");
+    expect(issues.some((i) => i.path === "f.bearings[0].degrees")).toBe(true);
+  });
 });
 
 describe("three-figure bearing labels", () => {
