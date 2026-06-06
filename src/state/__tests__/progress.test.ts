@@ -229,3 +229,62 @@ describe("recordAttempt / completedAt", () => {
     expect(store.getState().lessons["a"]!.completedAt).toBe("FIXED");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Per-skill / per-difficulty scoping — bounded by topic, never cross-topic
+// ---------------------------------------------------------------------------
+
+describe("skill/difficulty scoping", () => {
+  const lessons: LessonIndexEntry[] = [
+    {
+      id: "a1",
+      subject: "math",
+      topic: "algebra",
+      topicArea: "brackets",
+      questions: [
+        { skill: "expand", difficulty: "easy" },
+        { skill: "factor", difficulty: "hard" },
+      ],
+    },
+    {
+      id: "g1",
+      subject: "math",
+      topic: "geometry",
+      topicArea: "triangles",
+      questions: [{ skill: "expand", difficulty: "easy" }],
+    },
+  ];
+
+  it("aggregates a skill within a topic and never co-mingles a same-named skill from another topic", () => {
+    const store = createProgressStore({ backend: createMemoryBackend(), lessons });
+    store.recordOutcome("a1", 0, "correct"); // algebra · expand
+    store.recordOutcome("g1", 0, "incorrect"); // geometry · expand (same skill name!)
+
+    expect(store.getSkillProgress("math", "algebra", "expand")).toEqual({
+      correct: 1,
+      incorrect: 0,
+      answered: 1,
+    });
+    expect(store.getSkillProgress("math", "geometry", "expand")).toEqual({
+      correct: 0,
+      incorrect: 1,
+      answered: 1,
+    });
+  });
+
+  it("aggregates by difficulty within a topic", () => {
+    const store = createProgressStore({ backend: createMemoryBackend(), lessons });
+    store.recordOutcome("a1", 0, "correct"); // easy
+    store.recordOutcome("a1", 1, "incorrect"); // hard
+    expect(store.getDifficultyProgress("math", "algebra", "easy")).toEqual({
+      correct: 1,
+      incorrect: 0,
+      answered: 1,
+    });
+    expect(store.getDifficultyProgress("math", "algebra", "hard")).toEqual({
+      correct: 0,
+      incorrect: 1,
+      answered: 1,
+    });
+  });
+});

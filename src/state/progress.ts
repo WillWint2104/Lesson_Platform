@@ -39,12 +39,27 @@ export interface ProgressState {
   lessons: Record<string, LessonRecord>;
 }
 
+/** Per-question metadata (by position) used for skill/difficulty scoping. */
+export interface QuestionMeta {
+  skill?: string;
+  difficulty?: string;
+}
+
 /** Minimal hierarchy index entry (derived from the loaded registry). */
 export interface LessonIndexEntry {
   id: string;
   subject: string;
   topic: string;
   topicArea: string;
+  /** Per-question skill/difficulty, indexed by question position. */
+  questions?: QuestionMeta[];
+}
+
+/** Outcome counts for a skill/difficulty within a topic boundary. */
+export interface ScopedQuestionProgress {
+  correct: number;
+  incorrect: number;
+  answered: number;
 }
 
 /** Result of a hierarchy-scoped query. Only in-scope, registry-known lessons. */
@@ -66,6 +81,14 @@ export interface ProgressStore {
   getLessonProgress(lessonId: string): LessonRecord | null;
   getTopicProgress(subject: string, topic: string): ScopedProgress;
   getTopicAreaProgress(subject: string, topic: string, topicArea: string): ScopedProgress;
+  /** Outcomes for a skill, scoped to a topic (never cross-topic). */
+  getSkillProgress(subject: string, topic: string, skill: string): ScopedQuestionProgress;
+  /** Outcomes for a difficulty, scoped to a topic (never cross-topic). */
+  getDifficultyProgress(
+    subject: string,
+    topic: string,
+    difficulty: string,
+  ): ScopedQuestionProgress;
   recordOutcome(lessonId: string, questionIndex: number, outcome: Outcome): void;
   recordAttempt(lessonId: string, completed: boolean): void;
   setLastVisited(lessonId: string): void;
@@ -271,6 +294,29 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     return { lessonIds, records, completedCount, correctCount, incorrectCount, attemptCount };
   }
 
+  // Per-question scoping (skill/difficulty) — always bounded by the topic filter
+  // so it can never aggregate across topics.
+  function scopeQuestions(
+    filter: (l: LessonIndexEntry) => boolean,
+    match: (m: QuestionMeta) => boolean,
+  ): ScopedQuestionProgress {
+    let correct = 0;
+    let incorrect = 0;
+    for (const lesson of index) {
+      if (!filter(lesson)) continue;
+      const rec = state.lessons[lesson.id];
+      if (!rec) continue;
+      const metas = lesson.questions ?? [];
+      metas.forEach((meta, i) => {
+        if (!match(meta)) return;
+        const outcome = rec.questionOutcomes[i];
+        if (outcome === "correct") correct += 1;
+        else if (outcome === "incorrect") incorrect += 1;
+      });
+    }
+    return { correct, incorrect, answered: correct + incorrect };
+  }
+
   return {
     persistent,
 
@@ -302,6 +348,17 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     getTopicAreaProgress(subject, topic, topicArea) {
       return scope(
         (l) => l.subject === subject && l.topic === topic && l.topicArea === topicArea,
+      );
+    },
+
+    getSkillProgress(subject, topic, skill) {
+      return scopeQuestions((l) => l.subject === subject && l.topic === topic, (m) => m.skill === skill);
+    },
+
+    getDifficultyProgress(subject, topic, difficulty) {
+      return scopeQuestions(
+        (l) => l.subject === subject && l.topic === topic,
+        (m) => m.difficulty === difficulty,
       );
     },
 
