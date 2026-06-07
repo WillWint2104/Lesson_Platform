@@ -5,6 +5,7 @@
  */
 import { type CSSProperties } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
 
@@ -67,7 +68,9 @@ export function DebugHarness() {
                 <span style={{ font: "var(--text-meta)", color: "var(--muted)" }}>
                   {area.segments.length} segment{area.segments.length === 1 ? "" : "s"}
                 </span>
-                <Link to={`/${area.subject}/${area.topic}/${area.topicArea}`}>open →</Link>
+                <Link to={`/${area.subject}/${area.topic}/${area.topicArea}`}>
+                  open <ArrowRight size={16} aria-hidden="true" style={{ verticalAlign: "middle" }} />
+                </Link>
               </>
             ) : (
               <span style={issueTag}>

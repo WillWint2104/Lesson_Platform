@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
 import type { AreaRegistry, ValidatedArea } from "@/ingest/load";
 import type { ProgressStore } from "@/state/progress";
 import { titleCase } from "@/app/format";
+import { StatusCircle } from "@/shared/StatusCircle";
 
 /** Library hub (area model). Lists topics → areas; hero continues/starts an area. */
 export function Library() {
@@ -40,14 +42,17 @@ export function Library() {
       {/* Subordinate to the hero: a quiet note, not a headline banner. */}
       <LocalProgressNotice />
 
-      <div className="topic-grid">
-        {subject !== null
-          ? registry.getTopics(subject).map((topic) => (
-              <TopicCard key={topic} subject={subject} topic={topic} />
-            ))
-          : null}
-        <div className="topic-placeholder">Future topics drop in as content packs.</div>
-      </div>
+      <section className="area-section" aria-label="Topics">
+        <p className="section-label">Topics</p>
+        <div className="topic-grid">
+          {subject !== null
+            ? registry.getTopics(subject).map((topic) => (
+                <TopicCard key={topic} subject={subject} topic={topic} />
+              ))
+            : null}
+          <div className="topic-placeholder">Future topics drop in as content packs.</div>
+        </div>
+      </section>
     </main>
   );
 }
@@ -126,7 +131,7 @@ function Hero({ subject }: { subject: string | null }) {
         </span>
       </span>
       <span className="hero__cta" aria-hidden="true">
-        Open →
+        Open <ArrowRight size={16} />
       </span>
     </Link>
   );
@@ -185,21 +190,16 @@ function TopicCard({ subject, topic }: { subject: string; topic: string }) {
       </div>
 
       <ul className="topic-card__areas">
-        {areas.map((area) => {
+        {areas.map((area, i) => {
           const p = areaProgress(area, store);
           const kind = p.total > 0 && p.done === p.total ? "complete" : p.done > 0 ? "progress" : "idle";
           const label =
             kind === "complete" ? "Complete" : kind === "progress" ? `${p.done}/${p.total} done` : "Not started";
-          const glyph = kind === "complete" ? "✓" : kind === "progress" ? "▶" : "•";
+          const variant = kind === "complete" ? "check" : kind === "progress" ? "play-ring" : "number";
           return (
             <li key={area.id}>
               <Link className="topic-area-row" to={areaPath(area)}>
-                <span
-                  className={`topic-area-row__glyph topic-area-row__glyph--${kind}`}
-                  aria-hidden="true"
-                >
-                  {glyph}
-                </span>
+                <StatusCircle variant={variant} size="sm" value={i + 1} label={label} />
                 <span className="topic-area-row__name">{titleCase(area.topicArea)}</span>
                 <span className="topic-area-row__state">{label}</span>
               </Link>

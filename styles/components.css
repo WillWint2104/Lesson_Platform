@@ -7,6 +7,51 @@
  * informational), §4 card anatomy (radius 16, padding 16), §5 colour roles.
  */
 
+/* ---- Status circle (THE shared state motif, §6) ---- */
+.status-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--radius-pill);
+  font: var(--text-card-title);
+}
+.status-circle--sm {
+  width: 28px;
+  height: 28px;
+}
+.status-circle--md {
+  width: 36px;
+  height: 36px;
+}
+.status-circle--check {
+  background: var(--green); /* §5 progress/done */
+  color: var(--card-bg);
+}
+.status-circle--play-ring {
+  background: var(--card-bg);
+  color: var(--green-edge);
+  border: 2px solid var(--green);
+}
+.status-circle--number {
+  background: var(--page-bg);
+  color: var(--muted);
+  border: var(--border-flat-width) solid var(--border);
+}
+.status-circle--lock {
+  background: var(--card-border);
+  color: var(--brand-ink);
+}
+.status-circle--dot {
+  background: var(--coral); /* §5 incorrect */
+  color: var(--coral-deep);
+}
+/* §1: chunky construction only when the circle is itself the interactive nav. */
+.status-circle--pressable {
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+}
+
 /* ---- Notes container ---- */
 .notes-renderer {
   display: flex;
@@ -559,24 +604,7 @@
   align-items: center;
   gap: var(--space-3);
 }
-/* Answered-state indicator (status circle motif §6). */
-.ws-row__status {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-pill);
-  font: var(--text-card-title);
-}
-.ws-row__status--correct {
-  background: var(--green-tint);
-  color: var(--green-edge);
-}
-.ws-row__status--incorrect {
-  background: var(--coral);
-  color: var(--coral-deep);
-}
+/* Answered-state indicator now uses the shared StatusCircle motif (§6). */
 /* Answer-icon button (interactive → chunky §1; cyan = hint/informational §5). */
 .ws-row__solve {
   display: inline-flex;

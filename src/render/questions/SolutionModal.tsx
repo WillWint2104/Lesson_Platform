@@ -14,6 +14,7 @@
  * close; Escape and a backdrop click close; Tab is trapped within the dialog.
  */
 import { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 import { MathText } from "@/shared/MathText";
 import type { Question } from "@/ingest/types";
 import type { Outcome } from "./types";
@@ -102,7 +103,7 @@ export function SolutionModal({
             Question {questionNumber} · {isMc ? "Explanation" : "Worked solution"}
           </h2>
           <button type="button" className="modal__close" aria-label="Close" onClick={onClose}>
-            ✕
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
 
