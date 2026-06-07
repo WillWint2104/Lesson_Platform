@@ -67,6 +67,28 @@ function renderAt(path: string, reg: AreaRegistry, store: ProgressStore) {
   );
 }
 
+describe("app chrome (page, not frame)", () => {
+  const routes = ["/", `/${AREA_ID}`, "/nope", "/debug"];
+  it.each(routes)("renders the full-width app bar + footer on %s", (path) => {
+    const reg = buildReg(mkArea("brackets"));
+    const { container } = renderAt(path, reg, buildStore(reg));
+    // App bar wordmark (a link, unique — the footer wordmark is a span).
+    expect(screen.getByRole("link", { name: "Lesson Platform" })).toBeTruthy();
+    // Footer present and container-aligned.
+    const footer = container.querySelector("footer.app-footer");
+    expect(footer).not.toBeNull();
+    expect(footer?.textContent).toContain("©");
+    // Page-surface shell wrapper present (cream background lives on <body>).
+    expect(container.querySelector(".app-shell")).not.toBeNull();
+  });
+
+  it("adds the page-surface body-class hook", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt("/", reg, buildStore(reg));
+    expect(document.body.classList.contains("lp-app")).toBe(true);
+  });
+});
+
 describe("Library", () => {
   it("renders registry-driven subject pills + a 'more soon' pill", () => {
     const reg = buildReg(mkArea("brackets"));
