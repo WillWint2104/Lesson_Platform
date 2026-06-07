@@ -15,6 +15,23 @@
 import { Fragment } from "react";
 import katex from "katex";
 
+/**
+ * The ONLY emphasis mechanism for math content (authoring.md): two macros mapped
+ * to theme tokens via CSS classes (raw \textcolor is a validator warning).
+ *   \emA{...} — outside-term emphasis (green-deep, .ktx-em-a)
+ *   \emB{...} — in-use-term emphasis (cyan-ink, .ktx-em-b)
+ * They expand to \htmlClass so the colour stays mapped to tokens, not hardcoded.
+ */
+const KATEX_MACROS = {
+  "\\emA": "\\htmlClass{ktx-em-a}{#1}",
+  "\\emB": "\\htmlClass{ktx-em-b}{#1}",
+} as const;
+
+// Allow ONLY \htmlClass (used by our emphasis macros); nothing else is trusted.
+function trustHtmlClass(context: { command: string }): boolean {
+  return context.command === "\\htmlClass";
+}
+
 export type MathSegment =
   | { type: "text"; value: string }
   | { type: "inline"; value: string }
@@ -80,6 +97,9 @@ export function MathText({ children }: MathTextProps) {
         const html = katex.renderToString(seg.value, {
           throwOnError: false,
           displayMode: seg.type === "display",
+          macros: { ...KATEX_MACROS },
+          trust: trustHtmlClass,
+          strict: false,
         });
         // Both wrappers are spans (display is block-level via CSS) so that
         // display math nested inside a <p> stays valid HTML — a <div> inside a
