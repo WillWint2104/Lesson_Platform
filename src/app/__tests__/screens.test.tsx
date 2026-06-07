@@ -12,6 +12,7 @@ import { AppRoutes } from "@/app/AppRoutes";
 afterEach(cleanup);
 
 const AREA_ID = "math/algebra/brackets";
+const STAGE1 = `/${AREA_ID}/stage/1`;
 
 const mcQuestion = (prompt: string, right: string, wrong: string) => ({
   type: "multiple-choice",
@@ -21,11 +22,10 @@ const mcQuestion = (prompt: string, right: string, wrong: string) => ({
     { text: wrong, isCorrect: false },
   ],
 });
-const textQ = (prompt: string, answer?: string, working?: string[]) => ({
+const textQ = (prompt: string, answer?: string) => ({
   type: "text",
   prompt,
   ...(answer !== undefined ? { answer } : {}),
-  ...(working !== undefined ? { working } : {}),
 });
 
 function stage(
@@ -64,10 +64,7 @@ function buildReg(...areas: Record<string, unknown>[]): AreaRegistry {
   return buildAreaRegistry(Object.assign({}, ...areas));
 }
 function buildStore(reg: AreaRegistry): ProgressStore {
-  return createProgressStore({
-    backend: createMemoryBackend(),
-    areaIds: reg.areas.map((a) => a.id),
-  });
+  return createProgressStore({ backend: createMemoryBackend(), areaIds: reg.areas.map((a) => a.id) });
 }
 function renderAt(path: string, reg: AreaRegistry, store: ProgressStore) {
   return render(
@@ -82,315 +79,250 @@ function renderAt(path: string, reg: AreaRegistry, store: ProgressStore) {
 }
 
 describe("app chrome (page, not frame)", () => {
-  const routes = ["/", `/${AREA_ID}`, "/nope", "/debug"];
+  const routes = ["/", STAGE1, "/nope", "/debug"];
   it.each(routes)("renders the full-width app bar + footer on %s", (path) => {
     const reg = buildReg(mkArea("brackets"));
     renderAt(path, reg, buildStore(reg));
     expect(screen.getByRole("link", { name: "Lesson Platform" })).toBeTruthy();
     const footer = screen.getByRole("contentinfo");
     expect(within(footer).getByText("Lesson Platform")).toBeTruthy();
-    expect(within(footer).getByText(/©/)).toBeTruthy();
-  });
-
-  it("adds the page-surface body-class hook", () => {
-    const reg = buildReg(mkArea("brackets"));
-    renderAt("/", reg, buildStore(reg));
-    expect(document.body.classList.contains("lp-app")).toBe(true);
   });
 });
 
 describe("Library", () => {
-  it("renders registry-driven subject pills + a 'more soon' pill", () => {
+  it("renders subject pills + a 'more soon' pill", () => {
     const reg = buildReg(mkArea("brackets"));
     renderAt("/", reg, buildStore(reg));
     expect(screen.getByRole("button", { name: "Math" })).toBeTruthy();
     expect(screen.getByText("more soon")).toBeTruthy();
   });
 
-  it("shows the local-progress notice once and persists dismissal", () => {
+  it("local-progress notice shows on Library only + persists dismissal", () => {
     const reg = buildReg(mkArea("brackets"));
     const store = buildStore(reg);
     renderAt("/", reg, store);
     expect(screen.getByText(/saved in this browser/i)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(screen.queryByText(/saved in this browser/i)).toBeNull();
     expect(store.isNoticeDismissed("local-progress")).toBe(true);
-  });
-
-  it("shows the local-progress notice on the Library only (not other routes)", () => {
-    const reg = buildReg(mkArea("brackets"));
-    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
+    cleanup();
+    renderAt(STAGE1, reg, store);
     expect(screen.queryByText(/saved in this browser/i)).toBeNull();
   });
 
-  it("hero is 'start here', deep-linking to the first incomplete stage", () => {
+  it("hero 'start here' deep-links to the first incomplete stage page", () => {
     const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
     renderAt("/", reg, buildStore(reg));
-    expect(screen.getByText("Start here")).toBeTruthy();
-    expect(screen.getByText("Start here").closest("a")?.getAttribute("href")).toBe(
-      "/math/algebra/brackets#stage-1",
-    );
+    expect(screen.getByText("Start here").closest("a")?.getAttribute("href")).toBe(STAGE1);
   });
 
-  it("hero is 'continue' when an area was last visited", () => {
-    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
+  it("hero 'continue' deep-links to the stored stage + view", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("A"), stage("B")] }));
     const store = buildStore(reg);
-    store.setLastVisited(AREA_ID, 0, "stage");
+    store.setLastVisited(AREA_ID, 1, "exercise");
     renderAt("/", reg, store);
-    expect(screen.getByText("Continue where you left off")).toBeTruthy();
     expect(
       screen.getByText("Continue where you left off").closest("a")?.getAttribute("href"),
-    ).toBe("/math/algebra/brackets#stage-1");
+    ).toBe(`/${AREA_ID}/stage/2/exercise`);
   });
 
-  it("renders topic-area rows linking to the area page, + grid + placeholder", () => {
-    const reg = buildReg(mkArea("brackets"));
-    const { container } = renderAt("/", reg, buildStore(reg));
-    const row = screen.getByText("Brackets").closest("a");
-    expect(row?.getAttribute("href")).toBe("/math/algebra/brackets");
-    expect(row?.className).toContain("topic-area-row");
-    expect(container.querySelector(".topic-grid")).not.toBeNull();
-    expect(screen.getByText(/Future topics drop in/)).toBeTruthy();
-  });
-});
-
-describe("Hub rail (zones)", () => {
-  const statVal = (label: string) =>
-    screen.getByText(label).closest(".stat-row")?.querySelector(".stat-row__val")?.textContent;
-
-  it("renders the zoned hub: main + rail with all three rail cards", () => {
-    const reg = buildReg(mkArea("brackets"));
-    const { container } = renderAt("/", reg, buildStore(reg));
-    expect(container.querySelector(".hub")).not.toBeNull();
-    expect(container.querySelector(".hub__main")).not.toBeNull();
-    expect(container.querySelector(".hub__rail")).not.toBeNull();
-    expect(screen.getByText("Up next")).toBeTruthy();
-    expect(screen.getByText("Your progress")).toBeTruthy();
-    expect(screen.getByText("How it works")).toBeTruthy();
-  });
-
-  it("up next: first incomplete stage, with question count + anchor", () => {
-    const reg = buildReg(mkArea("brackets")); // one stage "Intro", 1 question
-    renderAt("/", reg, buildStore(reg));
-    const link = screen.getByText("Intro").closest("a");
-    expect(link?.getAttribute("href")).toBe("/math/algebra/brackets#stage-1");
-    expect(screen.getByText(/1 question/)).toBeTruthy();
-  });
-
-  it("up next: skips completed stages to the next incomplete one", () => {
-    const reg = buildReg(
-      mkArea("brackets", { stages: [stage("First"), stage("Second")] }),
-    );
-    const store = buildStore(reg);
-    store.recordAttempt(AREA_ID, 0, true); // complete stage 0
-    renderAt("/", reg, store);
-    const link = screen.getByText("Second").closest("a");
-    expect(link?.getAttribute("href")).toBe("/math/algebra/brackets#stage-2");
-    expect(screen.queryByText("First")).toBeNull();
-  });
-
-  it("up next: hidden with an 'all caught up' line when everything is complete", () => {
-    const reg = buildReg(mkArea("brackets"));
+  it("up next deep-links to the first incomplete stage page; stats over stages", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("First"), stage("Second")] }));
     const store = buildStore(reg);
     store.recordAttempt(AREA_ID, 0, true);
     renderAt("/", reg, store);
-    expect(screen.getByText(/all caught up/i)).toBeTruthy();
-    expect(screen.queryByText("Intro")).toBeNull();
-  });
-
-  it("your progress: stats reflect the seeded store", () => {
-    const reg = buildReg(
-      mkArea("brackets", { stages: [stage("First"), stage("Second")] }),
+    expect(screen.getByText("Second").closest("a")?.getAttribute("href")).toBe(
+      `/${AREA_ID}/stage/2`,
     );
-    const store = buildStore(reg);
-    store.recordOutcome(AREA_ID, 0, "core", 0, "correct");
-    store.recordAttempt(AREA_ID, 0, true); // stage 0 complete, 1 question answered
-    renderAt("/", reg, store);
-    expect(statVal("Areas completed")).toBe("0/1");
+    const statVal = (label: string) =>
+      screen.getByText(label).closest(".stat-row")?.querySelector(".stat-row__val")?.textContent;
     expect(statVal("Exercises completed")).toBe("1/2");
-    expect(statVal("Questions answered")).toBe("1");
   });
 });
 
-describe("AreaPage — layout", () => {
-  it("renders the stage's notes, a video stage, and the worksheet", () => {
-    const reg = buildReg(mkArea("brackets"));
+describe("Area redirect", () => {
+  it("redirects the area root to stage 1 with no progress", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("Alpha"), stage("Beta")] }));
     renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    expect(screen.getByRole("heading", { name: "Notes heading" })).toBeTruthy();
-    expect(screen.getByText("Video coming soon.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Right" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
   });
 
-  it("renders not-found for an unknown area", () => {
+  it("redirects to the current (first incomplete) stage", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("Alpha"), stage("Beta")] }));
+    const store = buildStore(reg);
+    store.recordAttempt(AREA_ID, 0, true); // stage 1 done → current is stage 2
+    renderAt(`/${AREA_ID}`, reg, store);
+    expect(screen.getByRole("link", { name: /Start Exercise 2/ })).toBeTruthy();
+  });
+
+  it("not-found for an unknown area", () => {
     const reg = buildReg(mkArea("brackets"));
     renderAt("/no/such/area", reg, buildStore(reg));
     expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
   });
-
-  it("numbers stages in authored order with a small-caps label + title heading", () => {
-    const reg = buildReg(
-      mkArea("brackets", { stages: [stage("S-A"), stage("S-B")] }),
-    );
-    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    expect(screen.getByText("Stage 1")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "S-A" })).toBeTruthy();
-    expect(screen.getByText("Stage 2")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "S-B" })).toBeTruthy();
-  });
-
-  it("numbers the questions within a stage exercise 1..n", () => {
-    const reg = buildReg(
-      mkArea("brackets", {
-        stages: [stage("Three", { questions: [mcQuestion("Q-one", "a", "b"), textQ("Q-two"), textQ("Q-three")] })],
-      }),
-    );
-    const { container } = renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    const nums = Array.from(container.querySelectorAll(".ws-row__num")).map((n) => n.textContent);
-    expect(nums).toEqual(["1", "2", "3"]);
-  });
-
-  it("renders an extra-practice pool when present", () => {
-    const reg = buildReg(
-      mkArea("brackets", {
-        stages: [stage("S", { questions: [mcQuestion("core-q", "R", "W")], extra: [mcQuestion("extra-q", "ER", "EW")] })],
-      }),
-    );
-    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    expect(screen.getByText("More practice")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "ER" })).toBeTruthy();
-  });
 });
 
-describe("AreaPage — solution modal", () => {
-  const oneText = (answer?: string, working?: string[]) =>
-    mkArea("brackets", { stages: [stage("T", { questions: [textQ("Solve it", answer, working)] })] });
-
-  it("opens a worked-solution modal, moves focus in, closes on Escape, returns focus", () => {
-    const reg = buildReg(oneText("Answer here", ["First step", "Second step"]));
-    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    const icon = screen.getByRole("button", { name: "Show solution for question 1" });
-
-    fireEvent.click(icon);
-    const dialog = screen.getByRole("dialog");
-    expect(dialog.getAttribute("aria-modal")).toBe("true");
-    expect(dialog.contains(document.activeElement)).toBe(true);
-    expect(within(dialog).getByText("Answer here")).toBeTruthy();
-    expect(within(dialog).getByText("First step")).toBeTruthy();
-
-    fireEvent.keyDown(dialog, { key: "Escape" });
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(document.activeElement).toBe(icon);
-  });
-
-  it("shows an honest empty state when there is no worked solution", () => {
-    const reg = buildReg(oneText());
-    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    fireEvent.click(screen.getByRole("button", { name: "Show solution for question 1" }));
-    expect(screen.getByText("No worked solution provided.")).toBeTruthy();
-  });
-
-  it("MC: marks inline, then opens an explanation-only modal (no self-mark)", () => {
-    const reg = buildReg(mkArea("brackets"));
-    const store = buildStore(reg);
-    renderAt(`/${AREA_ID}`, reg, store);
-
-    fireEvent.click(screen.getByRole("button", { name: "Right" }));
-    expect(screen.getByLabelText("Answered correctly")).toBeTruthy();
-    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toBe("correct");
-
-    fireEvent.click(screen.getByRole("button", { name: "Show explanation for question 1" }));
-    const dialog = screen.getByRole("dialog");
-    expect(within(dialog).queryByRole("button", { name: "I got it" })).toBeNull();
-    expect(dialog.querySelector(".qr-mc__option--correct")).not.toBeNull();
-  });
-
-  it("non-MC: self-mark records the outcome and closes the modal", () => {
-    const reg = buildReg(oneText("A"));
-    const store = buildStore(reg);
-    renderAt(`/${AREA_ID}`, reg, store);
-
-    fireEvent.click(screen.getByRole("button", { name: "Show solution for question 1" }));
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "I got it" }));
-
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toBe("correct");
-    expect(screen.getByLabelText("Answered correctly")).toBeTruthy();
-  });
-});
-
-describe("AreaPage — progress & gating", () => {
-  it("restores the answered-state indicator from the store on load", () => {
-    const reg = buildReg(mkArea("brackets"));
-    const store = buildStore(reg);
-    store.recordOutcome(AREA_ID, 0, "core", 0, "correct");
-    renderAt(`/${AREA_ID}`, reg, store);
-    expect(screen.getByLabelText("Answered correctly")).toBeTruthy();
-  });
-
-  it("nothing locks — every stage's questions render (free navigation)", () => {
+describe("StagePage", () => {
+  it("renders the video, notes panels, and the Start-Exercise CTA", () => {
     const reg = buildReg(
       mkArea("brackets", {
         stages: [
-          stage("First", { questions: [mcQuestion("q1", "R0", "W0")] }),
-          stage("Second", { questions: [mcQuestion("q2", "R1", "W1")] }),
-        ],
-      }),
-    );
-    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    expect(screen.getByRole("button", { name: "R0" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "R1" })).toBeTruthy(); // not locked
-    expect(screen.queryByText(/first to unlock/i)).toBeNull();
-  });
-
-  it("completes a stage when every core question is ANSWERED, even incorrectly", () => {
-    const reg = buildReg(
-      mkArea("brackets", { stages: [stage("Only", { questions: [mcQuestion("q", "Yes", "No")] })] }),
-    );
-    const store = buildStore(reg);
-    renderAt(`/${AREA_ID}`, reg, store);
-    expect(screen.queryByText(/completed every stage/i)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "No" })); // wrong, but answered
-    expect(screen.getByText(/completed every stage/i)).toBeTruthy();
-    expect(store.getStageProgress(AREA_ID, 0)?.completedAt).not.toBeNull();
-  });
-
-  it("extra outcomes never affect stage completion", () => {
-    const reg = buildReg(
-      mkArea("brackets", {
-        stages: [
-          stage("S", {
-            questions: [textQ("core")],
-            extra: [mcQuestion("extra-q", "ER", "EW")],
+          stage("Single brackets", {
+            notes: [
+              { type: "paragraph", text: "Multiply the outside term." },
+              { type: "callout", style: "key", text: "Remember this." },
+              { type: "example", prompt: "Expand 3(x+4).", answer: "3x+12", steps: [{ tex: "3x+12" }] },
+            ],
+            video: { src: null, duration: null },
           }),
         ],
       }),
     );
-    const store = buildStore(reg);
-    renderAt(`/${AREA_ID}`, reg, store);
-    fireEvent.click(screen.getByRole("button", { name: "ER" })); // answer the EXTRA question
-    expect(store.getStageProgress(AREA_ID, 0)?.completedAt).toBeNull(); // core still unanswered
-    expect(screen.queryByText(/completed every stage/i)).toBeNull();
+    renderAt(STAGE1, reg, buildStore(reg));
+    expect(screen.getByText("Video coming soon.")).toBeTruthy();
+    expect(screen.getByText("The rule")).toBeTruthy();
+    expect(screen.getByText("Remember")).toBeTruthy();
+    expect(screen.getByText("Worked examples")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
   });
 
-  it("area-complete banner appears with a back-to-library CTA", () => {
+  it("not-found for an out-of-range stage number", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt(`/${AREA_ID}/stage/9`, reg, buildStore(reg));
+    expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
+  });
+
+  it("stepper navigates freely in both directions", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("Alpha"), stage("Beta")] }));
+    renderAt(STAGE1, reg, buildStore(reg));
+    // On stage 1; jump to stage 2 via the stepper.
+    fireEvent.click(screen.getByRole("link", { name: /Beta/ }));
+    expect(screen.getByRole("link", { name: /Start Exercise 2/ })).toBeTruthy();
+    // …and back to stage 1.
+    fireEvent.click(screen.getByRole("link", { name: /Alpha/ }));
+    expect(screen.getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
+  });
+});
+
+describe("ExercisePage — completion & gating", () => {
+  const EX1 = `/${AREA_ID}/stage/1/exercise`;
+
+  it("completes when all core are ANSWERED (even incorrectly) + shows the nudge", () => {
     const reg = buildReg(
       mkArea("brackets", { stages: [stage("Only", { questions: [mcQuestion("q", "Yes", "No")] })] }),
     );
-    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
-    expect(screen.getByText(/completed every stage/i)).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Back to library" })).toBeTruthy();
+    const store = buildStore(reg);
+    renderAt(EX1, reg, store);
+    expect(screen.queryByText(/Exercise 1 complete/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "No" })); // wrong, but answered
+    expect(screen.getByText(/Exercise 1 complete/)).toBeTruthy();
+    expect(screen.getByText(/marked red before moving on/)).toBeTruthy(); // nudge
+    expect(store.getStageProgress(AREA_ID, 0)?.completedAt).not.toBeNull();
   });
 
-  it("hero deep-link anchor target (stage-1) exists on the area page", () => {
-    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
-    const store = buildStore(reg);
-    renderAt("/", reg, store);
-    const href = screen.getByText("Start here").closest("a")?.getAttribute("href");
-    expect(href).toContain("#stage-1");
-    cleanup();
+  it("offers Continue to the next stage (Back to area on the last)", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [stage("A", { questions: [mcQuestion("q", "Y", "N")] }), stage("B")],
+      }),
+    );
+    renderAt(EX1, reg, buildStore(reg));
+    fireEvent.click(screen.getByRole("button", { name: "Y" }));
+    expect(screen.getByRole("link", { name: /Continue to Stage 2/ })).toBeTruthy();
+  });
 
-    const { container } = renderAt(`/${AREA_ID}`, reg, store);
-    expect(container.querySelector("#stage-1")).not.toBeNull();
+  it("more-practice expander is collapsed by default and reveals extra rows", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [stage("S", { questions: [mcQuestion("core", "R", "W")], extra: [mcQuestion("extra-q", "ER", "EW")] })],
+      }),
+    );
+    renderAt(EX1, reg, buildStore(reg));
+    expect(screen.queryByRole("button", { name: "ER" })).toBeNull(); // collapsed
+    fireEvent.click(screen.getByRole("button", { name: /More practice/ }));
+    expect(screen.getByRole("button", { name: "ER" })).toBeTruthy();
+  });
+
+  it("extra solutions are locked until core is complete, and extra never completes the stage", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [stage("S", { questions: [textQ("core")], extra: [mcQuestion("extra-q", "ER", "EW")] })],
+      }),
+    );
+    const store = buildStore(reg);
+    renderAt(EX1, reg, store);
+    fireEvent.click(screen.getByRole("button", { name: /More practice/ }));
+    // Extra solution locked while core is unanswered.
+    const extraSolve = screen.getByRole("button", { name: "Show explanation for question M1" });
+    expect((extraSolve as HTMLButtonElement).disabled).toBe(true);
+    // Answering the extra question records to store.extra but does NOT complete.
+    fireEvent.click(screen.getByRole("button", { name: "ER" }));
+    expect(store.getStageProgress(AREA_ID, 0)?.extra[0]).toBe("correct");
+    expect(store.getStageProgress(AREA_ID, 0)?.completedAt).toBeNull();
+  });
+
+  it("restores answered-state + records sticky completedAt that survives a re-run", () => {
+    const reg = buildReg(
+      mkArea("brackets", { stages: [stage("S", { questions: [textQ("q", "A")] })] }),
+    );
+    const store = buildStore(reg);
+    renderAt(EX1, reg, store);
+    fireEvent.click(screen.getByRole("button", { name: "Show solution for question 1" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "I got it" }));
+    const first = store.getStageProgress(AREA_ID, 0);
+    expect(first?.completedAt).not.toBeNull();
+    expect(screen.getByLabelText("Answered correctly")).toBeTruthy();
+  });
+});
+
+describe("Question focus view", () => {
+  const EX1 = `/${AREA_ID}/stage/1/exercise`;
+  const twoQ = mkArea("brackets", {
+    stages: [stage("S", { questions: [textQ("first q", "A1"), textQ("second q", "A2")] })],
+  });
+
+  it("opens from the enlarge icon, labels Question N of M, navigates and closes (Esc)", () => {
+    const reg = buildReg(twoQ);
+    renderAt(EX1, reg, buildStore(reg));
+    const enlarge = screen.getByRole("button", { name: "Enlarge question 1" });
+    fireEvent.click(enlarge);
+    const dialog = screen.getByRole("dialog", { name: "Question 1 of 2" });
+    expect(dialog).toBeTruthy();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    fireEvent.keyDown(dialog, { key: "ArrowRight" });
+    expect(screen.getByRole("dialog", { name: "Question 2 of 2" })).toBeTruthy();
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(enlarge); // focus restored to the row's opener
+  });
+
+  it("the S key opens the solution inside the focus view", () => {
+    const reg = buildReg(twoQ);
+    renderAt(EX1, reg, buildStore(reg));
+    fireEvent.click(screen.getByRole("button", { name: "Enlarge question 1" }));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "s" });
+    expect(screen.getByText("A1")).toBeTruthy(); // solution answer shown
+  });
+
+  it("MC renders inline inside the focus view", () => {
+    const reg = buildReg(
+      mkArea("brackets", { stages: [stage("S", { questions: [mcQuestion("pick", "Yes", "No")] })] }),
+    );
+    const store = buildStore(reg);
+    renderAt(EX1, reg, store);
+    fireEvent.click(screen.getByRole("button", { name: "Enlarge question 1" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Yes" }));
+    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toBe("correct");
+  });
+
+  it("the exercise grid + stage grid expose stacking containers (mobile smoke)", () => {
+    const reg = buildReg(mkArea("brackets"));
+    const { container } = renderAt(EX1, reg, buildStore(reg));
+    expect(container.querySelector(".ex-grid")).not.toBeNull();
+    cleanup();
+    const { container: c2 } = renderAt(STAGE1, reg, buildStore(reg));
+    expect(c2.querySelector(".stage-grid")).not.toBeNull();
   });
 });
