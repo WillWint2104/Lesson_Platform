@@ -67,6 +67,26 @@ function renderAt(path: string, reg: AreaRegistry, store: ProgressStore) {
   );
 }
 
+describe("app chrome (page, not frame)", () => {
+  const routes = ["/", `/${AREA_ID}`, "/nope", "/debug"];
+  it.each(routes)("renders the full-width app bar + footer on %s", (path) => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt(path, reg, buildStore(reg));
+    // Accessible, user-facing queries: getByRole/getByText exclude a11y-hidden
+    // nodes and throw if the chrome isn't rendered — not presence-only checks.
+    expect(screen.getByRole("link", { name: "Lesson Platform" })).toBeTruthy(); // app bar wordmark
+    const footer = screen.getByRole("contentinfo"); // the <footer> landmark
+    expect(within(footer).getByText("Lesson Platform")).toBeTruthy(); // footer wordmark
+    expect(within(footer).getByText(/©/)).toBeTruthy();
+  });
+
+  it("adds the page-surface body-class hook", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt("/", reg, buildStore(reg));
+    expect(document.body.classList.contains("lp-app")).toBe(true);
+  });
+});
+
 describe("Library", () => {
   it("renders registry-driven subject pills + a 'more soon' pill", () => {
     const reg = buildReg(mkArea("brackets"));

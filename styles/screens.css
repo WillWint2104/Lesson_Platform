@@ -5,31 +5,106 @@
  * mobile-first.
  */
 
-/* ===== Responsive page container (max-width per screen type) ===== */
+/* ===== Page surface =====
+ * The app is a PAGE, not a framed card: the cream background fills the whole
+ * viewport; only *content* is width-constrained (via --container per route).
+ * Backgrounds never carry a max-width.
+ */
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--brand-ink);
+  font-family: var(--font-body);
+}
+
+/* Full-height flex column so the footer pins to the viewport bottom on short
+ * pages (kills the "stranded island" look on sparse content). */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
+  /* --container is set per route on the shell; default to the hub width. */
+  --container: var(--container-wide);
+}
+
+/* ---- Full-width app bar (its own white surface, sticky) ---- */
+.app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+}
+.app-bar__inner {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-3) var(--page-pad-inline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.app-bar__wordmark {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--brand-ink);
+  text-decoration: none;
+}
+.app-bar__identity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+
+/* ---- Slim full-width footer ---- */
+.app-footer {
+  border-top: 1px solid var(--border);
+}
+.app-footer__inner {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-4) var(--page-pad-inline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 0.8rem;
+  color: var(--muted-ink);
+}
+.app-footer__wordmark {
+  font-family: var(--font-heading);
+  font-weight: 700;
+}
+
+/* ===== Content container (width-constrained; NO background) ===== */
 .app-page {
   width: 100%;
+  max-width: var(--container);
   margin: 0 auto;
-  min-height: 100vh;
-  max-width: var(--container-list); /* default */
+  flex: 1; /* grow to push the footer to the bottom */
   padding: var(--page-pad-block) var(--page-pad-inline) var(--space-8);
-  background: var(--page-bg);
   font-family: var(--font-body);
   color: var(--brand-ink);
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-}
-.app-page--wide {
-  max-width: var(--container-wide);
-}
-.app-page--list {
-  max-width: var(--container-list);
-}
-.app-page--reading {
-  max-width: var(--container-reading);
-}
-.app-page--area {
-  max-width: var(--container-area);
 }
 
 /* ---- Shared button / link ---- */
@@ -52,7 +127,8 @@
   color: var(--card-bg);
   border-bottom: 4px solid var(--green-edge);
 }
-.btn--quiet {
+.btn--quiet,
+.btn--ghost {
   background: var(--card-bg);
   color: var(--brand-ink);
   border-color: var(--card-border);
@@ -72,64 +148,39 @@
   border-radius: var(--radius-pill);
 }
 
-/* ---- One-time local-progress notice (sizes to the container) ---- */
+/* ---- One-time local-progress notice (subordinate to the hero: small + quiet) ---- */
 .notice {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex-wrap: wrap;
   background: var(--cyan-tint);
-  border: var(--card-border-width) solid var(--cyan-deep);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--cyan-deep);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-3);
 }
 .notice__text {
   flex: 1;
-  min-width: 14rem;
+  min-width: 12rem;
   margin: 0;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
   color: var(--cyan-deep);
 }
 .notice__dismiss {
-  min-height: 44px;
-  padding: var(--space-1) var(--space-4);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   font-family: var(--font-heading);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   cursor: pointer;
   background: var(--card-bg);
   color: var(--cyan-deep);
-  border: var(--card-border-width) solid var(--cyan-deep);
+  border: 1px solid var(--cyan-deep);
 }
 
 /* ===== Library hub ===== */
-.lib-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.lib-header__name {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 1.25rem;
-  color: var(--brand-ink);
-}
-.lib-header__identity {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-pill);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
-  font-family: var(--font-heading);
-  font-weight: 700;
-  color: var(--brand-ink);
-}
-
 .lib-greeting {
   display: flex;
   flex-direction: column;
@@ -183,17 +234,25 @@
   cursor: default;
 }
 
-/* ---- Hero (solid green, ALWAYS present) ---- */
+/* ---- Hero (a wide button-card, ALWAYS present — banner, not a slab) ---- */
 .hero {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
   text-decoration: none;
   background: var(--green);
   color: var(--card-bg);
   border-bottom: var(--card-edge-width) solid var(--green-edge);
   border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-4) var(--space-5);
+}
+.hero__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }
 .hero__kicker {
   font-family: var(--font-heading);
@@ -211,6 +270,22 @@
 .hero__crumb {
   font-size: 0.9rem;
   opacity: 0.9;
+}
+/* The explicit affordance — a chunky white button. The whole card is clickable;
+ * this is just the visible call-to-action. */
+.hero__cta {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  color: var(--brand-ink);
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.95rem;
 }
 
 /* ---- Topic grid (1 / 2 / 3 columns) ---- */
@@ -607,4 +682,24 @@
 .notfound__text {
   margin: 0;
   color: var(--muted-ink);
+}
+
+/* ===== Small-screen chrome (≤480px / ~360px) ===== */
+@media (max-width: 480px) {
+  .app-page {
+    padding-inline: var(--space-4);
+  }
+  .app-bar__inner,
+  .app-footer__inner {
+    padding-inline: var(--space-4);
+  }
+  /* Hero stacks: text over a full-width CTA. */
+  .hero {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+  }
+  .hero__cta {
+    justify-content: center;
+  }
 }

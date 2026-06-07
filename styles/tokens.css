@@ -17,6 +17,7 @@
   --card-border: #e8e0cc;       /* 2px border + 4-5px bottom edge */
   --card-border-width: 2px;
   --card-edge-width: 5px;       /* 4-5px bottom edge */
+  --border: #e8e0cc;            /* hairline divider (app bar / footer) */
 
   /* ---- Action green ---- */
   --green: #48b178;
