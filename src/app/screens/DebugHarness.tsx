@@ -66,7 +66,7 @@ export function DebugHarness() {
               <>
                 <span style={validTag}>valid</span>
                 <span style={{ font: "var(--text-meta)", color: "var(--muted)" }}>
-                  {area.segments.length} segment{area.segments.length === 1 ? "" : "s"}
+                  {area.stages.length} stage{area.stages.length === 1 ? "" : "s"}
                 </span>
                 <Link to={`/${area.subject}/${area.topic}/${area.topicArea}`}>
                   open <ArrowRight size={16} aria-hidden="true" style={{ verticalAlign: "middle" }} />

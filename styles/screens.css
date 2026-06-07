@@ -551,6 +551,13 @@ body {
   margin: 0;
   color: var(--brand-ink);
 }
+/* Stage sub-zones (notes / extra-practice) within a stage section. */
+.stage-notes,
+.stage-extra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
 /* Video centered, capped narrower than the worksheet column. */
 .ws-video {
   width: 100%;

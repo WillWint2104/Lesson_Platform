@@ -1,28 +1,26 @@
 /**
  * @file AreaPage.tsx — one page per topic area (/:subject/:topic/:topicArea).
  *
- * The designed worksheet experience: breadcrumb → title + meta → notes → the
- * authored sequence, each segment a clearly numbered section (videos and
- * exercises numbered independently). Exercises render as worksheets (see
- * `Worksheet`); a locked exercise renders a locked card with its questions
- * hidden until the previous exercise is complete. Videos are never locked.
+ * v3 STAGE model: an area is a sequence of stages (one skill each = notes →
+ * video → exercise, with an optional extra-practice pool). Nothing locks —
+ * navigation is free (Mayer segmenting); each stage shows a derived status
+ * (done / current / upcoming).
  *
- * Progress: per-question outcomes go to the v2 store; an exercise's `completedAt`
- * is set once every question has a "correct" outcome (consistent with
- * `isAreaComplete`). The page subscribes to the store so unlocking and
- * answered-state indicators stay live.
+ * Completion: a stage completes when every CORE question has an outcome (ANY
+ * outcome — never gated on correctness). Extra outcomes never affect completion.
+ * `completedAt` is sticky; review re-runs record fresh outcomes + attempts.
  *
- * (QuestionRunner is now dormant — retained for the future checkpoint/quiz mode,
- * CLAUDE.md §c rule 8/9 — and is no longer rendered here.)
+ * NOTE: the full page-by-page STEPPER UX is a follow-up; this renders the stages
+ * linearly with their status motif. (QuestionRunner remains dormant.)
  */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { Check } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
-import type { ExerciseRecord, ProgressStore } from "@/state/progress";
-import type { ResolvedSegment } from "@/ingest/load";
-import { computeSegmentUnlock, isAreaComplete, type SegmentStatus } from "@/app/unlock";
+import type { ProgressStore, StageRecord } from "@/state/progress";
+import type { ResolvedStage } from "@/ingest/load";
+import { computeStageStatus, currentStageIndex, isAreaComplete, type StageStatus } from "@/app/unlock";
 import { titleCase } from "@/app/format";
 import { VideoEmbed } from "@/render/VideoEmbed";
 import { NotesRenderer } from "@/render/notes/NotesRenderer";
@@ -37,16 +35,20 @@ function useStoreTick(store: ProgressStore): void {
   useEffect(() => store.subscribe(() => setTick((t) => t + 1)), [store]);
 }
 
-/** DOM ids for the per-segment anchors (independent video / exercise numbering). */
-const videoAnchor = (n: number) => `video-${n}`;
-const exerciseAnchor = (n: number) => `exercise-${n}`;
+const stageAnchor = (n: number) => `stage-${n}`;
 
-interface SegItem {
-  seg: ResolvedSegment;
-  index: number;
-  status: SegmentStatus;
-  /** Display number within its own kind (Video 1, Exercise 1, Video 2…). */
-  displayNum: number;
+/** Whether every core question in a stage has an outcome (the completion rule). */
+function allCoreAnswered(rec: StageRecord | null, coreCount: number): boolean {
+  if (coreCount === 0) return false;
+  for (let k = 0; k < coreCount; k++) if (rec?.core[k] === undefined) return false;
+  return true;
+}
+
+function stageVariant(status: StageStatus): "check" | "play-ring" | "number" {
+  return status === "done" ? "check" : status === "current" ? "play-ring" : "number";
+}
+function stageStatusLabel(status: StageStatus): string {
+  return status === "done" ? "Complete" : status === "current" ? "Current" : "Upcoming";
 }
 
 export function AreaPage() {
@@ -60,11 +62,20 @@ export function AreaPage() {
 
   useStoreTick(store);
 
+  // Per-stage completion (all core answered), derived from the store.
+  const stageInputs = (area?.stages ?? []).map((stage, i) => ({
+    complete: allCoreAnswered(
+      store.getStageProgress(areaId, i),
+      stage.exercise.questions.length,
+    ),
+  }));
+
   useEffect(() => {
-    if (ok && area) store.setLastVisited(area.id);
+    if (ok && area) store.setLastVisited(area.id, currentStageIndex(stageInputs), "stage");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ok, area, store]);
 
-  // Deep-link: scroll to the anchored segment (hero "continue" target) on load.
+  // Deep-link: scroll to the anchored stage (hero "continue" target) on load.
   const scrolledHash = useRef<string | null>(null);
   useEffect(() => {
     const hash = location.hash.replace(/^#/, "");
@@ -80,40 +91,16 @@ export function AreaPage() {
     return <NotFound message="That topic area doesn’t exist." />;
   }
 
-  const segmentInputs = area.segments.map((s, i) => ({
-    type: s.type,
-    complete:
-      s.type === "exercise" ? Boolean(store.getExerciseProgress(area.id, i)?.completedAt) : false,
-  }));
-  const states = computeSegmentUnlock(segmentInputs);
-  const complete = isAreaComplete(segmentInputs);
+  const statuses = computeStageStatus(stageInputs);
+  const complete = isAreaComplete(stageInputs);
+  const questionTotal = area.stages.reduce((sum, s) => sum + s.exercise.questions.length, 0);
 
-  // Independent numbering for videos and exercises, in authored order.
-  let videoCount = 0;
-  let exerciseCount = 0;
-  const items: SegItem[] = area.segments.map((seg, index) => {
-    const displayNum = seg.type === "video" ? ++videoCount : ++exerciseCount;
-    return { seg, index, status: states[index]!.status, displayNum };
-  });
-  const exerciseTotal = exerciseCount;
-  const questionTotal = area.segments.reduce(
-    (sum, s) => sum + (s.type === "exercise" ? s.questions.length : 0),
-    0,
-  );
-
-  function recordOutcome(segIndex: number, qIndex: number, outcome: Outcome, qCount: number) {
-    const isAllCorrect = (rec: ExerciseRecord | null) =>
-      qCount > 0 &&
-      Array.from({ length: qCount }, (_, k) => rec?.questionOutcomes[k] === "correct").every(
-        Boolean,
-      );
-
-    const wasAllCorrect = isAllCorrect(store.getExerciseProgress(area!.id, segIndex));
-    store.recordOutcome(area!.id, segIndex, qIndex, outcome);
-    const allCorrect = isAllCorrect(store.getExerciseProgress(area!.id, segIndex));
-    // Count a completed attempt on each transition INTO "all correct"; the
-    // sticky completedAt is set on the first such transition and never cleared.
-    if (allCorrect && !wasAllCorrect) store.recordAttempt(area!.id, segIndex, true);
+  /** Record a core outcome; set the sticky completedAt when all core are answered. */
+  function recordCore(stageIndex: number, qIndex: number, outcome: Outcome, coreCount: number) {
+    const before = allCoreAnswered(store.getStageProgress(area!.id, stageIndex), coreCount);
+    store.recordOutcome(area!.id, stageIndex, "core", qIndex, outcome);
+    const after = allCoreAnswered(store.getStageProgress(area!.id, stageIndex), coreCount);
+    if (after && !before) store.recordAttempt(area!.id, stageIndex, true);
   }
 
   return (
@@ -128,7 +115,7 @@ export function AreaPage() {
       <header className="area-head">
         <h1 className="sel-title">{area.title}</h1>
         <p className="area-meta">
-          {exerciseTotal} exercise{exerciseTotal === 1 ? "" : "s"} · {questionTotal} question
+          {area.stages.length} stage{area.stages.length === 1 ? "" : "s"} · {questionTotal} question
           {questionTotal === 1 ? "" : "s"}
         </p>
       </header>
@@ -136,7 +123,7 @@ export function AreaPage() {
       {complete ? (
         <div className="area-complete">
           <p className="area-complete__text">
-            <Check size={18} aria-hidden="true" /> You’ve completed every exercise in this area.
+            <Check size={18} aria-hidden="true" /> You’ve completed every stage in this area.
           </p>
           <Link className="btn btn--ghost" to="/">
             Back to library
@@ -144,119 +131,83 @@ export function AreaPage() {
         </div>
       ) : null}
 
-      <section className="area-section" aria-label="Notes">
-        <h2 className="section-label">Notes</h2>
-        <NotesRenderer blocks={area.notes} />
-      </section>
-
-      {items.map((item) =>
-        item.seg.type === "video" ? (
-          <VideoSegmentView key={item.index} num={item.displayNum} seg={item.seg} />
-        ) : (
-          <ExerciseSegmentView
-            key={item.index}
-            num={item.displayNum}
-            segIndex={item.index}
-            seg={item.seg}
-            status={item.status}
-            areaId={area.id}
-            store={store}
-            onOutcome={recordOutcome}
-          />
-        ),
-      )}
+      {area.stages.map((stage, i) => (
+        <StageSection
+          key={i}
+          num={i + 1}
+          stage={stage}
+          status={statuses[i]!}
+          areaId={area.id}
+          store={store}
+          onCore={recordCore}
+        />
+      ))}
     </main>
   );
 }
 
-function VideoSegmentView({
+function StageSection({
   num,
-  seg,
-}: {
-  num: number;
-  seg: Extract<ResolvedSegment, { type: "video" }>;
-}) {
-  return (
-    <section className="ws-segment" id={videoAnchor(num)} aria-label={`Video ${num}: ${seg.title}`}>
-      <header className="ws-seg-head">
-        <StatusCircle variant="play-ring" size="md" label="Video" />
-        <div className="ws-seg-headtext">
-          <p className="section-label">Video {num}</p>
-          <h2 className="ws-section-head">{seg.title}</h2>
-        </div>
-      </header>
-      <div className="ws-video">
-        <VideoEmbed src={seg.src} title={seg.title} />
-      </div>
-    </section>
-  );
-}
-
-/** Status-circle variant + accessible label for an exercise segment. */
-function exerciseStatus(status: SegmentStatus): { variant: "check" | "play-ring" | "lock"; label: string } {
-  if (status === "done") return { variant: "check", label: "Complete" };
-  if (status === "locked") return { variant: "lock", label: "Locked" };
-  return { variant: "play-ring", label: "Current" };
-}
-
-function ExerciseSegmentView({
-  num,
-  segIndex,
-  seg,
+  stage,
   status,
   areaId,
   store,
-  onOutcome,
+  onCore,
 }: {
   num: number;
-  segIndex: number;
-  seg: Extract<ResolvedSegment, { type: "exercise" }>;
-  status: SegmentStatus;
+  stage: ResolvedStage;
+  status: StageStatus;
   areaId: string;
   store: ProgressStore;
-  onOutcome: (segIndex: number, qIndex: number, outcome: Outcome, qCount: number) => void;
+  onCore: (stageIndex: number, qIndex: number, outcome: Outcome, coreCount: number) => void;
 }) {
-  const locked = status === "locked";
-  const { variant, label } = exerciseStatus(status);
-  const head = (
-    <header className="ws-seg-head">
-      <StatusCircle variant={variant} size="md" label={label} />
-      <div className="ws-seg-headtext">
-        <p className="section-label">Exercise {num}</p>
-        <h2 className="ws-section-head">{seg.title}</h2>
-      </div>
-    </header>
-  );
-
-  if (locked) {
-    return (
-      <section
-        className="ws-segment ws-segment--locked"
-        id={exerciseAnchor(num)}
-        aria-label={`Exercise ${num} (locked): ${seg.title}`}
-      >
-        {head}
-        <div className="ws-locked">
-          <p className="ws-locked__title">
-            {seg.questions.length} question{seg.questions.length === 1 ? "" : "s"} · locked
-          </p>
-          <p className="ws-locked__note">Finish Exercise {num - 1} first to unlock this.</p>
-        </div>
-      </section>
-    );
-  }
-
-  const record = store.getExerciseProgress(areaId, segIndex);
-  const outcomes = record?.questionOutcomes ?? {};
+  const stageIndex = num - 1;
+  const rec = store.getStageProgress(areaId, stageIndex);
+  const coreOutcomes = rec?.core ?? {};
+  const extraOutcomes = rec?.extra ?? {};
 
   return (
-    <section className="ws-segment" id={exerciseAnchor(num)} aria-label={`Exercise ${num}: ${seg.title}`}>
-      {head}
+    <section className="ws-segment" id={stageAnchor(num)} aria-label={`Stage ${num}: ${stage.title}`}>
+      <header className="ws-seg-head">
+        <StatusCircle variant={stageVariant(status)} size="md" value={num} label={stageStatusLabel(status)} />
+        <div className="ws-seg-headtext">
+          <p className="section-label">Stage {num}</p>
+          <h2 className="ws-section-head">{stage.title}</h2>
+        </div>
+      </header>
+
+      {stage.notes.length > 0 ? (
+        <div className="stage-notes">
+          <NotesRenderer blocks={stage.notes} />
+        </div>
+      ) : null}
+
+      {stage.video ? (
+        <div className="ws-video">
+          <VideoEmbed src={stage.video.src} title={stage.title} />
+        </div>
+      ) : null}
+
       <Worksheet
-        questions={seg.questions}
-        outcomes={outcomes}
-        onOutcome={(qIndex, outcome) => onOutcome(segIndex, qIndex, outcome, seg.questions.length)}
+        questions={stage.exercise.questions}
+        outcomes={coreOutcomes}
+        onOutcome={(qIndex, outcome) =>
+          onCore(stageIndex, qIndex, outcome, stage.exercise.questions.length)
+        }
       />
+
+      {stage.exercise.extra.length > 0 ? (
+        <div className="stage-extra">
+          <p className="section-label">More practice</p>
+          <Worksheet
+            questions={stage.exercise.extra}
+            outcomes={extraOutcomes}
+            onOutcome={(qIndex, outcome) =>
+              store.recordOutcome(areaId, stageIndex, "extra", qIndex, outcome)
+            }
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

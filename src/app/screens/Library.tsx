@@ -76,30 +76,23 @@ function todayKicker(): string {
 
 const areaPath = (a: ValidatedArea) => `/${a.subject}/${a.topic}/${a.topicArea}`;
 
-/** Exercise-segment completion counts for an area. */
+/** Stage completion counts for an area. */
 function areaProgress(area: ValidatedArea, store: ProgressStore): { done: number; total: number } {
   let done = 0;
-  let total = 0;
-  area.segments.forEach((seg, i) => {
-    if (seg.type !== "exercise") return;
-    total += 1;
-    if (store.getExerciseProgress(area.id, i)?.completedAt) done += 1;
+  area.stages.forEach((_stage, i) => {
+    if (store.getStageProgress(area.id, i)?.completedAt) done += 1;
   });
-  return { done, total };
+  return { done, total: area.stages.length };
 }
 
 /**
- * Anchor (DOM id) of the first not-yet-complete exercise in an area, so the hero
- * can deep-link straight to where the learner left off. Exercises are numbered
- * independently of videos — matching the AreaPage's `exercise-N` ids. Returns
- * null when every exercise is complete (or there are none).
+ * Anchor (DOM id) of the first not-yet-complete stage in an area, so the hero
+ * can deep-link straight to where the learner left off (matching AreaPage's
+ * `stage-N` ids). Returns null when every stage is complete (or there are none).
  */
-function firstIncompleteExerciseAnchor(area: ValidatedArea, store: ProgressStore): string | null {
-  let exerciseNum = 0;
-  for (let i = 0; i < area.segments.length; i++) {
-    if (area.segments[i]!.type !== "exercise") continue;
-    exerciseNum += 1;
-    if (!store.getExerciseProgress(area.id, i)?.completedAt) return `exercise-${exerciseNum}`;
+function firstIncompleteStageAnchor(area: ValidatedArea, store: ProgressStore): string | null {
+  for (let i = 0; i < area.stages.length; i++) {
+    if (!store.getStageProgress(area.id, i)?.completedAt) return `stage-${i + 1}`;
   }
   return null;
 }
@@ -116,15 +109,15 @@ function firstAreaOf(registry: AreaRegistry, subject: string | null): ValidatedA
 function Hero({ subject }: { subject: string | null }) {
   const registry = useRegistry();
   const store = useProgressStore();
-  const lastId = store.getLastVisitedAreaId();
-  const lastArea = lastId ? registry.getAreaById(lastId) : undefined;
+  const lastVisited = store.getLastVisited();
+  const lastArea = lastVisited ? registry.getAreaById(lastVisited.areaId) : undefined;
   // Only continue to a *valid* last-visited area; otherwise fall back to "start here".
   const resume = lastArea?.valid ? lastArea : undefined;
   const target = resume ?? firstAreaOf(registry, subject);
   if (!target) return null;
 
   const kicker = resume ? "Continue where you left off" : "Start here";
-  const anchor = firstIncompleteExerciseAnchor(target, store);
+  const anchor = firstIncompleteStageAnchor(target, store);
   const to = anchor ? `${areaPath(target)}#${anchor}` : areaPath(target);
   return (
     <Link className="hero" to={to}>
@@ -149,28 +142,19 @@ function Hero({ subject }: { subject: string | null }) {
 interface UpNext {
   title: string;
   questionCount: number;
-  afterVideo: number | null;
   to: string;
 }
 
-/** First incomplete exercise across the registry, in order (null if all done). */
+/** First incomplete stage across the registry, in order (null if all done). */
 function findUpNext(registry: AreaRegistry, store: ProgressStore): UpNext | null {
   for (const area of registry.areas.filter((a) => a.valid)) {
-    let exerciseNum = 0;
-    let videoNum = 0;
-    for (let i = 0; i < area.segments.length; i++) {
-      const seg = area.segments[i]!;
-      if (seg.type === "video") {
-        videoNum += 1;
-        continue;
-      }
-      exerciseNum += 1;
-      if (!store.getExerciseProgress(area.id, i)?.completedAt) {
+    for (let i = 0; i < area.stages.length; i++) {
+      if (!store.getStageProgress(area.id, i)?.completedAt) {
+        const stage = area.stages[i]!;
         return {
-          title: seg.title,
-          questionCount: seg.questions.length,
-          afterVideo: videoNum > 0 ? videoNum : null,
-          to: `${areaPath(area)}#exercise-${exerciseNum}`,
+          title: stage.title,
+          questionCount: stage.exercise.questions.length,
+          to: `${areaPath(area)}#stage-${i + 1}`,
         };
       }
     }
@@ -195,12 +179,13 @@ function computeHubStats(registry: AreaRegistry, store: ProgressStore): HubStats
   for (const area of areas) {
     let exCount = 0;
     let doneCount = 0;
-    area.segments.forEach((seg, i) => {
-      if (seg.type !== "exercise") return;
+    area.stages.forEach((_stage, i) => {
       exCount += 1;
-      const rec = store.getExerciseProgress(area.id, i);
+      const rec = store.getStageProgress(area.id, i);
       if (rec?.completedAt) doneCount += 1;
-      if (rec) questionsAnswered += Object.keys(rec.questionOutcomes).length;
+      if (rec) {
+        questionsAnswered += Object.keys(rec.core).length + Object.keys(rec.extra).length;
+      }
     });
     exercisesTotal += exCount;
     exercisesDone += doneCount;
@@ -223,7 +208,6 @@ function RailUpNext() {
             <span className="up-next__title">{next.title}</span>
             <span className="up-next__meta">
               {next.questionCount} question{next.questionCount === 1 ? "" : "s"}
-              {next.afterVideo ? ` · after Video ${next.afterVideo}` : ""}
             </span>
           </span>
         </Link>
