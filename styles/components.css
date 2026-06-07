@@ -1,59 +1,55 @@
 /*
  * components.css — Component styles for the Lesson Platform.
  *
- * Reference design tokens from tokens.css via var(--...). NEVER hardcode hex
- * values (CLAUDE.md §d). Headings/labels use --font-heading (Plus Jakarta Sans);
- * body text uses --font-body (Manrope).
+ * Conforms to /docs/design-language.md: type via the six --text-* styles
+ * (§2, never raw sizes/weights), spacing on the §3 chain (4/12/16/32/48),
+ * §1 depth (chunky 2px+edge = interactive only; flat 1.5px --border =
+ * informational), §4 card anatomy (radius 16, padding 16), §5 colour roles.
  */
 
 /* ---- Notes container ---- */
 .notes-renderer {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  font-family: var(--font-body);
+  gap: var(--space-4);
+  font: var(--text-body);
   color: var(--brand-ink);
   text-align: left;
 }
 
 /* ---- Heading ---- */
 .note-heading {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 1.35rem;
+  font: var(--text-title);
   color: var(--brand-ink);
-  margin: 0.4rem 0 0;
+  margin: var(--space-1) 0 0;
 }
 
 /* ---- Paragraph ---- */
 .note-paragraph {
-  font-family: var(--font-body);
-  line-height: 1.6;
+  font: var(--text-body);
   margin: 0;
 }
 
 /* ---- List ---- */
 .note-list {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-left: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: var(--space-3);
 }
 
 .note-list__item {
-  line-height: 1.55;
+  font: var(--text-body);
 }
 
-/* ---- Callout (tinted, left-accented card) ---- */
+/* ---- Callout (tinted, left-accented card; informational → flat §1) ---- */
 .note-callout {
-  font-family: var(--font-body);
-  line-height: 1.55;
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
+  font: var(--text-body);
+  border: var(--border-flat-width) solid var(--border);
   border-left-width: 6px;
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
 }
 
 .note-callout--key {
@@ -71,72 +67,65 @@
   border-left-color: var(--cyan-deep);
 }
 
-/* ---- Worked example (white card) ---- */
+/* ---- Worked example (white card; informational → flat §1) ---- */
 .note-example {
   background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
-  border-radius: 14px;
-  padding: 1rem 1.1rem 1.1rem;
+  border: var(--border-flat-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: var(--space-3);
 }
 
+/* Small-caps section label (§6) — neutral --faint, not a role colour. */
 .note-example__tag {
   align-self: flex-start;
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 0.65rem;
-  letter-spacing: 0.08em;
+  font: var(--text-label);
+  letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--gold-deep);
-  background: var(--gold-tint);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
+  color: var(--faint);
 }
 
 .note-example__prompt {
-  font-family: var(--font-body);
-  font-weight: 600;
+  font: var(--text-card-title);
+  color: var(--brand-ink);
   margin: 0;
 }
 
 .note-example__working {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--space-3);
 }
 
 .note-example__working-line {
-  color: var(--muted-ink);
-  line-height: 1.5;
+  font: var(--text-body);
+  color: var(--muted);
 }
 
 .note-example__answer-row {
-  margin-top: 0.2rem;
+  margin-top: var(--space-1);
 }
 
+/* Static answer chip (NOT interactive → flat, no bottom edge §1). */
 .note-example__answer {
   display: inline-block;
-  font-family: var(--font-heading);
-  font-weight: 700;
+  font: var(--text-card-title);
   color: var(--card-bg);
   background: var(--green);
-  border-bottom: 3px solid var(--green-edge);
-  border-radius: 999px;
-  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
 }
 
 /* ---- Unknown-block error chip (defence in depth) ---- */
 .note-error {
-  font-family: var(--font-heading);
-  font-weight: 700;
+  font: var(--text-card-title);
   color: var(--coral-deep);
   background: var(--coral);
-  border: var(--card-border-width) solid var(--coral-deep);
-  border-radius: 10px;
-  padding: 0.5rem 0.8rem;
+  border: var(--border-flat-width) solid var(--coral-deep);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
 }
 
 .note-error code {
@@ -146,7 +135,7 @@
 /* ---- Math segments ---- */
 .mathtext-display {
   display: block;
-  margin: 0.4rem 0;
+  margin: var(--space-1) 0;
   overflow-x: auto;
 }
 
@@ -157,8 +146,8 @@
 .qr {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  font-family: var(--font-body);
+  gap: var(--space-4);
+  font: var(--text-body);
   color: var(--brand-ink);
   text-align: left;
 }
@@ -166,19 +155,19 @@
 .qr-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .qr-dots {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--space-1);
 }
 
 .qr-dot {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 999px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-pill);
   background: var(--card-border);
   border: 2px solid transparent;
 }
@@ -201,60 +190,55 @@
 }
 
 .qr-progress-label {
-  font-size: 0.85rem;
-  color: var(--muted-ink);
+  font: var(--text-meta);
+  color: var(--muted);
 }
 
+/* Difficulty badge (informational → flat §1; gold = difficulty §5). */
 .qr-difficulty {
   margin-left: auto;
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
+  font: var(--text-label);
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--gold-deep);
   background: var(--gold-tint);
-  border: 2px solid var(--gold);
-  border-radius: 999px;
-  padding: 0.15rem 0.6rem;
+  border: var(--border-flat-width) solid var(--gold);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
 }
 
 .qr-question {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: var(--space-3);
 }
 
 .qr-prompt {
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 1.05rem;
-  line-height: 1.5;
+  font: var(--text-body);
   margin: 0;
 }
 
-/* ---- Multiple choice ---- */
+/* ---- Multiple choice (interactive option → chunky §1) ---- */
 .qr-mc__list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: var(--space-3);
 }
 
 .qr-mc__option {
   display: block;
   width: 100%;
   text-align: left;
-  font-family: var(--font-body);
-  font-size: 1rem;
+  font: var(--text-body);
   color: var(--brand-ink);
   background: var(--card-bg);
   border: var(--card-border-width) solid var(--card-border);
   border-bottom-width: var(--card-edge-width);
-  border-radius: 12px;
-  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
   cursor: pointer;
 }
 
@@ -278,8 +262,8 @@
 
 .qr-feedback {
   margin: 0;
-  font-weight: 600;
-  color: var(--muted-ink);
+  font: var(--text-meta);
+  color: var(--muted);
 }
 
 /* ---- Table ---- */
@@ -290,7 +274,7 @@
 
 .qr-table__cell {
   border: 2px solid var(--card-border);
-  padding: 0.55rem 0.7rem;
+  padding: var(--space-2) var(--space-3);
   text-align: left;
 }
 
@@ -298,45 +282,44 @@
   background: var(--page-bg);
 }
 
-/* ---- Figure placeholder (swappable slot) ---- */
+/* ---- Figure placeholder (informational → flat §1) ---- */
 .qr-figure {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-3);
   background: var(--cyan-tint);
-  border: var(--card-border-width) dashed var(--cyan-deep);
-  border-radius: 14px;
-  padding: 1.5rem 1rem;
+  border: var(--border-flat-width) dashed var(--cyan-deep);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
   text-align: center;
 }
 
 .qr-figure__badge {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  font: var(--text-label);
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--cyan-deep);
   background: var(--card-bg);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
 }
 
 .qr-figure__note {
   margin: 0;
+  font: var(--text-meta);
   color: var(--cyan-deep);
-  font-style: italic;
 }
 
-/* ---- Video stage (bold-framed near-black 16:9 panel, CLAUDE.md §d) ---- */
+/* ---- Video stage (RECORDED EXCEPTION to §1/§4: the bold-framed near-black
+ * 16:9 panel is an authored design decision, CLAUDE.md §d). ---- */
 .video-stage {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   background: var(--video-bg);
   border: 5px solid var(--brand-ink);
-  border-radius: 14px;
+  border-radius: var(--radius-card);
   overflow: hidden;
 }
 
@@ -356,32 +339,30 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: var(--space-3);
 }
 
 .video-stage__badge {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
+  font: var(--text-label);
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: var(--brand-ink);
   background: var(--studio-mint);
-  border-radius: 999px;
-  padding: 0.2rem 0.65rem;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
 }
 
 .video-stage__note {
   margin: 0;
+  font: var(--text-meta);
   color: var(--studio-mint);
-  font-style: italic;
 }
 
 /* ---- Rendered figures (registry slot) ---- */
 .figure-slot {
   display: flex;
   justify-content: center;
-  padding: 0.5rem 0;
+  padding: var(--space-1) 0;
 }
 
 .figure-canvas {
@@ -394,56 +375,53 @@
 .qr-selfmark {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: var(--space-3);
 }
 
+/* Solution reveal (informational → flat §1). */
 .qr-reveal {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-3);
   background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
-  border-radius: 12px;
-  padding: 0.85rem 1rem;
+  border: var(--border-flat-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
 }
 
+/* Static answer chip (not interactive → flat, no bottom edge §1). */
 .qr-reveal__answer {
   display: inline-block;
   align-self: flex-start;
-  font-family: var(--font-heading);
-  font-weight: 700;
+  font: var(--text-card-title);
   color: var(--card-bg);
   background: var(--green);
-  border-bottom: 3px solid var(--green-edge);
-  border-radius: 999px;
-  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
 }
 
 .qr-reveal__working {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--space-3);
 }
 
 .qr-reveal__working-line {
-  color: var(--muted-ink);
-  line-height: 1.5;
+  font: var(--text-body);
+  color: var(--muted);
 }
 
 .qr-selfmark__buttons {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
-/* ---- Buttons ---- */
+/* ---- Buttons (interactive → chunky bottom edge §1) ---- */
 .qr-button {
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 0.95rem;
-  border-radius: 10px;
-  padding: 0.5rem 1.1rem;
+  font: var(--text-card-title);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
   border: var(--card-border-width) solid transparent;
 }
@@ -479,36 +457,35 @@
   justify-content: flex-end;
 }
 
-/* ---- Summary ---- */
+/* ---- Summary (informational → flat §1) ---- */
 .qr-summary {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.6rem;
+  gap: var(--space-3);
   background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
-  border-radius: 14px;
-  padding: 1.1rem 1.2rem;
+  border: var(--border-flat-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
 }
 
 .qr-summary__title {
-  font-family: var(--font-heading);
-  font-weight: 800;
+  font: var(--text-card-title);
   margin: 0;
   color: var(--brand-ink);
 }
 
 .qr-summary__counts {
   margin: 0;
-  font-weight: 600;
+  font: var(--text-meta);
+  color: var(--muted);
 }
 
 .qr-summary__actions {
   display: flex;
-  gap: 0.6rem;
+  gap: var(--space-3);
   flex-wrap: wrap;
-  margin-top: 0.4rem;
+  margin-top: var(--space-1);
 }
 
 .qr-summary__correct {
@@ -521,13 +498,12 @@
 
 /* ---- Unknown-type error chip (defence in depth) ---- */
 .qr-error {
-  font-family: var(--font-heading);
-  font-weight: 700;
+  font: var(--text-card-title);
   color: var(--coral-deep);
   background: var(--coral);
-  border: var(--card-border-width) solid var(--coral-deep);
-  border-radius: 10px;
-  padding: 0.5rem 0.8rem;
+  border: var(--border-flat-width) solid var(--coral-deep);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
 }
 
 .qr-error code {
@@ -544,20 +520,20 @@
   gap: var(--space-4);
   counter-reset: ws;
 }
+/* The row is an informational container (the row itself isn't clickable;
+ * its MC options / answer icon are the interactive bits) → flat §1. */
 .ws-row {
   display: flex;
   gap: var(--space-3);
   background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
-  border-radius: var(--radius-md);
+  border: var(--border-flat-width) solid var(--border);
+  border-radius: var(--radius-card);
   padding: var(--space-4);
 }
 .ws-row__num {
   flex: none;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  color: var(--green-edge);
+  font: var(--text-card-title);
+  color: var(--brand-ink);
   min-width: 1.5rem;
 }
 .ws-row__main {
@@ -574,26 +550,24 @@
 }
 .ws-row__prompt {
   flex: 1;
-  font-weight: 600;
-  line-height: 1.5;
+  font: var(--text-body);
   min-width: 0;
 }
 .ws-row__tools {
   flex: none;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
-/* Answered-state indicator (restored from the progress store). */
+/* Answered-state indicator (status circle motif §6). */
 .ws-row__status {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.4rem;
-  height: 1.4rem;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-pill);
-  font-weight: 800;
-  font-size: 0.8rem;
+  font: var(--text-card-title);
 }
 .ws-row__status--correct {
   background: var(--green-tint);
@@ -603,19 +577,18 @@
   background: var(--coral);
   color: var(--coral-deep);
 }
-/* Answer-icon button (opens the solution / explanation modal). */
+/* Answer-icon button (interactive → chunky §1; cyan = hint/informational §5). */
 .ws-row__solve {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   min-height: 44px;
   padding: var(--space-1) var(--space-3);
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 0.85rem;
+  font: var(--text-card-title);
   color: var(--cyan-deep);
   background: var(--cyan-tint);
   border: var(--card-border-width) solid var(--cyan-deep);
+  border-bottom-width: var(--card-edge-width);
   border-radius: var(--radius-pill);
   cursor: pointer;
 }
@@ -623,7 +596,7 @@
   filter: brightness(0.97);
 }
 
-/* ---- Solution / explanation modal ---- */
+/* ---- Solution / explanation modal (informational → flat §1) ---- */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -643,10 +616,9 @@
   flex-direction: column;
   gap: var(--space-4);
   background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
-  border-radius: var(--radius-lg);
-  padding: var(--space-5);
+  border: var(--border-flat-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
 }
 .modal__head {
   display: flex;
@@ -656,9 +628,7 @@
 }
 .modal__title {
   margin: 0;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 1.05rem;
+  font: var(--text-title);
   color: var(--brand-ink);
 }
 .modal__close {
@@ -666,7 +636,7 @@
   min-width: 44px;
   min-height: 44px;
   border-radius: var(--radius-sm);
-  font-size: 1rem;
+  font: var(--text-card-title);
   color: var(--brand-ink);
   background: var(--card-bg);
   border: var(--card-border-width) solid var(--card-border);
@@ -679,8 +649,8 @@
 }
 .modal__empty {
   margin: 0;
-  color: var(--muted-ink);
-  font-style: italic;
+  font: var(--text-meta);
+  color: var(--muted);
 }
 .modal__actions {
   display: flex;
