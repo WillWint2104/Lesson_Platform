@@ -40,3 +40,10 @@ Every page: sticky app bar (full-width white surface, container-aligned content)
 
 ## 8. Functional consistency
 Same action, same result, same look everywhere: dismissals look alike, locked states look alike, "open/continue" affordances look alike. A pattern introduced once is the pattern forever (or gets a recorded redesign).
+
+## 9. Recorded exceptions
+Deliberate, sanctioned deviations from the rules above (the only way to break a rule, per the preamble):
+
+- **(a) Video stage — bold dark frame.** The video player sits in a bold-framed (5px brand-ink) near-black 16:9 panel, not a flat informational surface (§1) or 16px card (§4). This is the authored studio treatment recorded in CLAUDE.md §d ("dark videos sit in bold-framed dark panels"); studio mint is permitted on this dark surface only.
+- **(b) Answer chips render success-green.** The static answer chip (worked-example / solution reveal) fills with green though it is not a CTA. This is §5 *progress* semantics — the chip signals the correct answer — not a colour-role violation. It carries no bottom edge (it is not pressable, §1).
+- **(c) Callout tints are §5 roles on informational blocks.** Notes callouts use the §5 colour roles as left-accent tints: `key` → green (progress/affirmation), `warning` → gold (caution/checkpoint), `info` → cyan (informational). These are informational surfaces (flat border, §1); the tint conveys the role, no action is implied.
