@@ -46,6 +46,13 @@ These rules are permanent. They govern how every change is made to this repo.
   straight to code on anything non-trivial.
 - **CI must be green before review.**
 - **PRs are small and single-purpose.**
+- **Merged-branch cleanup is pre-approved.** Once a feature branch is fully merged,
+  delete it (local AND remote) without asking — this is standing approval, not a
+  per-time question.
+- **Line endings are normalized by `.gitattributes` (LF in repo, LF on checkout for
+  source/snapshots).** NEVER hand-patch CRLF "phantom" diffs (e.g. on `*.snap`
+  goldens) again — if one reappears, the fix is to `.gitattributes` /
+  `git add --renormalize`, not a manual per-file checkout.
 
 ---
 

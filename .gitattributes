@@ -1,0 +1,35 @@
+# Line-ending normalization for the Lesson Platform.
+#
+# This repo is developed across OSes with core.autocrlf=true on some machines,
+# which kept reintroducing CRLF "phantom" diffs (notably on the figure *.snap
+# goldens — hand-patched seven times). `.gitattributes` is authoritative and
+# overrides autocrlf: text is stored as LF in the repo, and source/snapshot
+# files are checked out as LF too, so Windows can never re-add CRLF.
+
+# Default: let Git detect text vs binary and normalize stored EOLs to LF.
+* text=auto
+
+# Force LF on checkout for source + snapshots (the phantom-diff offenders).
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.js    text eol=lf
+*.jsx   text eol=lf
+*.mjs   text eol=lf
+*.cjs   text eol=lf
+*.json  text eol=lf
+*.css   text eol=lf
+*.html  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.svg   text eol=lf
+*.snap  text eol=lf
+
+# Binary assets: never touch EOLs.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
