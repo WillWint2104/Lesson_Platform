@@ -8,15 +8,6 @@ import { Link } from "react-router-dom";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
 
-const page: CSSProperties = {
-  minHeight: "100vh",
-  display: "grid",
-  placeItems: "start center",
-  background: "var(--page-bg)",
-  fontFamily: "var(--font-body)",
-  color: "var(--brand-ink)",
-  padding: "var(--space-6)",
-};
 const card: CSSProperties = {
   background: "var(--card-bg)",
   border: "var(--card-border-width) solid var(--card-border)",
@@ -60,7 +51,7 @@ export function DebugHarness() {
   const store = useProgressStore();
 
   return (
-    <main style={page}>
+    <main className="app-page">
       <section style={card}>
         <h1 style={heading}>Debug inspector</h1>
         <p>Dormant dev tool (not linked from the app). Discovered areas + validity.</p>

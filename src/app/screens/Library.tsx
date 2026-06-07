@@ -13,16 +13,7 @@ export function Library() {
   const [subject, setSubject] = useState<string | null>(subjects[0] ?? null);
 
   return (
-    <main className="app-page app-page--wide lib">
-      <header className="lib-header">
-        <span className="lib-header__name">Lesson Platform</span>
-        <span className="lib-header__identity" aria-label="Profile (placeholder)">
-          LP
-        </span>
-      </header>
-
-      <LocalProgressNotice />
-
+    <main className="app-page lib">
       <section className="lib-greeting">
         <p className="lib-kicker">{todayKicker()}</p>
         <h1 className="lib-headline">Welcome back</h1>
@@ -45,6 +36,9 @@ export function Library() {
       </section>
 
       <Hero subject={subject} />
+
+      {/* Subordinate to the hero: a quiet note, not a headline banner. */}
+      <LocalProgressNotice />
 
       <div className="topic-grid">
         {subject !== null
@@ -124,10 +118,15 @@ function Hero({ subject }: { subject: string | null }) {
   const to = anchor ? `${areaPath(target)}#${anchor}` : areaPath(target);
   return (
     <Link className="hero" to={to}>
-      <span className="hero__kicker">{kicker}</span>
-      <span className="hero__title">{target.title}</span>
-      <span className="hero__crumb">
-        {titleCase(target.subject)} · {titleCase(target.topic)}
+      <span className="hero__text">
+        <span className="hero__kicker">{kicker}</span>
+        <span className="hero__title">{target.title}</span>
+        <span className="hero__crumb">
+          {titleCase(target.subject)} · {titleCase(target.topic)}
+        </span>
+      </span>
+      <span className="hero__cta" aria-hidden="true">
+        Open →
       </span>
     </Link>
   );
