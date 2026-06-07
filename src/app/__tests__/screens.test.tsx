@@ -105,6 +105,12 @@ describe("Library", () => {
     expect(store.isNoticeDismissed("local-progress")).toBe(true);
   });
 
+  it("shows the local-progress notice on the Library only (not other routes)", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
+    expect(screen.queryByText(/saved in this browser/i)).toBeNull();
+  });
+
   it("hero is 'start here' (always present), deep-linking to the first incomplete exercise", () => {
     const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
     renderAt("/", reg, buildStore(reg));
@@ -133,6 +139,74 @@ describe("Library", () => {
     expect(row?.className).toContain("topic-area-row");
     expect(container.querySelector(".topic-grid")).not.toBeNull();
     expect(screen.getByText(/Future topics drop in/)).toBeTruthy();
+  });
+});
+
+describe("Hub rail (zones)", () => {
+  const statVal = (label: string) =>
+    screen.getByText(label).closest(".stat-row")?.querySelector(".stat-row__val")?.textContent;
+
+  it("renders the zoned hub: main + rail with all three rail cards", () => {
+    const reg = buildReg(mkArea("brackets"));
+    const { container } = renderAt("/", reg, buildStore(reg));
+    expect(container.querySelector(".hub")).not.toBeNull();
+    expect(container.querySelector(".hub__main")).not.toBeNull();
+    expect(container.querySelector(".hub__rail")).not.toBeNull();
+    expect(screen.getByText("Up next")).toBeTruthy();
+    expect(screen.getByText("Your progress")).toBeTruthy();
+    expect(screen.getByText("How it works")).toBeTruthy();
+  });
+
+  it("up next: first incomplete exercise, with question count + 'after Video N' + anchor", () => {
+    const reg = buildReg(mkArea("brackets")); // [video Intro, mc "Practice"]
+    renderAt("/", reg, buildStore(reg));
+    const link = screen.getByText("Practice").closest("a");
+    expect(link?.getAttribute("href")).toBe("/math/algebra/brackets#exercise-1");
+    expect(screen.getByText(/1 question · after Video 1/)).toBeTruthy();
+  });
+
+  it("up next: skips completed exercises to the next incomplete one", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        sequence: [
+          video("Intro"),
+          mcExercise("First", "R0", "W0"),
+          video("Mid"),
+          mcExercise("Second", "R1", "W1"),
+        ],
+      }),
+    );
+    const store = buildStore(reg);
+    store.recordAttempt(AREA_ID, 1, true); // complete exercise 1 (segment index 1)
+    renderAt("/", reg, store);
+    const link = screen.getByText("Second").closest("a");
+    expect(link?.getAttribute("href")).toBe("/math/algebra/brackets#exercise-2");
+    expect(screen.getByText(/after Video 2/)).toBeTruthy();
+    expect(screen.queryByText("First")).toBeNull();
+  });
+
+  it("up next: hidden with an 'all caught up' line when everything is complete", () => {
+    const reg = buildReg(mkArea("brackets")); // exercise at segment index 1
+    const store = buildStore(reg);
+    store.recordAttempt(AREA_ID, 1, true);
+    renderAt("/", reg, store);
+    expect(screen.getByText(/all caught up/i)).toBeTruthy();
+    expect(screen.queryByText("Practice")).toBeNull();
+  });
+
+  it("your progress: stats reflect the seeded store", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        sequence: [mcExercise("First", "R0", "W0"), mcExercise("Second", "R1", "W1")],
+      }),
+    );
+    const store = buildStore(reg);
+    store.recordOutcome(AREA_ID, 0, 0, "correct");
+    store.recordAttempt(AREA_ID, 0, true); // exercise 0 complete, 1 question answered
+    renderAt("/", reg, store);
+    expect(statVal("Areas completed")).toBe("0/1"); // not all exercises done
+    expect(statVal("Exercises completed")).toBe("1/2");
+    expect(statVal("Questions answered")).toBe("1");
   });
 });
 

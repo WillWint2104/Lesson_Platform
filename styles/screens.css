@@ -154,29 +154,32 @@ body {
   border-radius: var(--radius-pill);
 }
 
-/* ---- One-time local-progress notice (subordinate to the hero: small + quiet) ---- */
-.notice {
+/* ---- Demoted local-progress notice: a muted full-width app-bar line (v3) ---- */
+.app-noticebar {
+  background: var(--cyan-tint);
+  border-bottom: var(--border-flat-width) solid var(--cyan-deep);
+}
+.app-noticebar__inner {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: var(--space-2) var(--page-pad-inline);
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  flex-wrap: wrap;
-  background: var(--cyan-tint);
-  border: var(--border-flat-width) solid var(--cyan-deep); /* §1 flat informational */
-  border-radius: var(--radius-card);
-  padding: var(--space-3) var(--space-4);
 }
-.notice__text {
+.app-noticebar__text {
   flex: 1;
-  min-width: 12rem;
-  margin: 0;
+  min-width: 0;
   font: var(--text-meta);
   color: var(--cyan-deep);
 }
-.notice__dismiss {
+.app-noticebar__dismiss {
+  flex: none;
   min-height: 44px;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
-  font: var(--text-card-title);
+  font: var(--text-meta);
   cursor: pointer;
   background: var(--card-bg);
   color: var(--cyan-deep);
@@ -283,21 +286,123 @@ body {
   font: var(--text-card-title);
 }
 
-/* ---- Topic grid (1 / 2 / 3 columns) ---- */
+/* ---- Hub zones: main 2fr / rail 1fr; collapses to one column below 920px ---- */
+.hub {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.hub__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.hub__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+@media (max-width: 920px) {
+  /* Single column: the rail stacks after the main zone (source order). */
+  .hub {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Rail cards (flat informational anatomy §1, card recipe §4) ---- */
+.rail-card {
+  background: var(--card-bg);
+  border: var(--border-flat-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.rail-note {
+  margin: 0;
+  font: var(--text-meta);
+  color: var(--muted);
+}
+/* Up-next row (the interactive bit inside the flat card → pressable §1). */
+.up-next {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-decoration: none;
+  color: var(--brand-ink);
+  background: var(--page-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: var(--radius-card);
+  padding: var(--space-3);
+}
+.up-next__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.up-next__title {
+  font: var(--text-card-title);
+}
+.up-next__meta {
+  font: var(--text-meta);
+  color: var(--muted);
+}
+/* Stat rows */
+.stat-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.stat-row__label {
+  font: var(--text-meta);
+  color: var(--muted);
+}
+.stat-row__val {
+  margin: 0;
+  font: var(--text-card-title);
+  color: var(--brand-ink);
+}
+/* How-it-works steps */
+.howto {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.howto__step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.howto__text {
+  font: var(--text-body);
+}
+
+/* ---- Topic grid (2 columns within the hub main zone) ---- */
 .topic-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-5);
+  gap: var(--space-4); /* §3 grid gutter 16 */
   align-items: start;
 }
 @media (min-width: 768px) {
   .topic-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (min-width: 1120px) {
-  .topic-grid {
-    grid-template-columns: repeat(3, 1fr);
   }
 }
 
