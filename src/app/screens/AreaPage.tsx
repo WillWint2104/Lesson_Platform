@@ -17,6 +17,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { Check } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
 import type { ExerciseRecord, ProgressStore } from "@/state/progress";
@@ -27,6 +28,7 @@ import { VideoEmbed } from "@/render/VideoEmbed";
 import { NotesRenderer } from "@/render/notes/NotesRenderer";
 import { Worksheet } from "@/render/questions/Worksheet";
 import type { Outcome } from "@/render/questions/types";
+import { StatusCircle } from "@/shared/StatusCircle";
 import { NotFound } from "@/app/screens/NotFound";
 
 /** Subscribe to the store and force a re-render whenever progress changes. */
@@ -133,7 +135,9 @@ export function AreaPage() {
 
       {complete ? (
         <div className="area-complete">
-          <p className="area-complete__text">✓ You’ve completed every exercise in this area.</p>
+          <p className="area-complete__text">
+            <Check size={18} aria-hidden="true" /> You’ve completed every exercise in this area.
+          </p>
           <Link className="btn btn--ghost" to="/">
             Back to library
           </Link>
@@ -141,7 +145,7 @@ export function AreaPage() {
       ) : null}
 
       <section className="area-section" aria-label="Notes">
-        <h2 className="ws-section-head">Notes</h2>
+        <h2 className="section-label">Notes</h2>
         <NotesRenderer blocks={area.notes} />
       </section>
 
@@ -174,14 +178,25 @@ function VideoSegmentView({
 }) {
   return (
     <section className="ws-segment" id={videoAnchor(num)} aria-label={`Video ${num}: ${seg.title}`}>
-      <h2 className="ws-section-head">
-        Video {num} · {seg.title}
-      </h2>
+      <header className="ws-seg-head">
+        <StatusCircle variant="play-ring" size="md" label="Video" />
+        <div className="ws-seg-headtext">
+          <p className="section-label">Video {num}</p>
+          <h2 className="ws-section-head">{seg.title}</h2>
+        </div>
+      </header>
       <div className="ws-video">
         <VideoEmbed src={seg.src} title={seg.title} />
       </div>
     </section>
   );
+}
+
+/** Status-circle variant + accessible label for an exercise segment. */
+function exerciseStatus(status: SegmentStatus): { variant: "check" | "play-ring" | "lock"; label: string } {
+  if (status === "done") return { variant: "check", label: "Complete" };
+  if (status === "locked") return { variant: "lock", label: "Locked" };
+  return { variant: "play-ring", label: "Current" };
 }
 
 function ExerciseSegmentView({
@@ -202,7 +217,16 @@ function ExerciseSegmentView({
   onOutcome: (segIndex: number, qIndex: number, outcome: Outcome, qCount: number) => void;
 }) {
   const locked = status === "locked";
-  const heading = `Exercise ${num} · ${seg.title}`;
+  const { variant, label } = exerciseStatus(status);
+  const head = (
+    <header className="ws-seg-head">
+      <StatusCircle variant={variant} size="md" label={label} />
+      <div className="ws-seg-headtext">
+        <p className="section-label">Exercise {num}</p>
+        <h2 className="ws-section-head">{seg.title}</h2>
+      </div>
+    </header>
+  );
 
   if (locked) {
     return (
@@ -211,7 +235,7 @@ function ExerciseSegmentView({
         id={exerciseAnchor(num)}
         aria-label={`Exercise ${num} (locked): ${seg.title}`}
       >
-        <h2 className="ws-section-head">{heading}</h2>
+        {head}
         <div className="ws-locked">
           <p className="ws-locked__title">
             {seg.questions.length} question{seg.questions.length === 1 ? "" : "s"} · locked
@@ -227,7 +251,7 @@ function ExerciseSegmentView({
 
   return (
     <section className="ws-segment" id={exerciseAnchor(num)} aria-label={`Exercise ${num}: ${seg.title}`}>
-      <h2 className="ws-section-head">{heading}</h2>
+      {head}
       <Worksheet
         questions={seg.questions}
         outcomes={outcomes}

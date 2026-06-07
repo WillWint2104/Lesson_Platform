@@ -12,8 +12,10 @@
  * and reflects the `outcomes` it is given (the AreaPage owns the store wiring).
  */
 import { useRef, useState } from "react";
+import { Lightbulb } from "lucide-react";
 import { MathText } from "@/shared/MathText";
 import { FigureSlot } from "@/render/figures/FigureSlot";
+import { StatusCircle } from "@/shared/StatusCircle";
 import type { Question } from "@/ingest/types";
 import type { Outcome } from "./types";
 import { MultipleChoice } from "./MultipleChoice";
@@ -63,7 +65,7 @@ export function Worksheet({ questions, outcomes, onOutcome }: WorksheetProps) {
                         setOpenIndex(i);
                       }}
                     >
-                      <span aria-hidden="true">💡</span>
+                      <Lightbulb size={16} aria-hidden="true" />
                       <span className="ws-row__solve-label">{isMc ? "Explain" : "Solution"}</span>
                     </button>
                   </div>
@@ -107,15 +109,7 @@ export function Worksheet({ questions, outcomes, onOutcome }: WorksheetProps) {
 function OutcomeBadge({ outcome }: { outcome: Outcome | undefined }) {
   if (!outcome) return null;
   if (outcome === "correct") {
-    return (
-      <span className="ws-row__status ws-row__status--correct" aria-label="Answered correctly">
-        ✓
-      </span>
-    );
+    return <StatusCircle variant="check" size="sm" label="Answered correctly" />;
   }
-  return (
-    <span className="ws-row__status ws-row__status--incorrect" aria-label="Marked for review">
-      ●
-    </span>
-  );
+  return <StatusCircle variant="dot" size="sm" label="Marked for review" />;
 }

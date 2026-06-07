@@ -163,10 +163,15 @@ describe("AreaPage — layout", () => {
       }),
     );
     renderAt(`/${AREA_ID}`, reg, buildStore(reg));
-    expect(screen.getByRole("heading", { name: "Video 1 · V-A" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Exercise 1 · E-A" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Video 2 · V-B" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Exercise 2 · E-B" })).toBeTruthy();
+    // Section opens with a small-caps label (§6) + the segment title as the heading.
+    expect(screen.getByText("Video 1")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "V-A" })).toBeTruthy();
+    expect(screen.getByText("Exercise 1")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "E-A" })).toBeTruthy();
+    expect(screen.getByText("Video 2")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "V-B" })).toBeTruthy();
+    expect(screen.getByText("Exercise 2")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "E-B" })).toBeTruthy();
   });
 
   it("numbers the questions within an exercise 1..n", () => {
@@ -243,10 +248,10 @@ describe("AreaPage — solution modal", () => {
   it("MC: marks inline, then opens an explanation-only modal (no self-mark)", () => {
     const reg = buildReg(mkArea("brackets")); // [video, mc("Practice","Right","Wrong")]
     const store = buildStore(reg);
-    const { container } = renderAt(`/${AREA_ID}`, reg, store);
+    renderAt(`/${AREA_ID}`, reg, store);
 
     fireEvent.click(screen.getByRole("button", { name: "Right" })); // correct, inline
-    expect(container.querySelector(".ws-row__status--correct")).not.toBeNull();
+    expect(screen.getByLabelText("Answered correctly")).toBeTruthy(); // StatusCircle motif
     expect(store.getExerciseProgress(AREA_ID, 1)?.questionOutcomes[0]).toBe("correct");
 
     fireEvent.click(screen.getByRole("button", { name: "Show explanation for question 1" }));
@@ -263,14 +268,14 @@ describe("AreaPage — solution modal", () => {
       }),
     );
     const store = buildStore(reg);
-    const { container } = renderAt(`/${AREA_ID}`, reg, store);
+    renderAt(`/${AREA_ID}`, reg, store);
 
     fireEvent.click(screen.getByRole("button", { name: "Show solution for question 1" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "I got it" }));
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(store.getExerciseProgress(AREA_ID, 0)?.questionOutcomes[0]).toBe("correct");
-    expect(container.querySelector(".ws-row__status--correct")).not.toBeNull();
+    expect(screen.getByLabelText("Answered correctly")).toBeTruthy();
   });
 });
 
@@ -279,8 +284,8 @@ describe("AreaPage — progress & gating", () => {
     const reg = buildReg(mkArea("brackets")); // exercise is segment index 1
     const store = buildStore(reg);
     store.recordOutcome(AREA_ID, 1, 0, "correct");
-    const { container } = renderAt(`/${AREA_ID}`, reg, store);
-    expect(container.querySelector(".ws-row__status--correct")).not.toBeNull();
+    renderAt(`/${AREA_ID}`, reg, store);
+    expect(screen.getByLabelText("Answered correctly")).toBeTruthy();
   });
 
   it("locks a later exercise (hiding its questions), then unlocks on completion", () => {
