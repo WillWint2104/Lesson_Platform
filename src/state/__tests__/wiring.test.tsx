@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 const AREA = "math/algebra/brackets";
-const SEG = 1;
+const STAGE = 1;
 
 const mc = (correctIndex: number): MultipleChoiceQuestion => ({
   type: "multiple-choice",
@@ -23,44 +23,42 @@ const mc = (correctIndex: number): MultipleChoiceQuestion => ({
   ],
 });
 
+// Wire the dormant QuestionRunner to the v3 store: outcomes → core; completion
+// is "all answered" (v3, any outcome), not "all correct".
 function wire(store: ReturnType<typeof createProgressStore>) {
   return render(
     <QuestionRunner
       questions={[mc(1)]}
-      onResult={(i, o) => store.recordOutcome(AREA, SEG, i, o)}
+      onResult={(i, o) => store.recordOutcome(AREA, STAGE, "core", i, o)}
       onComplete={(results) =>
-        store.recordAttempt(
-          AREA,
-          SEG,
-          results.length > 0 && results.every((r) => r.outcome === "correct"),
-        )
+        store.recordAttempt(AREA, STAGE, results.length > 0 && results.every((r) => !!r.outcome))
       }
     />,
   );
 }
 
-describe("QuestionRunner → v2 progress store wiring (area + segment)", () => {
-  it("persists outcomes + a completed attempt for an all-correct run", () => {
+describe("QuestionRunner → v3 progress store wiring (area + stage, core pool)", () => {
+  it("persists a correct outcome + a completed attempt", () => {
     const store = createProgressStore({ backend: createMemoryBackend(), now: () => "T" });
     wire(store);
     fireEvent.click(screen.getByRole("button", { name: "Option B" })); // correct
-    fireEvent.click(screen.getByRole("button", { name: "Finish" })); // summary + onComplete
+    fireEvent.click(screen.getByRole("button", { name: "Finish" }));
 
-    const seg = store.getExerciseProgress(AREA, SEG);
-    expect(seg?.questionOutcomes[0]).toBe("correct");
-    expect(seg?.attempts).toBe(1);
-    expect(seg?.completedAt).toBe("T");
+    const st = store.getStageProgress(AREA, STAGE);
+    expect(st?.core[0]).toBe("correct");
+    expect(st?.attempts).toBe(1);
+    expect(st?.completedAt).toBe("T");
   });
 
-  it("records an incorrect outcome + an uncompleted attempt", () => {
+  it("completes the stage even on an incorrect answer (completion = answered)", () => {
     const store = createProgressStore({ backend: createMemoryBackend(), now: () => "T" });
     wire(store);
     fireEvent.click(screen.getByRole("button", { name: "Option A" })); // wrong
     fireEvent.click(screen.getByRole("button", { name: "Finish" }));
 
-    const seg = store.getExerciseProgress(AREA, SEG);
-    expect(seg?.questionOutcomes[0]).toBe("incorrect");
-    expect(seg?.attempts).toBe(1);
-    expect(seg?.completedAt).toBeNull();
+    const st = store.getStageProgress(AREA, STAGE);
+    expect(st?.core[0]).toBe("incorrect");
+    expect(st?.attempts).toBe(1);
+    expect(st?.completedAt).toBe("T"); // answered → complete, regardless of correctness
   });
 });

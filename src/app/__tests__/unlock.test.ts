@@ -1,44 +1,51 @@
 import { describe, it, expect } from "vitest";
-import { computeSegmentUnlock, isAreaComplete, type SegmentInput } from "@/app/unlock";
+import {
+  computeStageStatus,
+  currentStageIndex,
+  isAreaComplete,
+  type StageInput,
+} from "@/app/unlock";
 
-const v: SegmentInput = { type: "video", complete: false };
-const ex = (complete: boolean): SegmentInput => ({ type: "exercise", complete });
-const statuses = (segs: SegmentInput[]) => computeSegmentUnlock(segs).map((s) => s.status);
+const s = (complete: boolean): StageInput => ({ complete });
 
-describe("computeSegmentUnlock", () => {
-  it("videos are always open", () => {
-    expect(statuses([v, ex(false)])).toEqual(["video", "current"]);
-  });
-
-  it("first incomplete exercise is current; later exercises lock", () => {
-    expect(statuses([ex(false), ex(false)])).toEqual(["current", "locked"]);
-  });
-
-  it("completed exercises are done; the next unlocked-incomplete is current", () => {
-    expect(statuses([ex(true), ex(false)])).toEqual(["done", "current"]);
-  });
-
-  it("videos between exercises never block unlock", () => {
-    expect(statuses([ex(true), v, ex(false), v])).toEqual(["done", "video", "current", "video"]);
-  });
-
-  it("all exercises done → all done (no current)", () => {
-    expect(statuses([ex(true), v, ex(true)])).toEqual(["done", "video", "done"]);
-  });
-
-  it("reports unlocked (openable) for videos + done/current, not locked", () => {
-    expect(computeSegmentUnlock([ex(true), ex(false), ex(false)]).map((s) => s.unlocked)).toEqual([
-      true,
-      true,
-      false,
+describe("computeStageStatus", () => {
+  it("done for complete, current for the first incomplete, upcoming after", () => {
+    expect(computeStageStatus([s(true), s(false), s(false)])).toEqual([
+      "done",
+      "current",
+      "upcoming",
     ]);
+  });
+
+  it("nothing locks — a later complete stage stays 'done' (free navigation)", () => {
+    expect(computeStageStatus([s(false), s(true), s(false)])).toEqual([
+      "current",
+      "done",
+      "upcoming",
+    ]);
+  });
+
+  it("all complete → all done (no current)", () => {
+    expect(computeStageStatus([s(true), s(true)])).toEqual(["done", "done"]);
+  });
+});
+
+describe("currentStageIndex", () => {
+  it("is the first incomplete stage", () => {
+    expect(currentStageIndex([s(true), s(false), s(false)])).toBe(1);
+  });
+  it("is the last stage when everything is complete", () => {
+    expect(currentStageIndex([s(true), s(true)])).toBe(1);
+  });
+  it("is 0 for an empty area", () => {
+    expect(currentStageIndex([])).toBe(0);
   });
 });
 
 describe("isAreaComplete", () => {
-  it("is true only when every exercise segment is complete", () => {
-    expect(isAreaComplete([ex(true), v, ex(true)])).toBe(true);
-    expect(isAreaComplete([ex(true), ex(false)])).toBe(false);
-    expect(isAreaComplete([v])).toBe(false); // no exercises
+  it("is true only when every stage is complete (≥1 stage)", () => {
+    expect(isAreaComplete([s(true), s(true)])).toBe(true);
+    expect(isAreaComplete([s(true), s(false)])).toBe(false);
+    expect(isAreaComplete([])).toBe(false);
   });
 });

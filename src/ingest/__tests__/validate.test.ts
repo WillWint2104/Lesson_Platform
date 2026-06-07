@@ -258,6 +258,39 @@ describe("validateNotesFile — errors", () => {
     ).toBe(true);
   });
 
+  it("accepts a stepped example (steps with tex + optional why)", () => {
+    const res = validateNotesFile(
+      nfile([
+        {
+          type: "example",
+          prompt: "p",
+          answer: "a",
+          steps: [{ tex: "x=1", why: "because" }, { tex: "x=2" }],
+        },
+      ]),
+    );
+    expect(res.valid).toBe(true);
+  });
+
+  it("errors when an example has BOTH steps and working", () => {
+    const res = validateNotesFile(
+      nfile([{ type: "example", prompt: "p", answer: "a", steps: [{ tex: "x" }], working: ["x"] }]),
+    );
+    expect(has(res.errors, "notes[0] (example)", "use steps; working is the legacy form")).toBe(true);
+  });
+
+  it("errors when an example has NEITHER steps nor working", () => {
+    const res = validateNotesFile(nfile([{ type: "example", prompt: "p", answer: "a" }]));
+    expect(has(res.errors, "notes[0] (example)", "must have steps")).toBe(true);
+  });
+
+  it("errors on a step missing its tex", () => {
+    const res = validateNotesFile(
+      nfile([{ type: "example", prompt: "p", answer: "a", steps: [{ why: "no tex" }] }]),
+    );
+    expect(has(res.errors, "notes[0] (example).steps[0]", "missing or empty required field 'tex'")).toBe(true);
+  });
+
   it("flags a heading missing its text", () => {
     const res = validateNotesFile(nfile([{ type: "heading" }]));
     expect(has(res.errors, "notes[0]", "missing required field 'text'")).toBe(true);
@@ -333,20 +366,32 @@ describe("warnings", () => {
     expect(res.valid).toBe(true);
     expect(res.warnings.some((w) => w.message.includes("is not one of"))).toBe(true);
   });
+
+  it("warns on raw \\textcolor in math content (use \\emA / \\emB)", () => {
+    const file = JSON.parse(
+      '{"questions":[{"type":"text","prompt":"$\\\\textcolor{red}{x}$","answer":"a"}]}',
+    );
+    const res = validateQuestionsFile(file);
+    expect(res.valid).toBe(true);
+    expect(res.warnings.some((w) => w.message.includes("\\textcolor"))).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
 // Area manifest
 // ---------------------------------------------------------------------------
 
-describe("validateAreaManifest", () => {
+describe("validateAreaManifest (v3 stages)", () => {
   const goodArea = {
     area: {
       title: "Expanding Brackets",
-      notes: "notes.json",
-      sequence: [
-        { type: "video", title: "Intro", src: null },
-        { type: "exercise", title: "Warm-up", questions: "exercise-1.json" },
+      stages: [
+        {
+          title: "Single brackets",
+          notes: "notes.json",
+          video: { src: null, duration: null },
+          exercise: { questions: "exercise-1.json" },
+        },
       ],
     },
   };
@@ -361,63 +406,90 @@ describe("validateAreaManifest", () => {
     expect(has(res.errors, "lesson", "superseded by area.json")).toBe(true);
   });
 
+  it("rejects a superseded v2 sequence manifest with a migration pointer", () => {
+    const res = validateAreaManifest({ area: { title: "T", sequence: [] } });
+    expect(res.valid).toBe(false);
+    expect(has(res.errors, "area.sequence", "superseded by v3 stages")).toBe(true);
+  });
+
   it("errors on a missing 'area' wrapper", () => {
     expect(has(validateAreaManifest({}).errors, "area", "missing required field 'area'")).toBe(true);
   });
 
-  it("errors on an empty sequence", () => {
-    const res = validateAreaManifest({ area: { title: "T", notes: [], sequence: [] } });
-    expect(has(res.errors, "area.sequence", "at least one segment")).toBe(true);
+  it("errors on no stages", () => {
+    const res = validateAreaManifest({ area: { title: "T", stages: [] } });
+    expect(has(res.errors, "area.stages", "at least one stage")).toBe(true);
   });
 
-  it("warns (not errors) when an area has no notes", () => {
+  it("errors on a stage missing its exercise", () => {
+    const res = validateAreaManifest({ area: { title: "T", stages: [{ title: "S" }] } });
+    expect(has(res.errors, "area.stages[0].exercise", "missing required field 'exercise'")).toBe(true);
+  });
+
+  it("errors on an exercise with zero core questions", () => {
     const res = validateAreaManifest({
-      area: { title: "T", sequence: [{ type: "video", title: "v", src: null }] },
+      area: { title: "T", stages: [{ title: "S", exercise: { questions: [] } }] },
     });
-    expect(res.valid).toBe(true);
-    expect(has(res.warnings, "area.notes", "no notes provided")).toBe(true);
+    expect(has(res.errors, "area.stages[0].exercise.questions", "at least one question")).toBe(true);
   });
 
-  it("errors on an exercise with zero questions", () => {
+  it("errors (path-precise) on an empty extra pool", () => {
     const res = validateAreaManifest({
-      area: { title: "T", notes: [], sequence: [{ type: "exercise", title: "e", questions: [] }] },
-    });
-    expect(has(res.errors, "area.sequence[0] (exercise)", "at least one question")).toBe(true);
-  });
-
-  it("errors on an unknown segment type", () => {
-    const res = validateAreaManifest({
-      area: { title: "T", notes: [], sequence: [{ type: "audio", title: "a" }] },
-    });
-    expect(has(res.errors, "area.sequence[0]", "unknown segment type")).toBe(true);
-  });
-
-  it("errors on an unparseable video src", () => {
-    const res = validateAreaManifest({
-      area: { title: "T", notes: [], sequence: [{ type: "video", title: "v", src: "not a video!!" }] },
+      area: {
+        title: "T",
+        stages: [{ title: "S", exercise: { questions: [{ type: "text", prompt: "Q" }], extra: [] } }],
+      },
     });
     expect(
-      has(res.errors, "area.sequence[0] (video)", "could not be parsed as a YouTube video"),
+      has(res.errors, "area.stages[0].exercise.extra", "extra, when present, must contain at least one question"),
     ).toBe(true);
   });
 
-  it("validates inline exercise questions + figure data per kind", () => {
+  it("validates an inline extra question path-precisely", () => {
+    const res = validateAreaManifest({
+      area: {
+        title: "T",
+        stages: [
+          { title: "S", exercise: { questions: [{ type: "text", prompt: "Q" }], extra: [{ type: "text" }] } },
+        ],
+      },
+    });
+    expect(has(res.errors, "area.stages[0].exercise.extra[0]", "missing required field 'prompt'")).toBe(true);
+  });
+
+  it("errors on an unparseable stage video src", () => {
+    const res = validateAreaManifest({
+      area: {
+        title: "T",
+        stages: [
+          {
+            title: "S",
+            video: { src: "not a video!!", duration: null },
+            exercise: { questions: [{ type: "text", prompt: "Q" }] },
+          },
+        ],
+      },
+    });
+    expect(has(res.errors, "area.stages[0].video", "could not be parsed as a YouTube video")).toBe(true);
+  });
+
+  it("validates inline core questions + figure data per kind", () => {
     const res = validateAreaManifest(
       {
         area: {
           title: "T",
-          notes: [],
-          sequence: [
+          stages: [
             {
-              type: "exercise",
-              title: "e",
-              questions: [
-                {
-                  type: "geometry",
-                  prompt: "p",
-                  figure: { kind: "triangle-figure", specVersion: 1, data: { vertices: [{ x: 0, y: 0 }] } },
-                },
-              ],
+              title: "S",
+              exercise: {
+                questions: [
+                  {
+                    type: "geometry",
+                    prompt: "p",
+                    figure: { kind: "triangle-figure", specVersion: 1, data: { vertices: [{ x: 0, y: 0 }] } },
+                  },
+                ],
+              },
             },
           ],
         },
@@ -435,38 +507,46 @@ describe("validateAreaManifest", () => {
 // buildAreaRegistry
 // ---------------------------------------------------------------------------
 
-describe("buildAreaRegistry", () => {
-  const area = (title: string, sequence: unknown[]) => ({ area: { title, notes: [], sequence } });
+describe("buildAreaRegistry (v3 stages)", () => {
+  const area = (title: string, stages: unknown[]) => ({ area: { title, stages } });
   const at = (topicArea: string) => `/content/math/algebra/${topicArea}/area.json`;
+  const stage = (title: string, questions: unknown, extra?: unknown) => ({
+    title,
+    exercise: { questions, ...(extra !== undefined ? { extra } : {}) },
+  });
 
-  it("derives hierarchy + areaId from the path and resolves segments", () => {
+  it("derives hierarchy + areaId from the path and resolves stages", () => {
     const reg = buildAreaRegistry({
       "/content/science/biology/cells/area.json": area("Cells", [
-        { type: "video", title: "v", src: null },
-        { type: "exercise", title: "e", questions: [{ type: "text", prompt: "Q" }] },
+        { title: "S", video: { src: null, duration: null }, exercise: { questions: [{ type: "text", prompt: "Q" }] } },
       ]),
     });
     const a = reg.getAreaById("science/biology/cells");
     expect(a?.valid).toBe(true);
     expect(a?.subject).toBe("science");
-    expect(a?.segments).toHaveLength(2);
-    expect(a?.segments[1]).toMatchObject({ type: "exercise" });
+    expect(a?.stages).toHaveLength(1);
+    expect(a?.stages[0]?.exercise.questions).toHaveLength(1);
   });
 
-  it("resolves a referenced exercise questions file relative to the area dir", () => {
+  it("resolves referenced questions/notes/extra files relative to the area dir", () => {
     const reg = buildAreaRegistry({
-      [at("brackets")]: area("B", [{ type: "exercise", title: "e", questions: "ex.json" }]),
+      [at("brackets")]: area("B", [
+        { title: "S", notes: "notes.json", exercise: { questions: "ex.json", extra: "extra.json" } },
+      ]),
       "/content/math/algebra/brackets/ex.json": { questions: [{ type: "text", prompt: "Q" }] },
+      "/content/math/algebra/brackets/extra.json": { questions: [{ type: "text", prompt: "E" }] },
+      "/content/math/algebra/brackets/notes.json": { notes: [{ type: "heading", text: "H" }] },
     });
     const a = reg.getAreaById("math/algebra/brackets");
     expect(a?.valid).toBe(true);
-    const seg = a?.segments[0];
-    expect(seg && seg.type === "exercise" ? seg.questions.length : 0).toBe(1);
+    expect(a?.stages[0]?.exercise.questions).toHaveLength(1);
+    expect(a?.stages[0]?.exercise.extra).toHaveLength(1);
+    expect(a?.stages[0]?.notes).toHaveLength(1);
   });
 
   it("errors on a missing referenced questions file without throwing", () => {
     const reg = buildAreaRegistry({
-      [at("brackets")]: area("B", [{ type: "exercise", title: "e", questions: "missing.json" }]),
+      [at("brackets")]: area("B", [stage("S", "missing.json")]),
     });
     const a = reg.getAreaById("math/algebra/brackets");
     expect(a?.valid).toBe(false);
@@ -483,7 +563,9 @@ describe("buildAreaRegistry", () => {
   });
 
   it("getAreaById returns undefined for unknown ids (truthiness is not validity)", () => {
-    const reg = buildAreaRegistry({ [at("brackets")]: area("B", [{ type: "video", title: "v", src: null }]) });
+    const reg = buildAreaRegistry({
+      [at("brackets")]: area("B", [stage("S", [{ type: "text", prompt: "Q" }])]),
+    });
     expect(reg.getAreaById("math/algebra/brackets")?.title).toBe("B");
     expect(reg.getAreaById("nope")).toBeUndefined();
     expect(reg.getAreaById("")).toBeUndefined();
@@ -491,8 +573,8 @@ describe("buildAreaRegistry", () => {
 
   it("exposes hierarchy queries", () => {
     const reg = buildAreaRegistry({
-      "/content/math/algebra/brackets/area.json": area("B", [{ type: "video", title: "v", src: null }]),
-      "/content/math/algebra/factoring/area.json": area("F", [{ type: "video", title: "v", src: null }]),
+      "/content/math/algebra/brackets/area.json": area("B", [stage("S", [{ type: "text", prompt: "Q" }])]),
+      "/content/math/algebra/factoring/area.json": area("F", [stage("S", [{ type: "text", prompt: "Q" }])]),
     });
     expect(reg.getSubjects()).toEqual(["math"]);
     expect(reg.getTopics("math")).toEqual(["algebra"]);
