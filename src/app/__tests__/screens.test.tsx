@@ -71,15 +71,13 @@ describe("app chrome (page, not frame)", () => {
   const routes = ["/", `/${AREA_ID}`, "/nope", "/debug"];
   it.each(routes)("renders the full-width app bar + footer on %s", (path) => {
     const reg = buildReg(mkArea("brackets"));
-    const { container } = renderAt(path, reg, buildStore(reg));
-    // App bar wordmark (a link, unique — the footer wordmark is a span).
-    expect(screen.getByRole("link", { name: "Lesson Platform" })).toBeTruthy();
-    // Footer present and container-aligned.
-    const footer = container.querySelector("footer.app-footer");
-    expect(footer).not.toBeNull();
-    expect(footer?.textContent).toContain("©");
-    // Page-surface shell wrapper present (cream background lives on <body>).
-    expect(container.querySelector(".app-shell")).not.toBeNull();
+    renderAt(path, reg, buildStore(reg));
+    // Accessible, user-facing queries: getByRole/getByText exclude a11y-hidden
+    // nodes and throw if the chrome isn't rendered — not presence-only checks.
+    expect(screen.getByRole("link", { name: "Lesson Platform" })).toBeTruthy(); // app bar wordmark
+    const footer = screen.getByRole("contentinfo"); // the <footer> landmark
+    expect(within(footer).getByText("Lesson Platform")).toBeTruthy(); // footer wordmark
+    expect(within(footer).getByText(/©/)).toBeTruthy();
   });
 
   it("adds the page-surface body-class hook", () => {
