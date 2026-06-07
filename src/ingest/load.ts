@@ -1,19 +1,19 @@
 /**
  * @file load.ts — Area discovery + loading (CLAUDE.md §a, §c rule 7).
  *
- * Discovers `area.json` manifests under /content, resolves area notes and each
- * exercise segment's questions (inline or a referenced file path), normalises
- * video sources + figures, runs the validator, and returns every area WITH its
- * issues. Invalid areas are returned, not dropped and not thrown. A stray
- * superseded `lesson.json` is surfaced as an invalid area carrying the migration
- * error.
+ * Discovers `area.json` manifests under /content, resolves each STAGE's notes,
+ * video, core questions, and optional extra-practice pool (inline or referenced
+ * file paths), normalises video sources + figures, runs the validator, and
+ * returns every area WITH its issues. Invalid areas are returned, not dropped
+ * and not thrown. A stray superseded `lesson.json` is surfaced as an invalid
+ * area carrying the migration error.
  *
  * Discovery: Vite's `import.meta.glob('/content/**' + '/*.json', { eager: true })`.
  * The pure core (`buildAreaRegistry`) takes the path->json map so it is
  * unit-testable without Vite.
  */
 
-import type { AreaSegment, NoteBlock, Question } from "./types";
+import type { NoteBlock, Question, Stage } from "./types";
 import {
   validateAreaManifest,
   validateNotesFile,
@@ -28,10 +28,13 @@ export interface LoadOptions {
   figureSchemas?: FigureSchemaRegistry;
 }
 
-/** A resolved segment: questions inlined, video src normalised to an id/null. */
-export type ResolvedSegment =
-  | { type: "video"; title: string; src: string | null }
-  | { type: "exercise"; title: string; questions: Question[] };
+/** A resolved stage: notes/questions inlined, video src normalised to an id/null. */
+export interface ResolvedStage {
+  title: string;
+  notes: NoteBlock[];
+  video: { src: string | null; duration: number | null } | null;
+  exercise: { questions: Question[]; extra: Question[] };
+}
 
 export interface ValidatedArea {
   /** areaId = `<subject>/<topic>/<topicArea>` (path-derived, unique). */
@@ -43,8 +46,7 @@ export interface ValidatedArea {
   topicArea: string;
   /** Manifest file path (glob key). */
   path: string;
-  notes: NoteBlock[];
-  segments: ResolvedSegment[];
+  stages: ResolvedStage[];
   valid: boolean;
   errors: Issue[];
   warnings: Issue[];
@@ -104,6 +106,54 @@ function normalizeFigures(questions: Question[]): Question[] {
   });
 }
 
+interface ResolveCtx {
+  dir: string;
+  files: Record<string, unknown>;
+  errors: Issue[];
+  warnings: Issue[];
+  figureSchemas?: FigureSchemaRegistry;
+}
+
+/** Resolve a notes field (inline array or referenced path) into NoteBlock[]. */
+function resolveNotes(ctx: ResolveCtx, field: unknown, at: string): NoteBlock[] {
+  if (typeof field === "string") {
+    const notesPath = ctx.dir + field.replace(/^\.\//, "");
+    if (notesPath in ctx.files) {
+      const notesRaw = ctx.files[notesPath];
+      const res = validateNotesFile(notesRaw);
+      ctx.errors.push(...prefixIssues(res.errors, notesPath));
+      ctx.warnings.push(...prefixIssues(res.warnings, notesPath));
+      return asArray<NoteBlock>((notesRaw as { notes?: unknown } | null)?.notes);
+    }
+    ctx.errors.push({ path: at, message: `referenced notes file not found: ${notesPath}` });
+    return [];
+  }
+  return asArray<NoteBlock>(field);
+}
+
+/** Resolve a question pool (inline array or referenced path) into Question[]. */
+function resolveQuestions(ctx: ResolveCtx, field: unknown, at: string): Question[] {
+  if (typeof field === "string") {
+    const qPath = ctx.dir + field.replace(/^\.\//, "");
+    if (qPath in ctx.files) {
+      const qRaw = ctx.files[qPath];
+      const res = validateQuestionsFile(qRaw, { figureSchemas: ctx.figureSchemas });
+      ctx.errors.push(...prefixIssues(res.errors, qPath));
+      ctx.warnings.push(...prefixIssues(res.warnings, qPath));
+      const questions = normalizeFigures(
+        asArray<Question>((qRaw as { questions?: unknown } | null)?.questions),
+      );
+      if (questions.length === 0) {
+        ctx.errors.push({ path: at, message: "must contain at least one question" });
+      }
+      return questions;
+    }
+    ctx.errors.push({ path: at, message: `referenced questions file not found: ${qPath}` });
+    return [];
+  }
+  return normalizeFigures(asArray<Question>(field));
+}
+
 /** Build the area registry from an already-loaded path->json map. Pure. */
 export function buildAreaRegistry(
   files: Record<string, unknown>,
@@ -137,59 +187,39 @@ export function buildAreaRegistry(
       });
     }
 
-    const dir = dirOf(manifestPath);
+    const ctx: ResolveCtx = { dir: dirOf(manifestPath), files, errors, warnings, figureSchemas };
 
-    // Resolve area notes (inline array or referenced file).
-    let notes: NoteBlock[] = [];
-    const notesField = area?.["notes"];
-    if (typeof notesField === "string") {
-      const notesPath = dir + notesField.replace(/^\.\//, "");
-      if (notesPath in files) {
-        const notesRaw = files[notesPath];
-        const nres = validateNotesFile(notesRaw);
-        errors.push(...prefixIssues(nres.errors, notesPath));
-        warnings.push(...prefixIssues(nres.warnings, notesPath));
-        notes = asArray<NoteBlock>((notesRaw as { notes?: unknown } | null)?.notes);
-      } else {
-        errors.push({ path: "area.notes", message: `referenced notes file not found: ${notesPath}` });
-      }
-    } else {
-      notes = asArray<NoteBlock>(notesField);
-    }
+    // Resolve each stage.
+    const stages: ResolvedStage[] = [];
+    const rawStages = asArray<Stage>(area?.["stages"]);
+    rawStages.forEach((stageRaw, i) => {
+      const stage = stageRaw as unknown as Record<string, unknown>;
+      const sp = `area.stages[${i}]`;
+      const title = typeof stage["title"] === "string" ? (stage["title"] as string) : "";
 
-    // Resolve the ordered sequence into segments.
-    const segments: ResolvedSegment[] = [];
-    const rawSequence = asArray<AreaSegment>(area?.["sequence"]);
-    rawSequence.forEach((segRaw, i) => {
-      const seg = segRaw as unknown as Record<string, unknown>;
-      const segPath = `area.sequence[${i}]`;
-      const title = typeof seg["title"] === "string" ? (seg["title"] as string) : "";
-      if (seg["type"] === "video") {
-        const src = typeof seg["src"] === "string" ? parseYouTubeId(seg["src"] as string) : null;
-        segments.push({ type: "video", title, src });
-      } else if (seg["type"] === "exercise") {
-        let questions: Question[] = [];
-        const qField = seg["questions"];
-        if (typeof qField === "string") {
-          const qPath = dir + qField.replace(/^\.\//, "");
-          if (qPath in files) {
-            const qRaw = files[qPath];
-            const qres = validateQuestionsFile(qRaw, { figureSchemas });
-            errors.push(...prefixIssues(qres.errors, qPath));
-            warnings.push(...prefixIssues(qres.warnings, qPath));
-            questions = normalizeFigures(asArray<Question>((qRaw as { questions?: unknown } | null)?.questions));
-            if (questions.length === 0) {
-              errors.push({ path: `${segPath} (exercise)`, message: "exercise must contain at least one question" });
-            }
-          } else {
-            errors.push({ path: `${segPath} (exercise)`, message: `referenced questions file not found: ${qPath}` });
-          }
-        } else {
-          questions = normalizeFigures(asArray<Question>(qField));
-        }
-        segments.push({ type: "exercise", title, questions });
+      const notes =
+        stage["notes"] === undefined ? [] : resolveNotes(ctx, stage["notes"], `${sp}.notes`);
+
+      let video: ResolvedStage["video"] = null;
+      const videoRaw = stage["video"];
+      if (videoRaw && typeof videoRaw === "object" && !Array.isArray(videoRaw)) {
+        const v = videoRaw as Record<string, unknown>;
+        const src = typeof v["src"] === "string" ? parseYouTubeId(v["src"] as string) : null;
+        const duration = typeof v["duration"] === "number" ? (v["duration"] as number) : null;
+        video = { src, duration };
       }
-      // Unknown segment types are already reported by the validator; skip here.
+
+      const exerciseRaw =
+        stage["exercise"] && typeof stage["exercise"] === "object"
+          ? (stage["exercise"] as Record<string, unknown>)
+          : {};
+      const questions = resolveQuestions(ctx, exerciseRaw["questions"], `${sp}.exercise.questions`);
+      const extra =
+        exerciseRaw["extra"] === undefined
+          ? []
+          : resolveQuestions(ctx, exerciseRaw["extra"], `${sp}.exercise.extra`);
+
+      stages.push({ title, notes, video, exercise: { questions, extra } });
     });
 
     const id = hierarchy
@@ -210,8 +240,7 @@ export function buildAreaRegistry(
       topic: hierarchy?.topic ?? "",
       topicArea: hierarchy?.topicArea ?? "",
       path: manifestPath,
-      notes,
-      segments,
+      stages,
       valid: errors.length === 0,
       errors,
       warnings,
@@ -256,11 +285,4 @@ export function loadAllAreas(options: LoadOptions = {}): AreaRegistry {
     import: "default",
   });
   return buildAreaRegistry(files, options);
-}
-
-/** Exercise-segment indices of an area (for completion + unlock). */
-export function exerciseSegmentIndices(area: ValidatedArea): number[] {
-  return area.segments
-    .map((s, i) => (s.type === "exercise" ? i : -1))
-    .filter((i) => i >= 0);
 }
