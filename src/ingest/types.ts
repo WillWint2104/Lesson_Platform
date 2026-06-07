@@ -93,11 +93,25 @@ export const QUESTION_TYPES = [
   "multiple-choice",
 ] as const;
 
+/** One step of a stepped worked example: a TeX line + an optional one-line why. */
+export interface ExampleStep {
+  tex: string;
+  why?: string;
+}
+
 /** Discriminated union on `type` for notes blocks. */
 export type NoteBlock =
   | { type: "heading"; text: string }
   | { type: "paragraph"; text: string }
-  | { type: "example"; prompt: string; working: string[]; answer: string }
+  | {
+      type: "example";
+      prompt: string;
+      answer: string;
+      /** Stepped working (preferred): each step is a TeX line + optional why. */
+      steps?: ExampleStep[];
+      /** Legacy flat working lines (mutually exclusive with `steps`). */
+      working?: string[];
+    }
   | { type: "callout"; style: "key" | "warning" | "info"; text: string }
   | { type: "list"; items: string[] };
 
@@ -114,44 +128,47 @@ export const NOTE_BLOCK_TYPES = [
 export const CALLOUT_STYLES = ["key", "warning", "info"] as const;
 
 /**
- * A video segment in an area's sequence. `src` is a YouTube source (watch/short/
- * embed URL or bare 11-char id) or `null` when the video isn't recorded yet
- * (a first-class state — generation may run ahead of studio recording).
+ * A stage's video. `src` is a YouTube source (watch/short/embed URL or bare
+ * 11-char id) or `null` when the video isn't recorded yet (a first-class state —
+ * generation may run ahead of studio recording). `duration` is seconds or null.
  */
-export interface VideoSegment {
-  type: "video";
-  title: string;
+export interface StageVideo {
   src: string | null;
+  duration: number | null;
 }
 
-/** An exercise segment: an ordered set of questions (inline or a file path). */
-export interface ExerciseSegment {
-  type: "exercise";
-  title: string;
+/** A stage's exercise: required core questions + an optional extra-practice pool. */
+export interface StageExercise {
   questions: Question[] | string;
+  extra?: Question[] | string;
 }
-
-export type AreaSegment = VideoSegment | ExerciseSegment;
-
-export const SEGMENT_TYPES = ["video", "exercise"] as const;
 
 /**
- * The inner area object of an `area.json` manifest. ONE page per topic area:
- * area-level notes + an ordered `sequence` of video/exercise segments. The
- * normal pattern is video→exercise pulses, but the contract does not enforce
- * any ordering or mix.
+ * A STAGE = one skill: optional notes, an optional video, then a REQUIRED
+ * exercise. Stages are navigated as pages (Mayer segmenting principle); notes
+ * belong to the stage. `notes`/`questions`/`extra` are inline arrays or a path
+ * (relative to the area dir).
+ */
+export interface Stage {
+  title: string;
+  notes?: NoteBlock[] | string;
+  video?: StageVideo;
+  exercise: StageExercise;
+}
+
+/**
+ * The inner area object of an `area.json` manifest (contract v3). An area is a
+ * sequence of stages, each one skill = video then exercise.
  *
  * NOTE: no `subject`/`topic`/`topicArea` — the hierarchy is derived from the
  * directory path by the loader (CLAUDE.md §a), not stored in the manifest.
  */
 export interface Area {
   title: string;
-  /** Area-level notes: inline blocks or a path (relative to the area dir). */
-  notes: NoteBlock[] | string;
-  sequence: AreaSegment[];
+  stages: Stage[];
 }
 
-/** An `area.json` manifest. */
+/** An `area.json` manifest (v3). */
 export interface AreaManifest {
   area: Area;
 }

@@ -39,10 +39,25 @@ describe("NotesRenderer", () => {
       { type: "example", prompt: "P", working: ["step A", "step B", "step C"], answer: "ANS" },
     ];
     render(<NotesRenderer blocks={blocks} />);
-    expect(screen.getByText("WORKED EXAMPLE")).toBeTruthy();
+    expect(screen.getByText("Worked example")).toBeTruthy(); // CSS upper-cases it
     const steps = screen.getAllByText(/^step /);
     expect(steps.map((s) => s.textContent)).toEqual(["step A", "step B", "step C"]);
     expect(screen.getByText("ANS")).toBeTruthy();
+  });
+
+  it("renders a stepped example (steps with tex + why)", () => {
+    const blocks: NoteBlock[] = [
+      {
+        type: "example",
+        prompt: "P",
+        answer: "ANS",
+        steps: [{ tex: "lineone", why: "first reason" }, { tex: "linetwo" }],
+      },
+    ];
+    render(<NotesRenderer blocks={blocks} />);
+    expect(screen.getByText("lineone")).toBeTruthy();
+    expect(screen.getByText("first reason")).toBeTruthy();
+    expect(screen.getByText("linetwo")).toBeTruthy();
   });
 
   it("shows an alert chip for an unknown block type (never silently skips)", () => {

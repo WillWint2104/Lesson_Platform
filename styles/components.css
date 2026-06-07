@@ -149,6 +149,18 @@
   color: var(--muted);
 }
 
+/* Stepped working: a TeX line + an optional one-line "why" beneath it. */
+.note-example__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.note-example__why {
+  margin: 0;
+  font: var(--text-meta);
+  color: var(--muted);
+}
+
 .note-example__answer-row {
   margin-top: var(--space-1);
 }
@@ -182,6 +194,15 @@
   display: block;
   margin: var(--space-1) 0;
   overflow-x: auto;
+}
+
+/* Math emphasis macros (\emA / \emB) — the ONLY in-math emphasis (authoring.md).
+ * Colours stay mapped to theme tokens here, never hardcoded in content. */
+.ktx-em-a {
+  color: var(--green-edge);
+}
+.ktx-em-b {
+  color: var(--cyan-deep);
 }
 
 /* =========================================================================

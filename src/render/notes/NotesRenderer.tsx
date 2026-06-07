@@ -26,7 +26,12 @@ function NoteBlockView({ block }: { block: NoteBlock }) {
       return <NoteCallout style={block.style} text={block.text} />;
     case "example":
       return (
-        <NoteExample prompt={block.prompt} working={block.working} answer={block.answer} />
+        <NoteExample
+          prompt={block.prompt}
+          answer={block.answer}
+          steps={block.steps}
+          working={block.working}
+        />
       );
     default: {
       // Defence in depth: validator should have caught this already.

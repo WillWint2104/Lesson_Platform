@@ -10,7 +10,7 @@
  * catch that here by scanning content strings for control characters.
  */
 
-import { CALLOUT_STYLES, NOTE_BLOCK_TYPES, QUESTION_TYPES, SEGMENT_TYPES } from "./types";
+import { CALLOUT_STYLES, NOTE_BLOCK_TYPES, QUESTION_TYPES } from "./types";
 import { resolveFigure, schemaKey, type FigureSchemaRegistry } from "./figure";
 import { parseYouTubeId, ACCEPTED_YOUTUBE_FORMATS } from "@/shared/youtube";
 
@@ -74,11 +74,20 @@ function isNonEmptyString(value: unknown): value is string {
  * Adds an error (not a warning) because such content renders as nothing.
  */
 function scanLatex(report: Report, path: string, value: unknown): void {
-  if (typeof value === "string" && CONTROL_CHARS.test(value)) {
+  if (typeof value !== "string") return;
+  if (CONTROL_CHARS.test(value)) {
     report.error(
       path,
       "contains a control character — likely an un-doubled LaTeX backslash " +
         "(write \\\\frac not \\frac in JSON)",
+    );
+  }
+  // Raw \textcolor is discouraged: emphasis must go through the \emA / \emB
+  // macros so colour stays mapped to theme tokens (see /docs/authoring.md).
+  if (value.includes("\\textcolor")) {
+    report.warn(
+      path,
+      "raw \\textcolor is discouraged — use the \\emA{} / \\emB{} emphasis macros (see /docs/authoring.md)",
     );
   }
 }
@@ -409,10 +418,7 @@ function validateNoteBlock(report: Report, path: string, raw: unknown): void {
       warnUnknownFields(report, path, raw, ["type", "text"]);
       break;
     case "example":
-      requireString(report, path, raw, "prompt");
-      validateStringArray(report, `${path} (example)`, raw, "working");
-      requireString(report, path, raw, "answer");
-      warnUnknownFields(report, path, raw, ["type", "prompt", "working", "answer"]);
+      validateExample(report, path, raw);
       break;
     case "callout": {
       const style = raw["style"];
@@ -433,6 +439,58 @@ function validateNoteBlock(report: Report, path: string, raw: unknown): void {
     default:
       break;
   }
+}
+
+/**
+ * Validate an `example` block: prompt + answer required, plus EXACTLY ONE of
+ * `steps` (preferred) or `working` (legacy). Both present is an error.
+ */
+function validateExample(report: Report, path: string, raw: Record<string, unknown>): void {
+  const ep = `${path} (example)`;
+  requireString(report, path, raw, "prompt");
+  requireString(report, path, raw, "answer");
+
+  const hasSteps = raw["steps"] !== undefined;
+  const hasWorking = raw["working"] !== undefined;
+  if (hasSteps && hasWorking) {
+    report.error(ep, "use steps; working is the legacy form — an example may not have both");
+  } else if (!hasSteps && !hasWorking) {
+    report.error(ep, "an example must have steps (preferred) or legacy working");
+  } else if (hasSteps) {
+    validateExampleSteps(report, ep, raw["steps"]);
+  } else {
+    validateStringArray(report, ep, raw, "working");
+  }
+
+  warnUnknownFields(report, path, raw, ["type", "prompt", "answer", "steps", "working"]);
+}
+
+/** Validate stepped working: a non-empty array of { tex (required), why? }. */
+function validateExampleSteps(report: Report, path: string, steps: unknown): void {
+  if (!Array.isArray(steps) || steps.length === 0) {
+    report.error(`${path}.steps`, "steps must be a non-empty array");
+    return;
+  }
+  steps.forEach((step, i) => {
+    const sp = `${path}.steps[${i}]`;
+    if (!isPlainObject(step)) {
+      report.error(sp, "must be an object with 'tex' and optional 'why'");
+      return;
+    }
+    if (!isNonEmptyString(step["tex"])) {
+      report.error(sp, "missing or empty required field 'tex'");
+    } else {
+      scanLatex(report, sp, step["tex"]);
+    }
+    if (step["why"] !== undefined) {
+      if (typeof step["why"] !== "string") {
+        report.error(sp, "field 'why' must be a string");
+      } else {
+        scanLatex(report, sp, step["why"]);
+      }
+    }
+    warnUnknownFields(report, sp, step, ["tex", "why"]);
+  });
 }
 
 function validateStringArray(
@@ -524,31 +582,29 @@ export function validateAreaManifest(raw: unknown, options: ValidateOptions = {}
     }
   }
 
-  // notes: inline array or path. No notes is a WARNING (areas normally have notes).
-  const notes = area["notes"];
-  if (notes === undefined) {
-    report.warn("area.notes", "no notes provided — an area normally has area-level notes");
-  } else if (typeof notes === "string") {
-    if (!isNonEmptyString(notes)) report.error("area.notes", "notes path must not be empty");
-  } else {
-    validateNoteArray(report, "area.notes", notes);
+  // Reject superseded v2 sequence manifests with a migration pointer.
+  if ("sequence" in area) {
+    report.error(
+      "area.sequence",
+      "v2 sequence manifests are superseded by v3 stages — see /docs/authoring.md",
+    );
   }
 
-  // sequence: ordered, non-empty array of segments.
-  const sequence = area["sequence"];
-  if (!Array.isArray(sequence)) {
-    report.error("area.sequence", "must be an array of segments");
-  } else if (sequence.length === 0) {
-    report.error("area.sequence", "must contain at least one segment");
+  // stages: ordered, non-empty array.
+  const stages = area["stages"];
+  if (!Array.isArray(stages)) {
+    report.error("area.stages", "must be an array of stages");
+  } else if (stages.length === 0) {
+    report.error("area.stages", "must contain at least one stage");
   } else {
-    sequence.forEach((seg, i) =>
-      validateSegment(report, `area.sequence[${i}]`, seg, options.figureSchemas),
+    stages.forEach((stage, i) =>
+      validateStage(report, `area.stages[${i}]`, stage, options.figureSchemas),
     );
   }
 
   warnUnknownFields(report, "area", area, [
     "title",
-    "notes",
+    "stages",
     "sequence",
     "subject",
     "topic",
@@ -558,7 +614,11 @@ export function validateAreaManifest(raw: unknown, options: ValidateOptions = {}
   return report.result();
 }
 
-function validateSegment(
+/**
+ * Validate one stage: optional notes, optional video, a REQUIRED exercise (with
+ * ≥1 core question) and an optional extra pool (≥1 question when present).
+ */
+function validateStage(
   report: Report,
   path: string,
   raw: unknown,
@@ -568,40 +628,76 @@ function validateSegment(
     report.error(path, "must be an object");
     return;
   }
-  const type = raw["type"];
-  if (type === undefined || type === null || type === "") {
-    report.error(path, "missing required field 'type'");
-    return;
-  }
-  if (typeof type !== "string" || !SEGMENT_TYPES.includes(type as never)) {
-    report.error(
-      path,
-      `unknown segment type ${JSON.stringify(type)} — expected one of ${SEGMENT_TYPES.join(" | ")}`,
-    );
-    return;
-  }
 
   requireString(report, path, raw, "title");
 
-  if (type === "video") {
-    validateVideoSrc(report, `${path} (video)`, raw);
-    warnUnknownFields(report, path, raw, ["type", "title", "src"]);
-    return;
+  // notes (optional): inline array or path.
+  const notes = raw["notes"];
+  if (notes !== undefined) {
+    if (typeof notes === "string") {
+      if (!isNonEmptyString(notes)) report.error(`${path}.notes`, "notes path must not be empty");
+    } else {
+      validateNoteArray(report, `${path}.notes`, notes);
+    }
   }
 
-  // exercise
-  const ep = `${path} (exercise)`;
-  const questions = raw["questions"];
-  if (typeof questions === "string") {
-    if (!isNonEmptyString(questions)) report.error(ep, "questions path must not be empty");
-  } else if (!Array.isArray(questions) || questions.length === 0) {
-    report.error(ep, "exercise must contain at least one question");
-  } else {
-    questions.forEach((q, i) =>
-      validateQuestion(report, `${path}.questions[${i}]`, q, figureSchemas),
-    );
+  // video (optional).
+  const video = raw["video"];
+  if (video !== undefined) {
+    if (!isPlainObject(video)) {
+      report.error(`${path}.video`, "video must be an object");
+    } else {
+      validateVideoSrc(report, `${path}.video`, video);
+      const dur = video["duration"];
+      if (dur !== undefined && dur !== null && typeof dur !== "number") {
+        report.error(`${path}.video`, "field 'duration' must be a number or null");
+      }
+      warnUnknownFields(report, `${path}.video`, video, ["src", "duration"]);
+    }
   }
-  warnUnknownFields(report, path, raw, ["type", "title", "questions"]);
+
+  // exercise (required).
+  const exercise = raw["exercise"];
+  if (!isPlainObject(exercise)) {
+    report.error(`${path}.exercise`, "missing required field 'exercise'");
+    warnUnknownFields(report, path, raw, ["title", "notes", "video", "exercise"]);
+    return;
+  }
+  validateQuestionPool(report, `${path}.exercise`, "questions", exercise["questions"], figureSchemas);
+  if (exercise["extra"] !== undefined) {
+    validateQuestionPool(report, `${path}.exercise`, "extra", exercise["extra"], figureSchemas);
+  }
+  warnUnknownFields(report, `${path}.exercise`, exercise, ["questions", "extra"]);
+  warnUnknownFields(report, path, raw, ["title", "notes", "video", "exercise"]);
+}
+
+/**
+ * Validate a question pool (inline array or referenced path). Both core
+ * (`questions`) and extra need ≥1 question when given inline; referenced paths
+ * are resolved + validated by the loader.
+ */
+function validateQuestionPool(
+  report: Report,
+  basePath: string,
+  field: "questions" | "extra",
+  value: unknown,
+  figureSchemas?: FigureSchemaRegistry,
+): void {
+  const at = `${basePath}.${field}`;
+  if (typeof value === "string") {
+    if (!isNonEmptyString(value)) report.error(at, `${field} path must not be empty`);
+    return;
+  }
+  if (!Array.isArray(value) || value.length === 0) {
+    report.error(
+      at,
+      field === "extra"
+        ? "extra, when present, must contain at least one question"
+        : "exercise must contain at least one question",
+    );
+    return;
+  }
+  value.forEach((q, i) => validateQuestion(report, `${at}[${i}]`, q, figureSchemas));
 }
 
 /** Validate a video segment's `src` (YouTube source or null). */

@@ -1,0 +1,16 @@
+{
+  "area": {
+    "title": "Expanding a Single Bracket",
+    "stages": [
+      {
+        "title": "Single brackets",
+        "notes": [{ "type": "heading", "text": "Expanding a Single Bracket" }],
+        "video": { "src": null, "duration": null },
+        "exercise": {
+          "questions": [{ "type": "text", "prompt": "Expand $4(x + 3)$.", "answer": "$4x + 12$" }],
+          "extra": [{ "type": "text", "prompt": "Expand $3(x + 2)$.", "answer": "$3x + 6$" }]
+        }
+      }
+    ]
+  }
+}

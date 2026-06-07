@@ -7,13 +7,14 @@
  *   - localStorage unavailable (private mode / SSR) → in-memory fallback
  *   - unparseable JSON → backed up to lp:progress:corrupt, then fresh
  *   - newer schema version → left untouched, in-memory session
- *   - older (v1) data, no v2 yet → returned for migration (v1 key left intact)
+ *   - older (v2 or v1) data, no v3 yet → returned for migration (old key intact)
  */
 
 export const PROGRESS_KEY_V1 = "lp:progress:v1";
-export const PROGRESS_KEY = "lp:progress:v2"; // current
+export const PROGRESS_KEY_V2 = "lp:progress:v2";
+export const PROGRESS_KEY = "lp:progress:v3"; // current
 export const CORRUPT_KEY = "lp:progress:corrupt";
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export interface StorageBackend {
   getItem(key: string): string | null;
@@ -80,15 +81,16 @@ function backupCorrupt(backend: StorageBackend, raw: string): void {
 }
 
 /**
- * Read + classify stored progress. Prefers the current (v2) key; falls back to
- * the v1 key for migration (leaving v1 intact). Never throws, never destroys.
+ * Read + classify stored progress. Prefers the current (v3) key; falls back to
+ * the v2 then v1 keys for migration (leaving the old key intact). Never throws,
+ * never destroys.
  */
 export function loadRaw(backend: StorageBackend): LoadResult {
-  const raw2 = safeGet(backend, PROGRESS_KEY);
-  if (raw2 != null) {
-    const parsed = parseObject(raw2);
+  const raw3 = safeGet(backend, PROGRESS_KEY);
+  if (raw3 != null) {
+    const parsed = parseObject(raw3);
     if (!parsed) {
-      backupCorrupt(backend, raw2);
+      backupCorrupt(backend, raw3);
       return { status: "corrupt" };
     }
     const version = parsed["version"];
@@ -96,15 +98,20 @@ export function loadRaw(backend: StorageBackend): LoadResult {
     return { status: "ok", parsed };
   }
 
-  const raw1 = safeGet(backend, PROGRESS_KEY_V1);
-  if (raw1 != null) {
-    const parsed = parseObject(raw1);
-    if (!parsed) {
-      backupCorrupt(backend, raw1);
-      return { status: "corrupt" };
+  for (const [key, fromVersion] of [
+    [PROGRESS_KEY_V2, 2],
+    [PROGRESS_KEY_V1, 1],
+  ] as const) {
+    const raw = safeGet(backend, key);
+    if (raw != null) {
+      const parsed = parseObject(raw);
+      if (!parsed) {
+        backupCorrupt(backend, raw);
+        return { status: "corrupt" };
+      }
+      const v = typeof parsed["version"] === "number" ? (parsed["version"] as number) : fromVersion;
+      return { status: "migrate", fromVersion: v, parsed };
     }
-    const fromVersion = typeof parsed["version"] === "number" ? (parsed["version"] as number) : 1;
-    return { status: "migrate", fromVersion, parsed };
   }
 
   return { status: "empty" };
