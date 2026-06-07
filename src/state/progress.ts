@@ -1,17 +1,19 @@
 /**
- * @file progress.ts — Learner progress store, SCHEMA v2 (CLAUDE.md §a, §c 3 & 7).
+ * @file progress.ts — Learner progress store, SCHEMA v3 (CLAUDE.md §a, §c 3 & 7).
  *
- * v2 keys progress by **areaId + segment index**: each exercise segment has its
- * own questionOutcomes / attempts / completedAt. An area is complete when all
- * its exercise segments are complete (computed by consumers from the registry).
+ * v3 keys progress by **areaId + stage index**, each stage with separate `core`
+ * and `extra` outcome maps. A stage is complete when every CORE question has an
+ * outcome (ANY outcome — never gated on correctness); extra never affects
+ * completion. completedAt is sticky: review re-runs record fresh outcomes +
+ * attempts but never clear it.
  *
  * Save/restore symmetry (lesson 3): ONE serialize + ONE restore, colocated, with
  * an explicit whitelist. The round-trip test fails if a field is dropped.
  *
- * Migration: v1 (per-lesson) data is migrated to v2 on load — v1 lesson records
- * are NOT derivably mappable to v2 area/segments in this pure layer, so they are
- * **preserved verbatim under `legacy`, never destroyed**, and the v1 key is left
- * intact. Bump SCHEMA_VERSION + add a migration on ANY breaking shape change.
+ * Migration: older (v2/v1) data has no derivable v3 mapping in this pure layer,
+ * so it is **preserved verbatim under `legacy` (.v2 / .v1), never destroyed**,
+ * and the old key is left intact. Bump SCHEMA_VERSION + add a migration on ANY
+ * breaking shape change.
  */
 
 import {
@@ -24,30 +26,40 @@ import {
 } from "./storage";
 
 export type Outcome = "correct" | "incorrect";
+export type StageView = "stage" | "exercise";
+export type QuestionPool = "core" | "extra";
 
-/** Progress within one exercise segment. */
-export interface ExerciseRecord {
-  questionOutcomes: Record<number, Outcome>;
+/** Progress within one stage. */
+export interface StageRecord {
+  core: Record<number, Outcome>;
+  extra: Record<number, Outcome>;
   attempts: number;
   completedAt: string | null;
 }
 
-/** Per-area record: exercise progress keyed by segment index. */
+/** Per-area record: stage progress keyed by stage index. */
 export interface AreaRecord {
-  segments: Record<number, ExerciseRecord>;
+  stages: Record<number, StageRecord>;
 }
 
-/** Preserved v1 data that has no derivable v2 mapping (never destroyed). */
-export interface LegacyV1 {
-  lessons: Record<string, unknown>;
-  lastVisitedLessonId: string | null;
+/** Where the learner last was. */
+export interface LastVisited {
+  areaId: string;
+  stageIndex: number;
+  view: StageView;
+}
+
+/** Older-schema data preserved verbatim (never destroyed, never re-shaped). */
+export interface LegacyBucket {
+  v1?: unknown;
+  v2?: unknown;
 }
 
 export interface ProgressState {
-  version: 2;
-  lastVisitedAreaId: string | null;
+  version: 3;
+  lastVisited: LastVisited | null;
   areas: Record<string, AreaRecord>;
-  legacy: LegacyV1 | null;
+  legacy: LegacyBucket | null;
 }
 
 export interface ProgressStore {
@@ -55,17 +67,18 @@ export interface ProgressStore {
   /** Deep copy — callers cannot mutate the store through it. */
   getState(): ProgressState;
   /** Stale-id-guarded: null when the stored area id is absent from the registry. */
-  getLastVisitedAreaId(): string | null;
-  /** Exercise record for (area, segment), or null (stale area excluded). */
-  getExerciseProgress(areaId: string, segmentIndex: number): ExerciseRecord | null;
+  getLastVisited(): LastVisited | null;
+  /** Stage record for (area, stage), or null (stale area excluded). */
+  getStageProgress(areaId: string, stageIndex: number): StageRecord | null;
   recordOutcome(
     areaId: string,
-    segmentIndex: number,
+    stageIndex: number,
+    pool: QuestionPool,
     questionIndex: number,
     outcome: Outcome,
   ): void;
-  recordAttempt(areaId: string, segmentIndex: number, completed: boolean): void;
-  setLastVisited(areaId: string): void;
+  recordAttempt(areaId: string, stageIndex: number, completed: boolean): void;
+  setLastVisited(areaId: string, stageIndex: number, view: StageView): void;
   resetAll(): void;
   subscribe(listener: () => void): () => void;
   isNoticeDismissed(noticeId: string): boolean;
@@ -75,13 +88,13 @@ export interface ProgressStore {
 export interface CreateProgressStoreOptions {
   backend?: StorageBackend;
   persistent?: boolean;
-  /** Known area ids (from the registry) — enables the stale-id guard on reads. */
+  /** Known area ids (from the registry) — enables the stale-id guard. */
   areaIds?: string[];
   now?: () => string;
 }
 
 function freshState(): ProgressState {
-  return { version: SCHEMA_VERSION, lastVisitedAreaId: null, areas: {}, legacy: null };
+  return { version: SCHEMA_VERSION, lastVisited: null, areas: {}, legacy: null };
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -92,9 +105,10 @@ function isObject(v: unknown): v is Record<string, unknown> {
 // Save / restore — ONE serialize + ONE restore, explicit whitelist.
 // ---------------------------------------------------------------------------
 
-function cloneExercise(rec: ExerciseRecord): ExerciseRecord {
+function cloneStage(rec: StageRecord): StageRecord {
   return {
-    questionOutcomes: { ...rec.questionOutcomes },
+    core: { ...rec.core },
+    extra: { ...rec.extra },
     attempts: rec.attempts,
     completedAt: rec.completedAt,
   };
@@ -103,17 +117,21 @@ function cloneExercise(rec: ExerciseRecord): ExerciseRecord {
 function cloneAreas(areas: Record<string, AreaRecord>): Record<string, AreaRecord> {
   const out: Record<string, AreaRecord> = {};
   for (const [areaId, rec] of Object.entries(areas)) {
-    const segments: Record<number, ExerciseRecord> = {};
-    for (const [seg, ex] of Object.entries(rec.segments)) segments[Number(seg)] = cloneExercise(ex);
-    out[areaId] = { segments };
+    const stages: Record<number, StageRecord> = {};
+    for (const [idx, st] of Object.entries(rec.stages)) stages[Number(idx)] = cloneStage(st);
+    out[areaId] = { stages };
   }
   return out;
+}
+
+function cloneLegacy(legacy: LegacyBucket | null): LegacyBucket | null {
+  return legacy ? { ...legacy } : null;
 }
 
 export function serializeState(state: ProgressState): string {
   return JSON.stringify({
     version: SCHEMA_VERSION,
-    lastVisitedAreaId: state.lastVisitedAreaId,
+    lastVisited: state.lastVisited,
     areas: cloneAreas(state.areas),
     legacy: state.legacy,
   });
@@ -129,61 +147,72 @@ function restoreOutcomes(raw: unknown): Record<number, Outcome> {
   return out;
 }
 
-function restoreExercise(raw: unknown): ExerciseRecord {
+function restoreStage(raw: unknown): StageRecord {
   const r = isObject(raw) ? raw : {};
   return {
-    questionOutcomes: restoreOutcomes(r["questionOutcomes"]),
+    core: restoreOutcomes(r["core"]),
+    extra: restoreOutcomes(r["extra"]),
     attempts: typeof r["attempts"] === "number" ? (r["attempts"] as number) : 0,
     completedAt: typeof r["completedAt"] === "string" ? (r["completedAt"] as string) : null,
   };
+}
+
+function restoreLastVisited(raw: unknown): LastVisited | null {
+  if (!isObject(raw)) return null;
+  const areaId = raw["areaId"];
+  const stageIndex = raw["stageIndex"];
+  const view = raw["view"];
+  if (typeof areaId !== "string") return null;
+  if (typeof stageIndex !== "number") return null;
+  if (view !== "stage" && view !== "exercise") return null;
+  return { areaId, stageIndex, view };
 }
 
 export function restoreState(parsed: Record<string, unknown>): ProgressState {
   const areasIn = isObject(parsed["areas"]) ? (parsed["areas"] as Record<string, unknown>) : {};
   const areas: Record<string, AreaRecord> = {};
   for (const [areaId, recRaw] of Object.entries(areasIn)) {
-    const segIn = isObject(recRaw) && isObject((recRaw as Record<string, unknown>)["segments"])
-      ? ((recRaw as Record<string, unknown>)["segments"] as Record<string, unknown>)
-      : {};
-    const segments: Record<number, ExerciseRecord> = {};
-    for (const [seg, exRaw] of Object.entries(segIn)) segments[Number(seg)] = restoreExercise(exRaw);
-    areas[areaId] = { segments };
+    const stagesIn =
+      isObject(recRaw) && isObject((recRaw as Record<string, unknown>)["stages"])
+        ? ((recRaw as Record<string, unknown>)["stages"] as Record<string, unknown>)
+        : {};
+    const stages: Record<number, StageRecord> = {};
+    for (const [idx, stRaw] of Object.entries(stagesIn)) stages[Number(idx)] = restoreStage(stRaw);
+    areas[areaId] = { stages };
   }
 
-  let legacy: LegacyV1 | null = null;
+  let legacy: LegacyBucket | null = null;
   if (isObject(parsed["legacy"])) {
     const l = parsed["legacy"] as Record<string, unknown>;
-    legacy = {
-      lessons: isObject(l["lessons"]) ? (l["lessons"] as Record<string, unknown>) : {},
-      lastVisitedLessonId:
-        typeof l["lastVisitedLessonId"] === "string" ? (l["lastVisitedLessonId"] as string) : null,
-    };
+    legacy = {};
+    if (l["v1"] !== undefined) legacy.v1 = l["v1"];
+    if (l["v2"] !== undefined) legacy.v2 = l["v2"];
   }
 
   return {
     version: SCHEMA_VERSION,
-    lastVisitedAreaId:
-      typeof parsed["lastVisitedAreaId"] === "string"
-        ? (parsed["lastVisitedAreaId"] as string)
-        : null,
+    lastVisited: restoreLastVisited(parsed["lastVisited"]),
     areas,
     legacy,
   };
 }
 
-/** Migrate v1 (per-lesson) data to v2. v1 lesson records are preserved verbatim
- * under `legacy` (no derivable area/segment mapping in this pure layer). */
-export function migrateV1ToV2(v1: Record<string, unknown>): ProgressState {
-  return {
-    version: SCHEMA_VERSION,
-    lastVisitedAreaId: null,
-    areas: {},
-    legacy: {
-      lessons: isObject(v1["lessons"]) ? (v1["lessons"] as Record<string, unknown>) : {},
-      lastVisitedLessonId:
-        typeof v1["lastVisitedLessonId"] === "string" ? (v1["lastVisitedLessonId"] as string) : null,
-    },
-  };
+/**
+ * Migrate older (v2/v1) data to v3. Older records have no derivable area/stage
+ * mapping in this pure layer, so they are preserved VERBATIM under `legacy`:
+ * `legacy.v2` = the v2 blob, and `legacy.v1` = any v1 nested inside it (or the
+ * v1 blob directly when migrating straight from v1).
+ */
+export function migrateToV3(parsed: Record<string, unknown>, fromVersion: number): ProgressState {
+  const legacy: LegacyBucket = {};
+  if (fromVersion >= 2) {
+    legacy.v2 = parsed;
+    // A v2 blob carries its own `legacy` (the original v1) — preserve it too.
+    if (isObject(parsed["legacy"])) legacy.v1 = parsed["legacy"];
+  } else {
+    legacy.v1 = parsed;
+  }
+  return { version: SCHEMA_VERSION, lastVisited: null, areas: {}, legacy };
 }
 
 // ---------------------------------------------------------------------------
@@ -199,12 +228,10 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
 
   const knownAreaIds = new Set(options.areaIds ?? []);
   // Truthiness is not validity (CLAUDE.md §c rule 7): the registry is "present"
-  // whenever areaIds was supplied — even as an empty array (which then means
-  // *nothing* is known) — not merely when it is non-empty.
+  // whenever areaIds was supplied — even as an empty array.
   const hasRegistry = options.areaIds !== undefined;
   const now = options.now ?? (() => new Date().toISOString());
 
-  /** Stale-id guard: with a registry present, only known area ids are valid. */
   function isKnownAreaId(areaId: string): boolean {
     return !hasRegistry || knownAreaIds.has(areaId);
   }
@@ -221,8 +248,8 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
       state = restoreState(load.parsed);
       break;
     case "migrate":
-      state = migrateV1ToV2(load.parsed);
-      migrated = true; // persist the migrated v2 (leaving the v1 key intact)
+      state = migrateToV3(load.parsed, load.fromVersion);
+      migrated = true; // persist the migrated v3 (leaving the old key intact)
       break;
     case "future":
       persistDisabled = true;
@@ -263,9 +290,9 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   }
   if (migrated) {
     console.warn(
-      "[progress] migrated v1 progress to v2 — v1 lesson records preserved under `legacy` (the v1 key is left intact).",
+      "[progress] migrated older progress to v3 — old records preserved verbatim under `legacy` (the old key is left intact).",
     );
-    persist(); // write the migrated v2 snapshot
+    persist();
   }
   if (hasRegistry) {
     const stale = Object.keys(state.areas).filter((id) => !knownAreaIds.has(id));
@@ -280,18 +307,18 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     for (const listener of listeners) listener();
   }
 
-  function ensureExercise(areaId: string, segmentIndex: number): ExerciseRecord {
+  function ensureStage(areaId: string, stageIndex: number): StageRecord {
     let area = state.areas[areaId];
     if (!area) {
-      area = { segments: {} };
+      area = { stages: {} };
       state.areas[areaId] = area;
     }
-    let seg = area.segments[segmentIndex];
-    if (!seg) {
-      seg = { questionOutcomes: {}, attempts: 0, completedAt: null };
-      area.segments[segmentIndex] = seg;
+    let stage = area.stages[stageIndex];
+    if (!stage) {
+      stage = { core: {}, extra: {}, attempts: 0, completedAt: null };
+      area.stages[stageIndex] = stage;
     }
-    return seg;
+    return stage;
   }
 
   return {
@@ -300,43 +327,44 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     getState() {
       return {
         version: state.version,
-        lastVisitedAreaId: state.lastVisitedAreaId,
+        lastVisited: state.lastVisited ? { ...state.lastVisited } : null,
         areas: cloneAreas(state.areas),
-        legacy: state.legacy ? { ...state.legacy, lessons: { ...state.legacy.lessons } } : null,
+        legacy: cloneLegacy(state.legacy),
       };
     },
 
-    getLastVisitedAreaId() {
-      const id = state.lastVisitedAreaId;
-      if (id !== null && !isKnownAreaId(id)) return null;
-      return id;
+    getLastVisited() {
+      const lv = state.lastVisited;
+      if (lv === null) return null;
+      if (!isKnownAreaId(lv.areaId)) return null;
+      return { ...lv };
     },
 
-    getExerciseProgress(areaId, segmentIndex) {
+    getStageProgress(areaId, stageIndex) {
       if (!isKnownAreaId(areaId)) return null;
-      const seg = state.areas[areaId]?.segments[segmentIndex];
-      return seg ? cloneExercise(seg) : null;
+      const stage = state.areas[areaId]?.stages[stageIndex];
+      return stage ? cloneStage(stage) : null;
     },
 
-    recordOutcome(areaId, segmentIndex, questionIndex, outcome) {
+    recordOutcome(areaId, stageIndex, pool, questionIndex, outcome) {
       if (!isKnownAreaId(areaId)) return; // never persist ghost area records
-      ensureExercise(areaId, segmentIndex).questionOutcomes[questionIndex] = outcome;
+      ensureStage(areaId, stageIndex)[pool][questionIndex] = outcome;
       persist();
       notify();
     },
 
-    recordAttempt(areaId, segmentIndex, completed) {
-      if (!isKnownAreaId(areaId)) return; // never persist ghost area records
-      const seg = ensureExercise(areaId, segmentIndex);
-      seg.attempts += 1;
-      if (completed && seg.completedAt === null) seg.completedAt = now();
+    recordAttempt(areaId, stageIndex, completed) {
+      if (!isKnownAreaId(areaId)) return;
+      const stage = ensureStage(areaId, stageIndex);
+      stage.attempts += 1;
+      if (completed && stage.completedAt === null) stage.completedAt = now();
       persist();
       notify();
     },
 
-    setLastVisited(areaId) {
+    setLastVisited(areaId, stageIndex, view) {
       if (!isKnownAreaId(areaId)) return; // never persist a stale last-visited id
-      state.lastVisitedAreaId = areaId;
+      state.lastVisited = { areaId, stageIndex, view };
       persist();
       notify();
     },
