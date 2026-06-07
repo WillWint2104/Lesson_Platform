@@ -7,6 +7,7 @@ import type { AreaRegistry, ValidatedArea } from "@/ingest/load";
 import type { ProgressStore } from "@/state/progress";
 import { titleCase } from "@/app/format";
 import { StatusCircle } from "@/shared/StatusCircle";
+import { stagePath, exercisePath } from "@/app/stageProgress";
 
 /** Library hub (area model). Lists topics → areas; hero continues/starts an area. */
 export function Library() {
@@ -85,14 +86,10 @@ function areaProgress(area: ValidatedArea, store: ProgressStore): { done: number
   return { done, total: area.stages.length };
 }
 
-/**
- * Anchor (DOM id) of the first not-yet-complete stage in an area, so the hero
- * can deep-link straight to where the learner left off (matching AreaPage's
- * `stage-N` ids). Returns null when every stage is complete (or there are none).
- */
-function firstIncompleteStageAnchor(area: ValidatedArea, store: ProgressStore): string | null {
+/** 1-based number of the first not-yet-complete stage (null when all complete). */
+function firstIncompleteStageNumber(area: ValidatedArea, store: ProgressStore): number | null {
   for (let i = 0; i < area.stages.length; i++) {
-    if (!store.getStageProgress(area.id, i)?.completedAt) return `stage-${i + 1}`;
+    if (!store.getStageProgress(area.id, i)?.completedAt) return i + 1;
   }
   return null;
 }
@@ -117,8 +114,15 @@ function Hero({ subject }: { subject: string | null }) {
   if (!target) return null;
 
   const kicker = resume ? "Continue where you left off" : "Start here";
-  const anchor = firstIncompleteStageAnchor(target, store);
-  const to = anchor ? `${areaPath(target)}#${anchor}` : areaPath(target);
+  // Continue: deep-link to the stored stage + view. Start here / fallback: the
+  // first incomplete stage's page (clamp a stale stored index into range).
+  let to: string;
+  if (resume && lastVisited) {
+    const sn = Math.min(Math.max(lastVisited.stageIndex, 0), target.stages.length - 1) + 1;
+    to = lastVisited.view === "exercise" ? exercisePath(target, sn) : stagePath(target, sn);
+  } else {
+    to = stagePath(target, firstIncompleteStageNumber(target, store) ?? 1);
+  }
   return (
     <Link className="hero" to={to}>
       <span className="hero__text">
@@ -154,7 +158,7 @@ function findUpNext(registry: AreaRegistry, store: ProgressStore): UpNext | null
         return {
           title: stage.title,
           questionCount: stage.exercise.questions.length,
-          to: `${areaPath(area)}#stage-${i + 1}`,
+          to: stagePath(area, i + 1),
         };
       }
     }
