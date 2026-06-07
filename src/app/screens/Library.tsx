@@ -37,22 +37,27 @@ export function Library() {
         </div>
       </section>
 
-      <Hero subject={subject} />
-
-      {/* Subordinate to the hero: a quiet note, not a headline banner. */}
-      <LocalProgressNotice />
-
-      <section className="area-section" aria-label="Topics">
-        <p className="section-label">Topics</p>
-        <div className="topic-grid">
-          {subject !== null
-            ? registry.getTopics(subject).map((topic) => (
-                <TopicCard key={topic} subject={subject} topic={topic} />
-              ))
-            : null}
-          <div className="topic-placeholder">Future topics drop in as content packs.</div>
+      <div className="hub">
+        <div className="hub__main">
+          <Hero subject={subject} />
+          <section className="area-section" aria-label="Topics">
+            <p className="section-label">Topics</p>
+            <div className="topic-grid">
+              {subject !== null
+                ? registry.getTopics(subject).map((topic) => (
+                    <TopicCard key={topic} subject={subject} topic={topic} />
+                  ))
+                : null}
+              <div className="topic-placeholder">Future topics drop in as content packs.</div>
+            </div>
+          </section>
         </div>
-      </section>
+        <aside className="hub__rail" aria-label="Hub sidebar">
+          <RailUpNext />
+          <RailProgress />
+          <RailHowItWorks />
+        </aside>
+      </div>
     </main>
   );
 }
@@ -137,22 +142,140 @@ function Hero({ subject }: { subject: string | null }) {
   );
 }
 
-function LocalProgressNotice() {
+// ---------------------------------------------------------------------------
+// Rail (hub sidebar) — flat informational cards (§1/§4).
+// ---------------------------------------------------------------------------
+
+interface UpNext {
+  title: string;
+  questionCount: number;
+  afterVideo: number | null;
+  to: string;
+}
+
+/** First incomplete exercise across the registry, in order (null if all done). */
+function findUpNext(registry: AreaRegistry, store: ProgressStore): UpNext | null {
+  for (const area of registry.areas.filter((a) => a.valid)) {
+    let exerciseNum = 0;
+    let videoNum = 0;
+    for (let i = 0; i < area.segments.length; i++) {
+      const seg = area.segments[i]!;
+      if (seg.type === "video") {
+        videoNum += 1;
+        continue;
+      }
+      exerciseNum += 1;
+      if (!store.getExerciseProgress(area.id, i)?.completedAt) {
+        return {
+          title: seg.title,
+          questionCount: seg.questions.length,
+          afterVideo: videoNum > 0 ? videoNum : null,
+          to: `${areaPath(area)}#exercise-${exerciseNum}`,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+interface HubStats {
+  areasDone: number;
+  areasTotal: number;
+  exercisesDone: number;
+  exercisesTotal: number;
+  questionsAnswered: number;
+}
+
+function computeHubStats(registry: AreaRegistry, store: ProgressStore): HubStats {
+  const areas = registry.areas.filter((a) => a.valid);
+  let areasDone = 0;
+  let exercisesDone = 0;
+  let exercisesTotal = 0;
+  let questionsAnswered = 0;
+  for (const area of areas) {
+    let exCount = 0;
+    let doneCount = 0;
+    area.segments.forEach((seg, i) => {
+      if (seg.type !== "exercise") return;
+      exCount += 1;
+      const rec = store.getExerciseProgress(area.id, i);
+      if (rec?.completedAt) doneCount += 1;
+      if (rec) questionsAnswered += Object.keys(rec.questionOutcomes).length;
+    });
+    exercisesTotal += exCount;
+    exercisesDone += doneCount;
+    if (exCount > 0 && doneCount === exCount) areasDone += 1;
+  }
+  return { areasDone, areasTotal: areas.length, exercisesDone, exercisesTotal, questionsAnswered };
+}
+
+function RailUpNext() {
+  const registry = useRegistry();
   const store = useProgressStore();
-  if (store.isNoticeDismissed("local-progress")) return null;
+  const next = findUpNext(registry, store);
   return (
-    <aside className="notice" role="note">
-      <p className="notice__text">
-        Your progress is saved in this browser on this device. Clearing site data or switching
-        devices starts fresh.
-      </p>
-      <button
-        type="button"
-        className="notice__dismiss"
-        onClick={() => store.dismissNotice("local-progress")}
-      >
-        Dismiss
-      </button>
+    <aside className="rail-card">
+      <p className="section-label">Up next</p>
+      {next ? (
+        <Link className="up-next" to={next.to}>
+          <StatusCircle variant="play-ring" size="md" label="Up next" />
+          <span className="up-next__text">
+            <span className="up-next__title">{next.title}</span>
+            <span className="up-next__meta">
+              {next.questionCount} question{next.questionCount === 1 ? "" : "s"}
+              {next.afterVideo ? ` · after Video ${next.afterVideo}` : ""}
+            </span>
+          </span>
+        </Link>
+      ) : (
+        <p className="rail-note">All caught up — nice work.</p>
+      )}
+    </aside>
+  );
+}
+
+function RailProgress() {
+  const registry = useRegistry();
+  const store = useProgressStore();
+  const s = computeHubStats(registry, store);
+  return (
+    <aside className="rail-card">
+      <p className="section-label">Your progress</p>
+      <dl className="stat-list">
+        <StatRow label="Areas completed" value={`${s.areasDone}/${s.areasTotal}`} />
+        <StatRow label="Exercises completed" value={`${s.exercisesDone}/${s.exercisesTotal}`} />
+        <StatRow label="Questions answered" value={String(s.questionsAnswered)} />
+      </dl>
+    </aside>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="stat-row">
+      <dt className="stat-row__label">{label}</dt>
+      <dd className="stat-row__val">{value}</dd>
+    </div>
+  );
+}
+
+function RailHowItWorks() {
+  const steps = [
+    "Watch the video.",
+    "Work the exercise on paper.",
+    "Tap the solution icon to check.",
+  ];
+  return (
+    <aside className="rail-card">
+      <p className="section-label">How it works</p>
+      <ol className="howto">
+        {steps.map((text, i) => (
+          <li key={i} className="howto__step">
+            <StatusCircle variant="number" size="sm" value={i + 1} label={`Step ${i + 1}`} />
+            <span className="howto__text">{text}</span>
+          </li>
+        ))}
+      </ol>
     </aside>
   );
 }

@@ -8,9 +8,10 @@
  * shell (per route) so the app bar, footer, and page content all align to the
  * same column.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { useProgressStore } from "@/state/ProgressContext";
 
 /** Map a route to its content container width (kept in sync with each screen). */
 function containerForPath(pathname: string): string {
@@ -34,8 +35,40 @@ export function AppShell() {
   return (
     <div className="app-shell" style={style}>
       <AppBar />
+      <NoticeBar />
       <Outlet />
       <AppFooter />
+    </div>
+  );
+}
+
+/**
+ * Demoted local-progress notice (design-language v3): a single muted full-width
+ * app-bar line, out of the content flow. Dismissal is store-backed and persists;
+ * local state hides it immediately for the session.
+ */
+function NoticeBar() {
+  const store = useProgressStore();
+  const [dismissed, setDismissed] = useState(() => store.isNoticeDismissed("local-progress"));
+  if (dismissed) return null;
+  return (
+    <div className="app-noticebar">
+      <div className="app-noticebar__inner">
+        <span className="app-noticebar__text">
+          Your progress is saved in this browser on this device. Clearing site data or switching
+          devices starts fresh.
+        </span>
+        <button
+          type="button"
+          className="app-noticebar__dismiss"
+          onClick={() => {
+            store.dismissNotice("local-progress");
+            setDismissed(true);
+          }}
+        >
+          Dismiss
+        </button>
+      </div>
     </div>
   );
 }
