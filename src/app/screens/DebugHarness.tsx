@@ -21,7 +21,7 @@ const row: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "var(--space-3)",
-  padding: "var(--space-2) 0",
+  padding: "var(--space-3) 0",
   flexWrap: "wrap",
 };
 const resetButton: CSSProperties = {

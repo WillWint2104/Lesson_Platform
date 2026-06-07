@@ -112,7 +112,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 44px;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
   font: var(--text-card-title);
   text-decoration: none;
@@ -164,21 +164,23 @@ body {
   color: var(--cyan-deep);
 }
 .notice__dismiss {
-  min-height: 32px;
+  min-height: 44px;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   font: var(--text-card-title);
   cursor: pointer;
   background: var(--card-bg);
   color: var(--cyan-deep);
-  border: var(--border-flat-width) solid var(--cyan-deep);
+  /* §1 interactive → chunky */
+  border: var(--card-border-width) solid var(--cyan-deep);
+  border-bottom-width: var(--card-edge-width);
 }
 
 /* ===== Library hub ===== */
 .lib-greeting {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .lib-kicker {
   margin: 0;
@@ -265,7 +267,7 @@ body {
   align-items: center;
   gap: var(--space-1);
   min-height: 44px;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
   background: var(--card-bg);
   color: var(--brand-ink);
