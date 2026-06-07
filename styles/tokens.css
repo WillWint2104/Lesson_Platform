@@ -52,24 +52,43 @@
   --gold-tint: #fbf2d9;
   --cyan-tint: #e4f4f9;
 
-  /* ---- Muted ink (secondary text, e.g. working steps) ---- */
+  /* ---- Secondary / tertiary ink (design-language §2) ---- */
   --muted-ink: #5b6b61;
+  --muted: #5b6b61;   /* meta text (counts, statuses, timestamps) */
+  --faint: #8a978f;   /* small-caps labels / kickers */
 
-  /* ---- Spacing scale (4px base) ---- */
+  /* ---- Hairline divider for FLAT informational surfaces (§1) ---- */
+  --border-flat-width: 1.5px;
+
+  /* ---- Spacing scale (4px base). The §3 rhythm chain uses 4 / 12 / 16 / 32 / 48;
+   * --space-2 (8) / --space-5 (24) / --space-8 (64) are OFF the chain — do not
+   * use them for new gaps/padding. ---- */
   --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
-  --space-7: 48px;
-  --space-8: 64px;
+  --space-2: 8px;   /* off-chain */
+  --space-3: 12px;  /* gap within a group */
+  --space-4: 16px;  /* card padding / grid gutter / gap between cards */
+  --space-5: 24px;  /* off-chain */
+  --space-6: 32px;  /* gap between sections */
+  --space-7: 48px;  /* gap between zones / page bands */
+  --space-8: 64px;  /* off-chain */
 
   /* ---- Corner radii ---- */
   --radius-sm: 10px;
   --radius-md: 12px;
   --radius-lg: 14px;
   --radius-pill: 999px;
+  --radius-card: 16px;   /* §4 card radius */
+  --radius-icon: 11px;   /* §4 icon-tile radius */
+
+  /* ---- Type styles (§2 — the six frozen styles; never raw sizes/weights).
+   * `font` shorthand = weight size/line-height family. label/meta carry extra
+   * colour + letter-spacing/transform at the call site. ---- */
+  --text-display: 800 26px/1.2 "Plus Jakarta Sans", system-ui, sans-serif;
+  --text-title: 800 17px/1.3 "Plus Jakarta Sans", system-ui, sans-serif;
+  --text-card-title: 700 14.5px/1.35 "Plus Jakarta Sans", system-ui, sans-serif;
+  --text-label: 700 11px/1.2 "Plus Jakarta Sans", system-ui, sans-serif;
+  --text-body: 500 13.5px/1.55 "Manrope", system-ui, sans-serif;
+  --text-meta: 600 11.5px/1.4 "Manrope", system-ui, sans-serif;
 
   /* ---- Container widths (max content width per screen type) ---- */
   --container-wide: 1120px;     /* hub / grid screens (Library) */

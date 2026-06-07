@@ -20,7 +20,19 @@ reviews:
       instructions: >-
         Design tokens are AUTHORITATIVE in styles/tokens.css. Components must
         reference CSS custom properties (var(--...)) and must never hardcode hex
-        values. Flag any hardcoded hex colours in component styles.
+        values. Flag any hardcoded hex colours in component styles. Enforce
+        /docs/design-language.md: type only via the six --text-* styles (no raw
+        font-size/weight); spacing only on the §3 chain (4/12/16/32/48); chunky
+        depth (2px border + bottom edge) ONLY on interactive elements and a flat
+        1.5px --border on informational surfaces (§1); card radius 16 / icon
+        tile 11 (§4); one colour-role per job (§5).
+    - path: "src/**/*.tsx"
+      instructions: >-
+        Review UI changes against /docs/design-language.md (§§1–8): depth =
+        pressable affordance only; the six frozen type styles; the spacing
+        rhythm chain; one card recipe; colour roles (green = the only CTA);
+        the status-circle + small-caps-label motifs; page bands. Flag raw
+        sizes/colours and role violations in JSX/inline styles.
     - path: "src/**"
       instructions: >-
         Apply the engineering lessons in CLAUDE.md §c — especially save/restore

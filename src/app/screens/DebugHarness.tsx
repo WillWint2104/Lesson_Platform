@@ -10,26 +10,24 @@ import { useProgressStore } from "@/state/ProgressContext";
 
 const card: CSSProperties = {
   background: "var(--card-bg)",
-  border: "var(--card-border-width) solid var(--card-border)",
-  borderBottomWidth: "var(--card-edge-width)",
-  borderRadius: "var(--radius-md)",
-  padding: "var(--space-6)",
+  border: "var(--border-flat-width) solid var(--border)", // §1 informational → flat
+  borderRadius: "var(--radius-card)",
+  padding: "var(--space-4)",
   maxWidth: "44rem",
   width: "100%",
 };
-const heading: CSSProperties = { fontFamily: "var(--font-heading)", margin: "0 0 var(--space-2)" };
+const heading: CSSProperties = { font: "var(--text-title)", margin: "0 0 var(--space-3)" };
 const row: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "var(--space-3)",
-  padding: "var(--space-2) 0",
+  padding: "var(--space-3) 0",
   flexWrap: "wrap",
 };
 const resetButton: CSSProperties = {
-  fontFamily: "var(--font-heading)",
-  fontWeight: 700,
-  fontSize: "0.8rem",
+  font: "var(--text-card-title)",
   border: "var(--card-border-width) solid var(--coral-deep)",
+  borderBottomWidth: "var(--card-edge-width)", // §1 interactive → chunky
   borderRadius: "var(--radius-sm)",
   background: "var(--card-bg)",
   color: "var(--coral-deep)",
@@ -37,11 +35,9 @@ const resetButton: CSSProperties = {
   cursor: "pointer",
 };
 const tag: CSSProperties = {
-  fontFamily: "var(--font-heading)",
-  fontWeight: 700,
-  fontSize: "0.75rem",
+  font: "var(--text-meta)",
   borderRadius: "var(--radius-pill)",
-  padding: "0.15rem 0.6rem",
+  padding: "var(--space-1) var(--space-3)",
 };
 const validTag: CSSProperties = { ...tag, background: "var(--green)", color: "var(--card-bg)" };
 const issueTag: CSSProperties = { ...tag, background: "var(--coral)", color: "var(--coral-deep)" };
@@ -68,7 +64,7 @@ export function DebugHarness() {
             {area.valid ? (
               <>
                 <span style={validTag}>valid</span>
-                <span style={{ fontSize: "0.8rem", color: "var(--muted-ink)" }}>
+                <span style={{ font: "var(--text-meta)", color: "var(--muted)" }}>
                   {area.segments.length} segment{area.segments.length === 1 ? "" : "s"}
                 </span>
                 <Link to={`/${area.subject}/${area.topic}/${area.topicArea}`}>open →</Link>
