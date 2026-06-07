@@ -708,3 +708,114 @@
   gap: var(--space-3);
   flex-wrap: wrap;
 }
+
+/* ---- Worked-example step player (stage notes) ---- */
+.step-player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.step-tabs {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+/* Chunky example tabs (interactive, design-language §1). */
+.step-tab {
+  font: var(--text-card-title);
+  color: var(--brand-ink);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+.step-tab--active {
+  background: var(--green);
+  color: var(--card-bg);
+  border-color: var(--green-edge);
+}
+.example {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.example__prompt {
+  margin: 0;
+  font: var(--text-card-title);
+  color: var(--brand-ink);
+}
+.example__dots {
+  display: flex;
+  gap: var(--space-1);
+}
+.example__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--card-border);
+}
+.example__dot--on {
+  background: var(--green);
+}
+.example__steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.example__step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  border-radius: var(--radius-card);
+  padding: var(--space-3);
+}
+.example__step--revealed {
+  background: var(--card-bg);
+  border: var(--border-flat-width) solid var(--green-soft);
+}
+.example__step--current {
+  background: var(--green-tint);
+}
+.example__step--ghost {
+  min-height: var(--space-7);
+  background: var(--page-bg);
+  border: var(--border-flat-width) dashed var(--border);
+}
+.example__step-tex {
+  font: var(--text-body);
+  color: var(--brand-ink);
+}
+/* "why?" toggle (cyan chip) + cyan-tinted explanation. */
+.example__why-toggle {
+  align-self: flex-start;
+  font: var(--text-label);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--cyan-deep);
+  background: var(--cyan-tint);
+  border: var(--border-flat-width) solid var(--cyan-deep);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+.example__why {
+  margin: 0;
+  font: var(--text-meta);
+  color: var(--cyan-deep);
+  background: var(--cyan-tint);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+.example__answer {
+  align-self: flex-start;
+  font: var(--text-card-title);
+  color: var(--card-bg);
+  background: var(--green);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+}
+.example__next {
+  align-self: flex-start;
+}
