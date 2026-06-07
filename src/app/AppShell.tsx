@@ -35,7 +35,8 @@ export function AppShell() {
   return (
     <div className="app-shell" style={style}>
       <AppBar />
-      <NoticeBar />
+      {/* The local-progress notice belongs to the Library hub only. */}
+      <NoticeBar visible={pathname === "/"} />
       <Outlet />
       <AppFooter />
     </div>
@@ -47,10 +48,10 @@ export function AppShell() {
  * app-bar line, out of the content flow. Dismissal is store-backed and persists;
  * local state hides it immediately for the session.
  */
-function NoticeBar() {
+function NoticeBar({ visible }: { visible: boolean }) {
   const store = useProgressStore();
   const [dismissed, setDismissed] = useState(() => store.isNoticeDismissed("local-progress"));
-  if (dismissed) return null;
+  if (!visible || dismissed) return null;
   return (
     <div className="app-noticebar">
       <div className="app-noticebar__inner">

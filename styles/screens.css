@@ -176,7 +176,7 @@ body {
 }
 .app-noticebar__dismiss {
   flex: none;
-  min-height: 32px;
+  min-height: 44px;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
   font: var(--text-meta);
@@ -400,7 +400,7 @@ body {
   gap: var(--space-4); /* §3 grid gutter 16 */
   align-items: start;
 }
-@media (min-width: 600px) {
+@media (min-width: 768px) {
   .topic-grid {
     grid-template-columns: repeat(2, 1fr);
   }

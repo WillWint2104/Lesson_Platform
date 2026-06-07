@@ -105,6 +105,12 @@ describe("Library", () => {
     expect(store.isNoticeDismissed("local-progress")).toBe(true);
   });
 
+  it("shows the local-progress notice on the Library only (not other routes)", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt(`/${AREA_ID}`, reg, buildStore(reg));
+    expect(screen.queryByText(/saved in this browser/i)).toBeNull();
+  });
+
   it("hero is 'start here' (always present), deep-linking to the first incomplete exercise", () => {
     const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
     renderAt("/", reg, buildStore(reg));
