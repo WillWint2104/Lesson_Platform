@@ -104,6 +104,14 @@ never hardcode hex** — always reference tokens.
   `--page-pad-inline`/`--page-pad-block`. Screens consume these — **no literal
   sizes in component CSS** (radius/padding/width all go through tokens).
 
+**The app is a PAGE, never a framed card.** Backgrounds fill the viewport (the
+cream `--page-bg` lives on `<body>`); only *content* is width-constrained. The
+shared `AppShell` (`/src/app/AppShell.tsx`) is a `min-height:100svh` flex column
+with a full-width sticky app bar (white surface, `--border` hairline) and a slim
+footer; bar/footer/content all align to the active route's `--container` width
+(published on the shell per route). Never reintroduce an outer border / page
+max-width / floating-card surround on the page container.
+
 **Navigation:** Map-based topic navigation was explored and **ABANDONED**. Topic pages
 are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 
