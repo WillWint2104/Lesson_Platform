@@ -1,12 +1,32 @@
 {
   "area": {
     "title": "Expanding Brackets",
-    "notes": "notes.json",
-    "sequence": [
-      { "type": "video", "title": "Introduction to expanding brackets", "src": null },
-      { "type": "exercise", "title": "Warm-up", "questions": "exercise-1.json" },
-      { "type": "video", "title": "Worked examples", "src": null },
-      { "type": "exercise", "title": "Practice", "questions": "exercise-2.json" }
+    "stages": [
+      {
+        "title": "Single brackets",
+        "notes": "notes.json",
+        "video": { "src": null, "duration": null },
+        "exercise": { "questions": "exercise-1.json", "extra": "exercise-1-extra.json" }
+      },
+      {
+        "title": "Negative factors",
+        "video": { "src": null, "duration": null },
+        "exercise": {
+          "questions": [
+            { "type": "text", "prompt": "Expand $-2(x + 3)$.", "answer": "$-2x - 6$", "difficulty": "medium" },
+            { "type": "text", "prompt": "Expand $-5(x - 4)$.", "answer": "$-5x + 20$", "difficulty": "hard" }
+          ]
+        }
+      },
+      {
+        "title": "Double brackets",
+        "video": { "src": null, "duration": null },
+        "exercise": {
+          "questions": [
+            { "type": "text", "prompt": "Expand $(x + 2)(x + 3)$.", "answer": "$x^2 + 5x + 6$", "difficulty": "medium" }
+          ]
+        }
+      }
     ]
   }
 }

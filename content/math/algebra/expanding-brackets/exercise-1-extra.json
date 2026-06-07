@@ -2,36 +2,36 @@
   "questions": [
     {
       "type": "text",
-      "prompt": "Expand $2(x + 5)$.",
+      "prompt": "Expand $3(x + 2)$.",
       "skill": "expanding-single-brackets",
       "difficulty": "easy",
-      "answer": "$2x + 10$"
+      "answer": "$3x + 6$"
     },
     {
       "type": "text",
-      "prompt": "Expand $4(x + 3)$.",
+      "prompt": "Expand $5(x + 4)$.",
       "skill": "expanding-single-brackets",
       "difficulty": "easy",
-      "answer": "$4x + 12$"
+      "answer": "$5x + 20$"
     },
     {
       "type": "multiple-choice",
-      "prompt": "Which is the correct expansion of $3(2x + 7)$?",
+      "prompt": "Which is the correct expansion of $4(2x + 5)$?",
       "skill": "expanding-single-brackets",
       "difficulty": "medium",
       "options": [
-        { "text": "$6x + 21$", "isCorrect": true },
-        { "text": "$6x + 7$", "isCorrect": false },
-        { "text": "$5x + 21$", "isCorrect": false },
-        { "text": "$6x + 10$", "isCorrect": false }
+        { "text": "$8x + 20$", "isCorrect": true },
+        { "text": "$8x + 5$", "isCorrect": false },
+        { "text": "$6x + 20$", "isCorrect": false },
+        { "text": "$8x + 9$", "isCorrect": false }
       ]
     },
     {
       "type": "text",
-      "prompt": "Expand $6(3x + 4)$.",
+      "prompt": "Expand $7(3x + 2)$.",
       "skill": "expanding-single-brackets",
       "difficulty": "hard",
-      "answer": "$18x + 24$"
+      "answer": "$21x + 14$"
     }
   ]
 }

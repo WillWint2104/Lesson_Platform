@@ -1,49 +1,35 @@
 {
   "notes": [
-    {
-      "type": "heading",
-      "text": "Expanding a Single Bracket"
-    },
+    { "type": "heading", "text": "Expanding a single bracket" },
     {
       "type": "paragraph",
-      "text": "To expand a single bracket, multiply every term inside the bracket by the term outside: $a(b + c) = ab + ac$."
+      "text": "To expand a single bracket, multiply the term outside the bracket by every term inside it."
     },
+    { "type": "paragraph", "text": "$$a(b + c) = ab + ac$$" },
     {
       "type": "callout",
       "style": "key",
-      "text": "Multiply the outside term by each term inside the bracket, one at a time."
-    },
-    {
-      "type": "callout",
-      "style": "info",
-      "text": "Fractions work the same way: $\\frac{1}{2}(2x + 6) = x + 3$."
-    },
-    {
-      "type": "callout",
-      "style": "warning",
-      "text": "Do not forget the second term — writing $2x + 5$ instead of $2x + 10$ is a common slip."
+      "text": "Multiply the outside term by each term inside — including the last one. Write down every product before you simplify."
     },
     {
       "type": "example",
       "prompt": "Expand $3(x + 4)$.",
-      "working": [
-        "$3 \\times x = 3x$",
-        "$3 \\times 4 = 12$",
-        "$$3(x + 4) = 3x + 12$$"
+      "steps": [
+        { "tex": "\\emA{3}(x + 4)", "why": "Identify the term outside the bracket." },
+        { "tex": "\\emA{3}\\cdot \\emB{x} + \\emA{3}\\cdot \\emB{4}", "why": "Multiply the outside term by each term inside." },
+        { "tex": "3x + 12" }
       ],
       "answer": "$3x + 12$"
     },
     {
-      "type": "paragraph",
-      "text": "Written out in full, the general rule is: $$a(b + c) = ab + ac$$"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Multiply the first term: $a \\times b$.",
-        "Multiply the second term: $a \\times c$.",
-        "Add the results to get $ab + ac$."
-      ]
+      "type": "example",
+      "prompt": "Expand $5(2x + 3)$.",
+      "steps": [
+        { "tex": "\\emA{5}(2x + 3)", "why": "The outside term multiplies the whole bracket." },
+        { "tex": "\\emA{5}\\cdot \\emB{2x} + \\emA{5}\\cdot \\emB{3}", "why": "Multiply the coefficient as well as the letter." },
+        { "tex": "10x + 15" }
+      ],
+      "answer": "$10x + 15$"
     }
   ]
 }
