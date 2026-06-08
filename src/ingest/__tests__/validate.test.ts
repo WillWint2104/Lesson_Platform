@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   validateAreaManifest,
+  validateCourseManifest,
   validateNotesFile,
   validateQuestionsFile,
   type Issue,
@@ -612,6 +613,124 @@ describe("buildAreaRegistry (v3 stages)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// course.json manifest (content-architecture-v1 §3)
+// ---------------------------------------------------------------------------
+
+describe("validateCourseManifest", () => {
+  const good = {
+    id: "year-11-advanced",
+    displayName: "Year 11 · Mathematics Advanced",
+    year: 11,
+    stream: "Advanced",
+    subject: "Mathematics",
+    order: 110,
+  };
+
+  it("accepts a well-formed course manifest", () => {
+    const res = validateCourseManifest(good, { folderId: "year-11-advanced" });
+    expect(res.valid).toBe(true);
+    expect(res.errors).toEqual([]);
+  });
+
+  it("accepts a junior course with stream null", () => {
+    const res = validateCourseManifest(
+      { id: "year-8", displayName: "Year 8 · Mathematics", year: 8, stream: null, subject: "Mathematics", order: 80 },
+      { folderId: "year-8" },
+    );
+    expect(res.valid).toBe(true);
+  });
+
+  it("errors when id does not equal the folder name", () => {
+    const res = validateCourseManifest(good, { folderId: "year-12-advanced" });
+    expect(res.valid).toBe(false);
+    expect(has(res.errors, "course.id", "must equal the folder name")).toBe(true);
+  });
+
+  it("errors on a year outside 7–12 (and on a non-integer year)", () => {
+    expect(has(validateCourseManifest({ ...good, year: 6 }).errors, "course.year", "7 to 12")).toBe(true);
+    expect(has(validateCourseManifest({ ...good, year: 13 }).errors, "course.year", "7 to 12")).toBe(true);
+    expect(has(validateCourseManifest({ ...good, year: 11.5 }).errors, "course.year", "7 to 12")).toBe(true);
+  });
+
+  it("errors on a missing/empty displayName and a non-numeric order", () => {
+    expect(
+      has(validateCourseManifest({ ...good, displayName: "" }).errors, "course", "displayName"),
+    ).toBe(true);
+    expect(has(validateCourseManifest({ ...good, order: "110" }).errors, "course.order", "must be a number")).toBe(
+      true,
+    );
+  });
+
+  it("treats a multi-line displayName as an error (control character)", () => {
+    const res = validateCourseManifest({ ...good, displayName: "Year 11\nAdvanced" });
+    expect(res.valid).toBe(false);
+    expect(res.errors.some((e) => e.message.includes("control character"))).toBe(true);
+  });
+
+  it("warns (not errors) on an unknown stream; defaults subject is optional", () => {
+    const res = validateCourseManifest({ ...good, stream: "Honours" }, { folderId: "year-11-advanced" });
+    expect(res.valid).toBe(true);
+    expect(res.warnings.some((w) => w.message.includes("is not one of"))).toBe(true);
+    // subject omitted is fine (defaults to Mathematics downstream).
+    const noSubject = validateCourseManifest(
+      { id: "x", displayName: "X", year: 9, stream: null, order: 90 },
+      { folderId: "x" },
+    );
+    expect(noSubject.valid).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildAreaRegistry — course discovery (content-architecture-v1 §3)
+// ---------------------------------------------------------------------------
+
+describe("buildAreaRegistry — courses", () => {
+  const course = (id: string, year: number, order: number, extra: Record<string, unknown> = {}) => ({
+    [`/content/${id}/course.json`]: { id, displayName: `${id} display`, year, stream: null, subject: "Mathematics", order, ...extra },
+  });
+  const areaAt = (course: string) => ({
+    [`/content/${course}/algebra/brackets/area.json`]: {
+      area: { title: "B", stages: [{ title: "S", exercise: { questions: [{ type: "text", prompt: "Q", answer: "$x$" }] } }] },
+    },
+  });
+
+  it("discovers courses, sorts by order, and counts areas per course", () => {
+    const reg = buildAreaRegistry({
+      ...course("year-12-advanced", 12, 120),
+      ...course("year-8", 8, 80),
+      ...areaAt("year-8"),
+    });
+    expect(reg.getCourses().map((c) => c.id)).toEqual(["year-8", "year-12-advanced"]); // by order
+    expect(reg.getCourseById("year-8")?.areaCount).toBe(1);
+    expect(reg.getCourseById("year-12-advanced")?.areaCount).toBe(0); // empty course, not an error
+    expect(reg.getCourseById("year-12-advanced")?.valid).toBe(true);
+  });
+
+  it("a course with ZERO areas is valid (registered, content coming)", () => {
+    const reg = buildAreaRegistry({ ...course("year-11-advanced", 11, 110) });
+    const c = reg.getCourseById("year-11-advanced");
+    expect(c?.valid).toBe(true);
+    expect(c?.areaCount).toBe(0);
+    expect(reg.areas).toHaveLength(0);
+  });
+
+  it("surfaces an id≠folder mismatch as an invalid course (not thrown)", () => {
+    const reg = buildAreaRegistry({
+      "/content/year-9/course.json": { id: "year-eight", displayName: "X", year: 9, stream: null, subject: "Mathematics", order: 90 },
+    });
+    const c = reg.getCourseById("year-9");
+    expect(c?.valid).toBe(false);
+    expect(c?.errors.some((e) => e.message.includes("must equal the folder name"))).toBe(true);
+  });
+
+  it("getCourseById is stale-id-safe", () => {
+    const reg = buildAreaRegistry({ ...course("year-8", 8, 80) });
+    expect(reg.getCourseById("nope")).toBeUndefined();
+    expect(reg.getCourseById("")).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Living fixture: every /content JSON must validate cleanly
 // ---------------------------------------------------------------------------
 
@@ -636,7 +755,7 @@ describe("/content is a living fixture", () => {
       files[key] = JSON.parse(readFileSync(join(contentDir, rel), "utf8"));
     }
     const reg = buildAreaRegistry(files);
-    const area = reg.getAreaById("math/algebra/expanding-brackets");
+    const area = reg.getAreaById("year-8/algebra/expanding-brackets");
     expect(area?.valid).toBe(true);
     const allQuestions = (area?.stages ?? []).flatMap((s) => [
       ...s.exercise.questions,
@@ -648,9 +767,11 @@ describe("/content is a living fixture", () => {
 
   it.each(jsonFiles)("validates cleanly: %s", (rel) => {
     const raw = JSON.parse(readFileSync(join(contentDir, rel), "utf8"));
-    const base = rel.split(/[\\/]/).pop();
+    const parts = rel.split(/[\\/]/);
+    const base = parts.pop();
     let res;
     if (base === "area.json") res = validateAreaManifest(raw, { figureSchemas });
+    else if (base === "course.json") res = validateCourseManifest(raw, { folderId: parts[0] });
     else if (base === "notes.json") res = validateNotesFile(raw);
     else if (raw && typeof raw === "object" && "questions" in raw)
       res = validateQuestionsFile(raw, { figureSchemas });
@@ -663,7 +784,7 @@ describe("/content is a living fixture", () => {
           {
             path: rel,
             message:
-              "unrecognized content file — expected area.json, notes.json, or a { questions: [...] } payload",
+              "unrecognized content file — expected area.json, course.json, notes.json, or a { questions: [...] } payload",
           },
         ] as Issue[],
         warnings: [] as Issue[],
