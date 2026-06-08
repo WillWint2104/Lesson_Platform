@@ -13,7 +13,7 @@ Status: locked direction. Supersedes the v1 light design-language doc. This is t
 ---
 
 ## 2. Design tokens (exact)
-```
+```css
 --page:      #eef1f4   /* canvas base */
 --grid:      rgba(33,40,55,.045)  /* grid lines on canvas */
 --surface:   #ffffff   /* panels, cards, sidebar, chrome */
