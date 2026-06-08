@@ -6,20 +6,14 @@ import { StepPlayer } from "@/render/notes/StepPlayer";
 afterEach(cleanup);
 
 describe("StepPlayer", () => {
-  it("reveals steps one at a time, then the answer", () => {
-    // `tex` is typeset by KaTeX (so emphasis macros work); assert structurally.
+  it("shows ALL steps at once (no step-by-step reveal), answer last", () => {
     const { container } = render(
       <StepPlayer examples={[{ prompt: "P", answer: "ANS", steps: [{ tex: "x=1" }, { tex: "x=2" }] }]} />,
     );
-    expect(container.querySelectorAll(".example__step--revealed")).toHaveLength(1);
-    expect(container.querySelectorAll(".example__step--ghost")).toHaveLength(1);
-    expect(screen.queryByText("ANS")).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: /Next step/ }));
-    expect(container.querySelectorAll(".example__step--revealed")).toHaveLength(2);
-    expect(container.querySelectorAll(".example__step--ghost")).toHaveLength(0);
-    expect(screen.getByText("ANS")).toBeTruthy(); // final step → answer chip
-    expect(screen.queryByRole("button", { name: /Next step/ })).toBeNull();
+    expect(container.querySelectorAll(".example__step--revealed")).toHaveLength(2); // both shown
+    expect(container.querySelectorAll(".example__step--ghost")).toHaveLength(0); // no ghosts
+    expect(screen.queryByRole("button", { name: /Next step/ })).toBeNull(); // no reveal control
+    expect(screen.queryByText("ANS")).not.toBeNull(); // answer chip present
   });
 
   it("a why? toggle expands the explanation", () => {
