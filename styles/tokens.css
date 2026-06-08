@@ -49,6 +49,7 @@
 
   /* ---- Surface tints (pale backgrounds for callouts / chips) ---- */
   --green-tint: #e7f4ec;
+  --green-soft: #bfe3cf;   /* revealed-step border (step player) */
   --gold-tint: #fbf2d9;
   --cyan-tint: #e4f4f9;
 

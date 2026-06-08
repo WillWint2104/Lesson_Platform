@@ -307,20 +307,24 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   **NOTHING locks — navigation is free both directions** (stepper, Mayer
   segmenting). The debug harness at `/debug` is an **area inspector** (lists
   registry areas + validity + stage count, reset-progress), linked nowhere.
-- **AreaPage renders the stage model** (`/:subject/:topic/:topicArea`,
-  `--container-area` 960px): breadcrumb → title + meta (stage + question totals) →
-  one numbered **Stage N** section each (status circle + small-caps label +
-  title): the stage's Notes, a centered `VideoEmbed` (≤800px), the core
-  `Worksheet`, and — when present — a "More practice" extra `Worksheet`. Core
-  outcomes go to the store via `recordOutcome(areaId, stageIdx, "core", …)`; a
-  stage's sticky `completedAt` is set (via `recordAttempt`) the moment **every
-  core question is answered (any outcome)** — extra outcomes never affect it.
-  **Nothing locks** — every stage's questions always render. The page subscribes
-  to the store, sets `setLastVisited(areaId, stageIndex, "stage")` on mount,
-  shows a quiet area-complete banner + back-to-library CTA, and anchors each
-  stage (`stage-N`); the Library "continue" hero deep-links to the first
-  incomplete stage and scrolls there on load. *(The full page-by-page stepper UX
-  is a follow-up; stages currently render linearly with their status motif.)*
+- **Stage-flow screens are implemented** (the old single-page AreaPage is
+  REMOVED; its row + `SolutionModal` patterns are reused). Routes: the area root
+  `/:subject/:topic/:topicArea` **redirects** to the current stage
+  (`AreaRedirect`, progress-derived); `/…/stage/:n` is the **StagePage** (video
+  7fr / notes 4fr, stacks below 980 — STAGE NOTES → THE RULE → REMEMBER → WORKED
+  EXAMPLES `StepPlayer`, + "Start Exercise N →"); `/…/stage/:n/exercise` is the
+  **ExercisePage** (worksheet 7 / recap rail 4: core rows tappable → focus view,
+  inline MC, completion row + Continue/Back + gentle incorrect-nudge, a collapsed
+  "More practice" expander with extra solutions locked until core is complete and
+  never counting). Invalid `:n` → not-found. A shared `StageStepper`
+  (`/src/app/StageStepper.tsx`) sits on both pages — every stage clickable both
+  directions, nothing locks. The **question focus view** (`FocusView`) is a
+  full-surface takeover (role=dialog; ← → / S / Esc; rem-scaled type; focus
+  in/restore; works for core AND extra). Completion/outcome wiring is unchanged
+  (recordOutcome core/extra; sticky `completedAt` on all-core-answered);
+  `setLastVisited(area, stage, view)` updates on navigation and the hub deep-links
+  to the stored stage/view. Stage helpers + path builders live in
+  `/src/app/stageProgress.ts`.
 - **Responsive layout system:** `.app-page` is a centered container, fluid
   below a per-screen max-width (`--app-page--wide` Library / `--app-page--area`
   area page, `--container-area` 960px). The **Library is a hub**: greeting + day/date kicker, registry-driven
@@ -344,7 +348,9 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   | Route | Screen |
   |-------|--------|
   | `/` | Library **hub** (greeting + day/date kicker, subject pills, always-present hero, responsive topic grid with in-card area rows + empty-room placeholder) |
-  | `/:subject/:topic/:topicArea` | Area page (stages) — breadcrumb, title + meta, area-complete banner, numbered Stage N sections (notes + video + core worksheet + optional extra), free navigation (nothing locks); completion = all core answered |
+  | `/:subject/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
+  | `/:subject/:topic/:topicArea/stage/:n` | Stage page — stepper, video (7) + notes (4: rule / remember / worked-example step player), "Start Exercise N" |
+  | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page — stepper, worksheet (7) + recap rail (4); tappable rows → question focus view; completion row; locked-extra "More practice" expander |
   | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
 

@@ -645,3 +645,276 @@ body {
     justify-content: center;
   }
 }
+
+/* ===== Stage stepper (shared strip) ===== */
+.stepper {
+  overflow-x: auto;
+}
+.stepper__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+.stepper__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: none;
+}
+/* Connecting line after each non-last item; green once that step is done. */
+.stepper__item:not(:last-child)::after {
+  content: "";
+  width: var(--space-6);
+  height: 2px;
+  background: var(--border);
+  flex: none;
+}
+.stepper__item--done:not(:last-child)::after {
+  background: var(--green);
+}
+.stepper__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--muted);
+  font: var(--text-meta);
+}
+.stepper__item--active .stepper__link {
+  color: var(--brand-ink);
+  font: var(--text-card-title);
+}
+.stepper__title {
+  white-space: nowrap;
+}
+
+/* ===== Stage page (video 7 / notes 4) ===== */
+.stage-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (min-width: 980px) {
+  .stage-grid {
+    grid-template-columns: 7fr 4fr;
+  }
+}
+.stage-grid__video {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.stage-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.stage-grid__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.notes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--card-bg);
+  border: var(--border-flat-width) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+/* Centered green-tint display-formula block inside THE RULE. */
+.rule-formula {
+  background: var(--green-tint);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  text-align: center;
+}
+.stage-back {
+  align-self: flex-start;
+  font: var(--text-meta);
+  color: var(--green-edge);
+  text-decoration: none;
+}
+
+/* ===== Exercise page (worksheet 7 / rail 4) ===== */
+.ex-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (min-width: 980px) {
+  .ex-grid {
+    grid-template-columns: 7fr 4fr;
+  }
+}
+.ex-grid__main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.ex-grid__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+/* Tappable row + enlarge affordance. */
+.ws-row--tappable {
+  cursor: pointer;
+}
+.ws-row__enlarge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  cursor: pointer;
+}
+/* Completion row (informational, green) + gentle nudge. */
+.ex-complete {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  background: var(--green-tint);
+  border: var(--border-flat-width) solid var(--green);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+}
+.ex-complete__text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font: var(--text-card-title);
+  color: var(--brand-ink);
+}
+.ex-nudge {
+  margin: 0;
+  font: var(--text-meta);
+  color: var(--muted);
+}
+/* More-practice expander (chunky) + recessed extra list. */
+.ex-expander {
+  width: 100%;
+  text-align: left;
+  font: var(--text-card-title);
+  color: var(--brand-ink);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  cursor: pointer;
+}
+.ws-list--extra {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--page-bg);
+  border-radius: var(--radius-card);
+}
+.ex-rewatch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--text-meta);
+  color: var(--green-edge);
+  text-decoration: none;
+}
+
+/* ===== Question focus view (full-surface takeover) ===== */
+.focus-view {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--page-bg);
+  display: flex;
+  flex-direction: column;
+}
+.focus-view__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--page-pad-inline);
+  border-bottom: var(--border-flat-width) solid var(--border);
+  background: var(--card-bg);
+}
+.focus-view__count {
+  font: var(--text-card-title);
+  color: var(--brand-ink);
+}
+.focus-view__close {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font: var(--text-card-title);
+  color: var(--brand-ink);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.focus-view__body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-7) var(--page-pad-inline);
+}
+.focus-q {
+  width: 100%;
+  max-width: var(--container-reading);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+/* rem-based so browser zoom compounds on top. */
+.focus-q__prompt {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1.5;
+}
+.focus-q__figure {
+  width: 100%;
+  max-width: 420px;
+}
+.focus-q__solve {
+  align-self: flex-start;
+}
+.focus-view__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--page-pad-inline);
+  border-top: var(--border-flat-width) solid var(--border);
+  background: var(--card-bg);
+}
+/* Strong focus indicators inside the takeover (≥2px, outline + shadow). */
+.focus-view :focus-visible {
+  outline: 2px solid var(--green-edge);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--green-tint);
+}
