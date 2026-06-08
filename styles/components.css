@@ -746,19 +746,6 @@
   font: var(--text-card-title);
   color: var(--brand-ink);
 }
-.example__dots {
-  display: flex;
-  gap: var(--space-1);
-}
-.example__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--radius-pill);
-  background: var(--card-border);
-}
-.example__dot--on {
-  background: var(--green);
-}
 .example__steps {
   display: flex;
   flex-direction: column;
@@ -774,14 +761,6 @@
 .example__step--revealed {
   background: var(--card-bg);
   border: var(--border-flat-width) solid var(--green-soft);
-}
-.example__step--current {
-  background: var(--green-tint);
-}
-.example__step--ghost {
-  min-height: var(--space-7);
-  background: var(--page-bg);
-  border: var(--border-flat-width) dashed var(--border);
 }
 .example__step-tex {
   font: var(--text-body);

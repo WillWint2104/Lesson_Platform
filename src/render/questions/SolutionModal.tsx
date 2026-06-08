@@ -145,11 +145,7 @@ function WorkedSolution({ answer, working }: { answer?: string; working?: string
   }
   return (
     <div className="qr-reveal">
-      {answer ? (
-        <span className="qr-reveal__answer">
-          <MathText>{answer}</MathText>
-        </span>
-      ) : null}
+      {/* Working/steps FIRST so the reasoning isn't spoiled; answer chip LAST. */}
       {working && working.length > 0 ? (
         <div className="qr-reveal__working">
           {working.map((line, idx) => (
@@ -158,6 +154,11 @@ function WorkedSolution({ answer, working }: { answer?: string; working?: string
             </div>
           ))}
         </div>
+      ) : null}
+      {answer ? (
+        <span className="qr-reveal__answer">
+          <MathText>{answer}</MathText>
+        </span>
       ) : null}
     </div>
   );

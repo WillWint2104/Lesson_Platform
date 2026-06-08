@@ -837,34 +837,49 @@ body {
   text-decoration: none;
 }
 
-/* ===== Question focus view (full-surface takeover) ===== */
-.focus-view {
+/* ===== Question focus view (enlarge IN PLACE — dialog over a blurred scrim) ===== */
+.focus-backdrop {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: var(--page-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.focus-card {
+  width: 100%;
+  max-width: var(--container-reading);
+  max-height: 90vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  gap: var(--space-4);
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
 }
-.focus-view__bar {
+.focus-card__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-4) var(--page-pad-inline);
-  border-bottom: var(--border-flat-width) solid var(--border);
-  background: var(--card-bg);
 }
-.focus-view__count {
+.focus-card__count {
   font: var(--text-card-title);
   color: var(--brand-ink);
 }
-.focus-view__close {
+.focus-card__close {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   min-height: 44px;
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-3);
   font: var(--text-card-title);
   color: var(--brand-ink);
   background: var(--card-bg);
@@ -872,17 +887,7 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
-.focus-view__body {
-  flex: 1;
-  overflow-y: auto;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: var(--space-7) var(--page-pad-inline);
-}
-.focus-q {
-  width: 100%;
-  max-width: var(--container-reading);
+.focus-card__body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -900,21 +905,49 @@ body {
   width: 100%;
   max-width: 420px;
 }
-.focus-q__solve {
-  align-self: flex-start;
-}
-.focus-view__nav {
+.focus-card__nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-4) var(--page-pad-inline);
-  border-top: var(--border-flat-width) solid var(--border);
-  background: var(--card-bg);
 }
-/* Strong focus indicators inside the takeover (≥2px, outline + shadow). */
-.focus-view :focus-visible {
+/* Strong focus indicators inside the dialog (≥2px, outline + shadow). */
+.focus-card :focus-visible {
   outline: 2px solid var(--green-edge);
   outline-offset: 2px;
   box-shadow: 0 0 0 3px var(--green-tint);
+}
+
+/* ===== Self-mark controls (exercise rows + focus view) ===== */
+.selfmark {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.selfmark__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font: var(--text-card-title);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: var(--card-bg);
+  border: var(--card-border-width) solid var(--card-border);
+  border-bottom-width: var(--card-edge-width);
+}
+.selfmark__btn--got {
+  color: var(--green-edge);
+}
+.selfmark__btn--not {
+  color: var(--coral-deep);
+}
+.selfmark__btn--got.selfmark__btn--on {
+  background: var(--green-tint);
+  border-color: var(--green);
+}
+.selfmark__btn--not.selfmark__btn--on {
+  background: var(--coral);
+  border-color: var(--coral-deep);
 }

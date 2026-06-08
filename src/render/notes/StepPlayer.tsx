@@ -1,13 +1,12 @@
 /**
- * @file StepPlayer.tsx — worked-example tabs + step player (stage notes).
+ * @file StepPlayer.tsx — worked-example tabs + all-steps display (stage notes).
  *
  * "Example 1 / Example 2…" chunky tabs switch examples. Within the active
- * example, stepped working is revealed one step at a time via "Next step →"
- * (progress dots): revealed steps get a green-soft border, the current step adds
- * a faint bg, future steps are ghosted placeholders; each revealed step has a
- * "why?" toggle (cyan chip) when why text exists; the answer chip appears after
- * the final step. Legacy `working` examples render fully revealed in the same
- * anatomy. All math (incl. \emA/\emB emphasis) flows through MathText.
+ * example ALL steps are shown at once (no step-by-step reveal): each stepped
+ * line keeps its optional "why?" toggle (cyan chip), and the answer chip renders
+ * LAST. Legacy `working` examples render the same way. All math (incl. \emA/\emB
+ * emphasis) flows through MathText. `steps[].tex` is raw KaTeX by contract and is
+ * wrapped in `$…$`; legacy `working` lines are authored with delimiters already.
  */
 import { useState } from "react";
 import { MathText } from "@/shared/MathText";
@@ -42,7 +41,7 @@ export function StepPlayer({ examples }: { examples: ExampleData[] }) {
           ))}
         </div>
       ) : null}
-      {/* key remounts the example → resets the reveal state when switching tabs */}
+      {/* key={current} remounts on tab switch so per-step `why?` toggles reset. */}
       <Example key={current} data={examples[current]!} />
     </div>
   );
@@ -50,71 +49,35 @@ export function StepPlayer({ examples }: { examples: ExampleData[] }) {
 
 function Example({ data }: { data: ExampleData }) {
   const steps = data.steps ?? null;
-  const total = steps?.length ?? 0;
-  const [revealed, setRevealed] = useState(1);
-
   return (
     <div className="example">
       <p className="example__prompt">
         <MathText>{data.prompt}</MathText>
       </p>
-
-      {steps ? (
-        <>
-          <div className="example__dots" aria-hidden="true">
-            {steps.map((_, i) => (
-              <span key={i} className={`example__dot${i < revealed ? " example__dot--on" : ""}`} />
-            ))}
-          </div>
-          <div className="example__steps">
-            {steps.map((step, i) =>
-              i < revealed ? (
-                <Step key={i} step={step} current={i === revealed - 1} />
-              ) : (
-                <div key={i} className="example__step example__step--ghost" aria-hidden="true" />
-              ),
-            )}
-          </div>
-          {revealed >= total ? (
-            <span className="example__answer">
-              <MathText>{data.answer}</MathText>
-            </span>
-          ) : (
-            <button
-              type="button"
-              className="btn btn--primary example__next"
-              onClick={() => setRevealed((r) => Math.min(total, r + 1))}
-            >
-              Next step →
-            </button>
-          )}
-        </>
-      ) : (
-        <>
-          <div className="example__steps">
-            {(data.working ?? []).map((line, i) => (
+      <div className="example__steps">
+        {steps
+          ? steps.map((step, i) => <Step key={i} step={step} />)
+          : (data.working ?? []).map((line, i) => (
               <div key={i} className="example__step example__step--revealed">
                 <div className="example__step-tex">
                   <MathText>{line}</MathText>
                 </div>
               </div>
             ))}
-          </div>
-          <span className="example__answer">
-            <MathText>{data.answer}</MathText>
-          </span>
-        </>
-      )}
+      </div>
+      {/* Answer chip LAST — never above the reasoning. */}
+      <span className="example__answer">
+        <MathText>{data.answer}</MathText>
+      </span>
     </div>
   );
 }
 
-function Step({ step, current }: { step: ExampleStep; current: boolean }) {
+function Step({ step }: { step: ExampleStep }) {
   const [showWhy, setShowWhy] = useState(false);
   return (
-    <div className={`example__step example__step--revealed${current ? " example__step--current" : ""}`}>
-      {/* `tex` is raw KaTeX by contract — wrap so MathText typesets it (emphasis
-          macros included) rather than rendering it as plain text. */}
+    <div className="example__step example__step--revealed">
+      {/* `tex` is raw KaTeX by contract — wrap so MathText typesets it. */}
       <div className="example__step-tex">
         <MathText>{`$${step.tex}$`}</MathText>
       </div>

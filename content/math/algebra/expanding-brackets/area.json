@@ -46,14 +46,10 @@
               "answer": "$10x + 5$"
             },
             {
-              "type": "multiple-choice", "skill": "fraction-factor", "difficulty": "medium",
-              "prompt": "Which is the correct expansion of $\\tfrac{1}{2}(2x + 6)$?",
-              "options": [
-                { "text": "$x + 3$", "isCorrect": true },
-                { "text": "$x + 6$", "isCorrect": false },
-                { "text": "$2x + 3$", "isCorrect": false },
-                { "text": "$\\tfrac{1}{2}x + 6$", "isCorrect": false }
-              ]
+              "type": "text", "skill": "fraction-factor", "difficulty": "medium",
+              "prompt": "Expand $\\tfrac{1}{2}(2x + 6)$.",
+              "working": ["$\\tfrac{1}{2} \\times 2x = x$", "$\\tfrac{1}{2} \\times 6 = 3$"],
+              "answer": "$x + 3$"
             },
             {
               "type": "text", "skill": "expand-and-simplify", "difficulty": "hard",
@@ -124,14 +120,10 @@
               "answer": "$-8x + 12$"
             },
             {
-              "type": "multiple-choice", "skill": "negative-factor", "difficulty": "medium",
-              "prompt": "Which is the correct expansion of $-(x - 7)$?",
-              "options": [
-                { "text": "$-x + 7$", "isCorrect": true },
-                { "text": "$-x - 7$", "isCorrect": false },
-                { "text": "$x - 7$", "isCorrect": false },
-                { "text": "$x + 7$", "isCorrect": false }
-              ]
+              "type": "text", "skill": "negative-factor", "difficulty": "medium",
+              "prompt": "Expand $-(x - 7)$.",
+              "working": ["$-1 \\times x = -x$", "$-1 \\times (-7) = 7$"],
+              "answer": "$-x + 7$"
             },
             {
               "type": "text", "skill": "expand-and-simplify", "difficulty": "hard",

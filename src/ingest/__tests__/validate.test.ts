@@ -600,6 +600,27 @@ describe("/content is a living fixture", () => {
     expect(jsonFiles.length).toBeGreaterThan(0);
   });
 
+  // The shipped Expanding Brackets area deliberately uses NO multiple-choice
+  // questions (a content choice — MC remains supported in code for future use).
+  // Assert on the parsed content model, not a raw substring, so referenced
+  // question files and stray prose can't give a false pass/fail.
+  it("the expanding-brackets area contains no multiple-choice questions", () => {
+    const files: Record<string, unknown> = {};
+    for (const rel of jsonFiles) {
+      const key = `/content/${rel.split(/[\\/]/).join("/")}`;
+      files[key] = JSON.parse(readFileSync(join(contentDir, rel), "utf8"));
+    }
+    const reg = buildAreaRegistry(files);
+    const area = reg.getAreaById("math/algebra/expanding-brackets");
+    expect(area?.valid).toBe(true);
+    const allQuestions = (area?.stages ?? []).flatMap((s) => [
+      ...s.exercise.questions,
+      ...(s.exercise.extra ?? []),
+    ]);
+    expect(allQuestions.length).toBeGreaterThan(0);
+    expect(allQuestions.some((q) => q.type === "multiple-choice")).toBe(false);
+  });
+
   it.each(jsonFiles)("validates cleanly: %s", (rel) => {
     const raw = JSON.parse(readFileSync(join(contentDir, rel), "utf8"));
     const base = rel.split(/[\\/]/).pop();
