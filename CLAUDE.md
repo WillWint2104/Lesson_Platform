@@ -18,14 +18,20 @@ platform renders content; it does not author it inline. **Completion = all core
 questions answered (any outcome), never gated on correctness.** (The earlier
 lesson-as-unit and v2 area-sequence models are superseded; see §e.)
 
-Content is organised as a strict hierarchy:
+Content is organised as a strict hierarchy (**course is the new top level** —
+content-architecture-v1 §2):
 
 ```
-subject → topic → topic area  (each area = notes + an ordered video/exercise sequence)
+course → topic → topic area  (each area = notes + an ordered video/exercise sequence)
 ```
+
+A **course** is a year-level + stream of maths (e.g. `year-8`, `year-11-advanced`),
+carrying a small `/content/<course>/course.json` manifest (§e). Everything below
+the course (topic/area/stage) is contract v3/v4 **unchanged**. A course may have
+**zero areas** (registered, "content coming") — never an error.
 
 **Content packs are strictly isolated from each other.** There are no cross-pack
-imports. Learner progress is **namespaced by subject/topic** so packs never read or
+imports. Learner progress is **namespaced by course** so packs never read or
 write each other's state.
 
 ---
@@ -152,12 +158,30 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 - `callout` — `{ style: "key" | "warning" | "info" }`
 - `list` — `{ items }`
 
+### Course manifest (`course.json`, content-architecture-v1 §3)
+The **course** is the top of the hierarchy. Each `/content/<course>/course.json`:
+```
+{ "id": string,            // MUST equal the folder name (path-derived, validated)
+  "displayName": string,   // single-line, non-empty (e.g. "Year 11 · Mathematics Advanced")
+  "year": number,          // integer 7–12
+  "stream": "Advanced" | "Standard" | "Extension" | null,   // null = junior, no stream
+  "subject": string,       // default "Mathematics" (reserved for multi-subject)
+  "order": number }        // picker sort key
+```
+`validateCourseManifest` enforces id===folder, year 7–12, single-line displayName,
+numeric order (id-mismatch / bad year / bad order / non-string subject are
+**errors**; an out-of-enum `stream` **warns**). Courses are discovered by scanning
+`/content/<course>/course.json` → `registry.courses` (sorted by `order`) +
+`getCourses()` / `getCourseById()`, each with an `areaCount` (0 = empty course,
+**valid**, "content coming"). Senior courses `year-11-advanced` / `year-12-advanced`
+are scaffolded empty.
+
 ### Area manifest (v3 — the unit is the topic AREA, made of STAGES)
 The unit of content is the **topic area**; an area is an ordered list of
 **stages**, each one skill = notes → video → exercise (navigated as pages, Mayer
 segmenting). Notes belong to the **stage** (no area-level notes). The v2
 `sequence` model and the v1 `lesson.json` are both **superseded**. Manifest lives
-at `/content/<subject>/<topic>/<topic-area>/area.json`:
+at `/content/<course>/<topic>/<topic-area>/area.json`:
 
 ```
 { "area": {
@@ -205,10 +229,13 @@ types.
 tokens. They are the ONLY emphasis mechanism; raw `\\textcolor` in content is a
 validator **warning**.
 
-**Hierarchy is path-derived, never in the manifest.** `subject`/`topic`/
-`topicArea` come from the directory path (`area.json` sits at the topic-area
-level); the **areaId** is `<subject>/<topic>/<topicArea>`. A manifest containing
-hierarchy fields is an error; a wrong-depth path is a load-time error.
+**Hierarchy is path-derived, never in the manifest.** The top path segment is
+the **course**; `topic`/`topicArea` follow (`area.json` sits at the topic-area
+level); the **areaId** is `<course>/<topic>/<topicArea>`. (The loader currently
+still exposes the top segment as `ValidatedArea.subject` for back-compat — a
+rename to `.course` lands with the routing PR; `area.subject` now holds the
+course slug, e.g. `year-8`.) A manifest containing hierarchy fields is an error;
+a wrong-depth path is a load-time error.
 
 ### Content strings are single-line by design
 Every content string (`prompt`, `text`, `answer`, `working[]` entries, list
@@ -256,7 +283,13 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   hierarchy, per-stage notes/video/core/extra resolution + figure
   normalization). `ResolvedStage` = `{ title, notes, video, exercise:{questions,
   extra} }`. Question contracts unchanged; the `example` note block is additively
-  extended with `steps`.
+  extended with `steps`. **Course level (content-architecture-v1 §3):**
+  `types.ts` adds `CourseManifest` (+ `COURSE_STREAMS`/`DEFAULT_COURSE_SUBJECT`),
+  `validate.ts` adds `validateCourseManifest`, and `load.ts` discovers courses by
+  scanning `/content/<course>/course.json` → `registry.courses` /
+  `getCourses()` / `getCourseById()` (each a `ValidatedCourse` with `areaCount`;
+  empty courses valid). The course level is **additive** — area resolution + the
+  v3/v4 contracts below the course are unchanged.
 - **Notes renderer is implemented:** `/src/render/notes/` (one component per
   block type + `NotesRenderer`) and the shared `/src/shared/MathText.tsx`.
 - **Question runtime is implemented (two presentation modes share one set of
