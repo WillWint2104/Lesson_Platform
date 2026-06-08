@@ -375,6 +375,29 @@ describe("warnings", () => {
     expect(res.valid).toBe(true);
     expect(res.warnings.some((w) => w.message.includes("\\textcolor"))).toBe(true);
   });
+
+  it("warns (not errors) on a Unicode fraction glyph — author as \\frac (v2 §6)", () => {
+    const res = validateQuestionsFile(qfile([{ type: "text", prompt: "Expand ½(x + 1)", answer: "a" }]));
+    expect(res.valid).toBe(true); // a warning, never an error
+    expect(res.warnings.some((w) => w.message.includes("Unicode fraction glyph"))).toBe(true);
+  });
+
+  it("warns on a Unicode fraction glyph inside working[] too", () => {
+    const res = validateQuestionsFile(
+      qfile([{ type: "text", prompt: "x", working: ["⅓ of the area"], answer: "a" }]),
+    );
+    expect(res.valid).toBe(true);
+    expect(res.warnings.some((w) => w.message.includes("Unicode fraction glyph"))).toBe(true);
+  });
+
+  it("does NOT warn on a properly stacked \\frac / \\tfrac", () => {
+    const file = JSON.parse(
+      '{"questions":[{"type":"text","prompt":"$\\\\frac{1}{2}(2x+6)$","answer":"$\\\\tfrac{1}{2}$"}]}',
+    );
+    const res = validateQuestionsFile(file);
+    expect(res.valid).toBe(true);
+    expect(res.warnings.some((w) => w.message.includes("Unicode fraction glyph"))).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------

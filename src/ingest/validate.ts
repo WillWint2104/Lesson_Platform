@@ -61,6 +61,11 @@ class Report {
 // form-feed, carriage-return). Inside a character class, \b means backspace.
 const CONTROL_CHARS = /[\b\t\n\v\f\r]/;
 
+// Unicode vulgar-fraction glyphs (½ ⅓ ¼ … ↉) and the fraction slash (⁄).
+// design-language-v2 §6: fractions are ALWAYS stacked \frac{}{}, never a
+// precomposed slanted glyph — those don't render through KaTeX as real maths.
+const UNICODE_FRACTIONS = /[¼-¾⅐-⅟↉⁄]/;
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -80,6 +85,14 @@ function scanLatex(report: Report, path: string, value: unknown): void {
       path,
       "contains a control character — likely an un-doubled LaTeX backslash " +
         "(write \\\\frac not \\frac in JSON)",
+    );
+  }
+  // Unicode fraction glyphs must become a stacked \frac (design-language-v2 §6).
+  if (UNICODE_FRACTIONS.test(value)) {
+    report.warn(
+      path,
+      "contains a Unicode fraction glyph (e.g. ½) — author fractions as a stacked " +
+        "\\\\frac{}{} so they render through KaTeX (see /docs/design-language-v2.md §6)",
     );
   }
   // Raw \textcolor is discouraged: emphasis must go through the \emA / \emB
