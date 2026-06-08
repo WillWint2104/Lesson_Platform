@@ -87,6 +87,23 @@ describe("app chrome (page, not frame)", () => {
     const footer = screen.getByRole("contentinfo");
     expect(within(footer).getByText("Lesson Platform")).toBeTruthy();
   });
+
+  it("shows the breadcrumb + mastery % in the top bar on an area route (§7a)", () => {
+    const reg = buildReg(mkArea("brackets", { title: "Brackets", stages: [stage("A"), stage("B")] }));
+    const store = buildStore(reg);
+    store.recordAttempt(AREA_ID, 0, true); // 1 of 2 stages → 50%
+    renderAt(STAGE1, reg, store);
+    const bar = screen.getByRole("banner");
+    expect(within(bar).getByText("Brackets")).toBeTruthy(); // area title (breadcrumb current)
+    expect(within(bar).getByLabelText("50% mastery")).toBeTruthy();
+  });
+
+  it("hides the breadcrumb + mastery on the Library (no active area)", () => {
+    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
+    renderAt("/", reg, buildStore(reg));
+    const bar = screen.getByRole("banner");
+    expect(within(bar).queryByText(/mastery/)).toBeNull();
+  });
 });
 
 describe("Contents sidebar (shell, §4)", () => {
@@ -210,7 +227,7 @@ describe("StagePage", () => {
     expect(screen.getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
   });
 
-  it("places worked examples in the MAIN column; rule / remember / CTA in the RAIL", () => {
+  it("puts the video band on its own row; notes split into rule | examples columns (§7a)", () => {
     const reg = buildReg(
       mkArea("brackets", {
         stages: [
@@ -226,13 +243,16 @@ describe("StagePage", () => {
       }),
     );
     const { container } = renderAt(STAGE1, reg, buildStore(reg));
-    const main = container.querySelector(".stage-grid__main")!;
-    const rail = container.querySelector(".stage-grid__rail")!;
-    expect(main.querySelector(".step-player")).not.toBeNull(); // worked examples in main
-    expect(rail.querySelector(".step-player")).toBeNull();
-    expect(within(rail as HTMLElement).getByText("The rule")).toBeTruthy();
-    expect(within(rail as HTMLElement).getByText("Remember")).toBeTruthy();
-    expect(within(rail as HTMLElement).getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
+    // Video band is a full-width panel, separate from the notes columns.
+    expect(container.querySelector(".stage-v2__video")).not.toBeNull();
+    const ruleCol = container.querySelector(".notes-cols__rule")! as HTMLElement;
+    const examplesCol = container.querySelector(".notes-cols__examples")! as HTMLElement;
+    expect(within(ruleCol).getByText("The rule")).toBeTruthy();
+    expect(within(ruleCol).getByText("Remember")).toBeTruthy();
+    expect(examplesCol.querySelector(".step-player")).not.toBeNull(); // worked examples in the right col
+    expect(ruleCol.querySelector(".step-player")).toBeNull();
+    // CTA lives in the "Up next" footer.
+    expect(screen.getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
   });
 
   it("not-found for an out-of-range stage number", () => {
@@ -241,14 +261,22 @@ describe("StagePage", () => {
     expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
   });
 
-  it("stepper navigates freely in both directions", () => {
+  it("navigates freely between stages via the contents sidebar (§4 is the nav)", () => {
     const reg = buildReg(mkArea("brackets", { stages: [stage("Alpha"), stage("Beta")] }));
     renderAt(STAGE1, reg, buildStore(reg));
-    // On stage 1; jump to stage 2 via the stepper.
-    fireEvent.click(screen.getByRole("link", { name: /Beta/ }));
+    // Jump to stage 2 via the sidebar…
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Lesson contents" })).getByRole("link", {
+        name: "Stage 2 video",
+      }),
+    );
     expect(screen.getByRole("link", { name: /Start Exercise 2/ })).toBeTruthy();
     // …and back to stage 1.
-    fireEvent.click(screen.getByRole("link", { name: /Alpha/ }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Lesson contents" })).getByRole("link", {
+        name: "Stage 1 video",
+      }),
+    );
     expect(screen.getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
   });
 });
@@ -437,6 +465,6 @@ describe("Question focus view", () => {
     expect(container.querySelector(".ex-grid")).not.toBeNull();
     cleanup();
     const { container: c2 } = renderAt(STAGE1, reg, buildStore(reg));
-    expect(c2.querySelector(".stage-grid")).not.toBeNull();
+    expect(c2.querySelector(".notes-cols")).not.toBeNull();
   });
 });

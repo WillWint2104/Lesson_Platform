@@ -1,10 +1,13 @@
 /**
- * @file StagePage.tsx — /:subject/:topic/:topicArea/stage/:n
+ * @file StagePage.tsx — /:subject/:topic/:topicArea/stage/:n  (design-language-v2 §7a)
  *
- * Two-column (≥980px): framed video left (7fr), stage notes right (4fr); stacks
- * video-first below 980. Under the video: a meta line + the primary
- * "Start Exercise N →". Notes anatomy: STAGE NOTES label → THE RULE → REMEMBER →
- * WORKED EXAMPLES (the step player). Free navigation via the shared stepper.
+ * On the grid canvas: a plain title row (`Title · Lesson n of N`), then the
+ * VIDEO BAND full-width on its own row (panel + mint strip + dark 16:9 + caption
+ * — gap-proof, never beside variable-height notes), then ONE notes panel with
+ * two internal columns (left: THE RULE + REMEMBER; right: WORKED EXAMPLES),
+ * collapsing to one column < 920px, and an "Up next · Exercise N" footer with a
+ * single primary action. Stage navigation lives in the contents sidebar (§4),
+ * so there is no in-page stepper here.
  */
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -14,12 +17,10 @@ import { useProgressStore } from "@/state/ProgressContext";
 import type { ProgressStore } from "@/state/progress";
 import type { NoteBlock } from "@/ingest/types";
 import { titleCase } from "@/app/format";
-import { computeStageStatus } from "@/app/unlock";
-import { areaBasePath, exercisePath, stagePath, stageInputs } from "@/app/stageProgress";
-import { StageStepper } from "@/app/StageStepper";
+import { exercisePath } from "@/app/stageProgress";
+import { Panel } from "@/shared/v2";
 import { VideoEmbed } from "@/render/VideoEmbed";
 import { MathText } from "@/shared/MathText";
-import { NoteCallout } from "@/render/notes/NoteCallout";
 import { StepPlayer, type ExampleData } from "@/render/notes/StepPlayer";
 import { NotFound } from "@/app/screens/NotFound";
 
@@ -53,81 +54,84 @@ export function StagePage() {
   }
 
   const stage = area.stages[stageIndex]!;
-  const statuses = computeStageStatus(stageInputs(area, store));
-  const steps = area.stages.map((s, i) => ({ title: s.title, status: statuses[i]! }));
-
   const prose = stage.notes.filter(
     (b) => b.type === "heading" || b.type === "paragraph" || b.type === "list",
   );
-  const callouts = stage.notes.filter((b) => b.type === "callout");
+  const callouts = stage.notes.filter((b): b is Extract<NoteBlock, { type: "callout" }> => b.type === "callout");
   const examples: ExampleData[] = stage.notes
     .filter((b): b is Extract<NoteBlock, { type: "example" }> => b.type === "example")
     .map((b) => ({ prompt: b.prompt, answer: b.answer, steps: b.steps, working: b.working }));
 
+  const dur = stage.video && typeof stage.video.duration === "number" ? `${stage.video.duration} min · ` : "";
+  const coreCount = stage.exercise.questions.length;
+
   return (
-    <main className="app-page stage-page">
-      <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link className="breadcrumb__link" to="/">
-          {titleCase(area.subject)}
-        </Link>{" "}
-        / {titleCase(area.topic)} / {titleCase(area.topicArea)}
-      </nav>
-      <header className="area-head">
-        <h1 className="sel-title">{area.title}</h1>
-      </header>
+    <main className="app-page stage-v2">
+      <p className="stage-v2__titlerow">
+        <span className="stage-v2__title">{titleCase(stage.title)}</span>
+        <span className="stage-v2__lesson v2-mono">
+          Lesson {stageNum} of {area.stages.length}
+        </span>
+      </p>
 
-      <StageStepper steps={steps} activeIndex={stageIndex} hrefFor={(i) => stagePath(area, i + 1)} />
-
-      {/* Main: video + worked examples (the player needs the wide column);
-          rail: the rule, remember, and the Start-Exercise CTA at its foot.
-          Stacks under 980 as video → examples → rule → remember → CTA. */}
-      <div className="stage-grid">
-        <div className="stage-grid__main">
-          <VideoEmbed src={stage.video?.src ?? null} title={stage.title} />
-          {examples.length > 0 ? (
-            <section className="notes-panel">
-              <p className="section-label">Worked examples</p>
-              <StepPlayer examples={examples} />
-            </section>
-          ) : null}
+      {/* Video band — full width, alone on its row (gap-proof). */}
+      <Panel bodyless className="stage-v2__video">
+        <VideoEmbed src={stage.video?.src ?? null} title={stage.title} />
+        <div className="stage-v2__caption">
+          <span className="stage-v2__caption-title">{titleCase(stage.title)}</span>
+          <span className="stage-v2__caption-meta v2-mono">{dur}watch first</span>
         </div>
+      </Panel>
 
-        <aside className="stage-grid__rail">
-          <p className="section-label">Stage notes · {stage.title}</p>
-
-          {prose.length > 0 ? (
-            <section className="notes-panel">
-              <p className="section-label">The rule</p>
-              {prose.map((b, i) => (
-                <ProseBlock key={i} block={b} />
-              ))}
-            </section>
-          ) : null}
-
-          {callouts.length > 0 ? (
-            <section className="notes-panel">
-              <p className="section-label">Remember</p>
-              {callouts.map((b, i) =>
-                b.type === "callout" ? <NoteCallout key={i} style={b.style} text={b.text} /> : null,
-              )}
-            </section>
-          ) : null}
-
-          <div className="stage-cta">
-            <p className="area-meta">
-              Stage {stageNum} of {area.stages.length} · {stage.exercise.questions.length} core
-              question{stage.exercise.questions.length === 1 ? "" : "s"}
-            </p>
-            <Link className="btn btn--primary" to={exercisePath(area, stageNum)}>
-              Start Exercise {stageNum} <ArrowRight size={16} aria-hidden="true" />
-            </Link>
+      {/* Notes — one panel, two internal columns. */}
+      <Panel className="stage-v2__notes">
+        <div className="notes-cols">
+          <div className="notes-cols__rule">
+            {prose.length > 0 ? (
+              <section className="notes-block">
+                <p className="v2-mono notes-block__label">The rule</p>
+                {prose.map((b, i) => (
+                  <ProseBlock key={i} block={b} />
+                ))}
+              </section>
+            ) : null}
+            {callouts.length > 0 ? (
+              <section className="notes-block">
+                <p className="v2-mono notes-block__label">Remember</p>
+                {callouts.map((b, i) => (
+                  <div key={i} className="v2-remember">
+                    <MathText>{b.text}</MathText>
+                  </div>
+                ))}
+              </section>
+            ) : null}
           </div>
-        </aside>
-      </div>
 
-      <Link className="stage-back" to={areaBasePath(area)}>
-        Back to {titleCase(area.topicArea)}
-      </Link>
+          <div className="notes-cols__examples">
+            {examples.length > 0 ? (
+              <section className="notes-block">
+                <p className="v2-mono notes-block__label">Worked examples</p>
+                <StepPlayer examples={examples} />
+              </section>
+            ) : (
+              <p className="notes-empty">No worked examples for this stage yet.</p>
+            )}
+          </div>
+        </div>
+      </Panel>
+
+      {/* Up next footer — a single primary action. */}
+      <Panel className="stage-v2__upnext">
+        <div className="stage-v2__upnext-text">
+          <span className="v2-mono">Up next</span>
+          <span className="stage-v2__upnext-title">
+            Exercise {stageNum} · {coreCount} question{coreCount === 1 ? "" : "s"}
+          </span>
+        </div>
+        <Link className="v2-btn v2-btn--primary" to={exercisePath(area, stageNum)}>
+          Start Exercise {stageNum} <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+      </Panel>
     </main>
   );
 }
@@ -154,7 +158,7 @@ function ProseBlock({ block }: { block: NoteBlock }) {
   if (block.type === "paragraph") {
     if (DISPLAY_FORMULA.test(block.text)) {
       return (
-        <div className="rule-formula">
+        <div className="v2-formula">
           <MathText>{block.text}</MathText>
         </div>
       );

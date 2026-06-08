@@ -26,6 +26,51 @@ body.lp-app {
   border: 1px solid var(--line);
   color: var(--ink);
 }
+/* Top-bar layout: brand + breadcrumb (lead) · mastery + avatar (trail) — §7a */
+.app-bar__lead,
+.app-bar__trail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.appbar-crumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font: var(--text-v2-body);
+  color: var(--muted);
+}
+.appbar-crumb__sep {
+  color: var(--faint);
+}
+.appbar-crumb__current {
+  color: var(--ink);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.appbar-mastery {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+.appbar-mastery__pct {
+  font: var(--text-v2-btn);
+  color: var(--mint-ink);
+}
+.appbar-mastery__label {
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .appbar-crumb__step,
+  .appbar-mastery__label {
+    display: none;
+  }
+}
+
 .app-footer {
   border-top: 1px solid var(--line);
 }
