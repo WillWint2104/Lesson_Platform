@@ -15,6 +15,7 @@ import "../styles/screens.css";
 import "../styles/v2-shell.css";
 import "../styles/v2-stage.css";
 import "../styles/v2-home.css";
+import "../styles/v2-exercise.css";
 // KaTeX stylesheet (npm, not CDN — see CLAUDE.md §f). Required for math layout.
 import "katex/dist/katex.min.css";
 

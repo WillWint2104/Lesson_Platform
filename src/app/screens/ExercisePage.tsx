@@ -1,32 +1,32 @@
 /**
- * @file ExercisePage.tsx — /:subject/:topic/:topicArea/stage/:n/exercise
+ * @file ExercisePage.tsx — /:subject/:topic/:topicArea/stage/:n/exercise (v2 §7b/§8)
  *
- * Worksheet main column + recap rail. Core set rows are fully tappable → the
- * question focus view; each row self-marks directly (✓ Got it / ✕ Not yet, no
- * solution required) and has an inline Solution button + an enlarge icon.
- * Completion (all core answered) reveals a green completion row linking to the
- * next stage's video ("Next: Video N+1", or back to the area on the last stage).
- * A collapsed "More practice" expander holds the extra pool — its solutions are
- * always available and extra never affects completion.
+ * One worksheet panel (mint strip) on the grid canvas — no extra bars (the shell
+ * bar + contents sidebar carry the chrome/nav). The panel header holds the title
+ * + question count + instruction; below it a grid of question cards (number badge
+ * + expand, mint-outlined question box, an answer field that the learner Checks
+ * by algebraic equivalence, and a Solution button LOCKED until that question is
+ * answered). Completion = every core question answered (correct or not, §8);
+ * wrong answers never gate. The "More practice" expander holds the optional extra
+ * pool (answerable + solvable, never affecting completion). Difficulty is a hidden
+ * authored tag — never rendered here (§8).
  */
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Lightbulb, Maximize2, ArrowRight, RotateCcw } from "lucide-react";
+import { ArrowRight, Maximize2 } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
-import type { ProgressStore } from "@/state/progress";
+import type { ProgressStore, AnswerRecord } from "@/state/progress";
 import type { Question } from "@/ingest/types";
-import type { Outcome } from "@/render/questions/types";
 import { titleCase } from "@/app/format";
-import { computeStageStatus } from "@/app/unlock";
-import { allCoreAnswered, areaBasePath, stagePath, stageInputs } from "@/app/stageProgress";
-import { StageStepper } from "@/app/StageStepper";
+import { allCoreAnswered, areaBasePath, stagePath } from "@/app/stageProgress";
+import { Panel } from "@/shared/v2";
 import { MathText } from "@/shared/MathText";
 import { FigureSlot } from "@/render/figures/FigureSlot";
 import { StatusCircle } from "@/shared/StatusCircle";
-import { MultipleChoice } from "@/render/questions/MultipleChoice";
+import { AnswerControl } from "@/render/questions/AnswerControl";
 import { SolutionModal } from "@/render/questions/SolutionModal";
-import { FocusView, SelfMark } from "@/render/questions/FocusView";
+import { FocusView } from "@/render/questions/FocusView";
 import { NotFound } from "@/app/screens/NotFound";
 
 function useStoreTick(store: ProgressStore): void {
@@ -35,15 +35,10 @@ function useStoreTick(store: ProgressStore): void {
 }
 
 type Pool = "core" | "extra";
-interface FocusTarget {
+interface Target {
   pool: Pool;
   index: number;
 }
-interface SolutionTarget {
-  pool: Pool;
-  index: number;
-}
-const DISPLAY_FORMULA = /^\s*\$\$[\s\S]*\$\$\s*$/;
 
 export function ExercisePage() {
   const { subject, topic, topicArea, n } = useParams();
@@ -59,8 +54,8 @@ export function ExercisePage() {
   useStoreTick(store);
 
   const [expanded, setExpanded] = useState(false);
-  const [focus, setFocus] = useState<FocusTarget | null>(null);
-  const [solution, setSolution] = useState<SolutionTarget | null>(null);
+  const [focus, setFocus] = useState<Target | null>(null);
+  const [solution, setSolution] = useState<Target | null>(null);
   const openerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -76,27 +71,21 @@ export function ExercisePage() {
   const core = stage.exercise.questions;
   const extra = stage.exercise.extra;
   const rec = store.getStageProgress(areaId, stageIndex);
-  const coreOutcomes = rec?.core ?? {};
-  const extraOutcomes = rec?.extra ?? {};
-  const coreComplete = allCoreAnswered(coreOutcomes, core.length);
-  const correctCount = core.filter((_q, i) => coreOutcomes[i] === "correct").length;
-  const anyIncorrect = core.some((_q, i) => coreOutcomes[i] === "incorrect");
-
-  const statuses = computeStageStatus(stageInputs(area, store));
-  const steps = area.stages.map((s, i) => ({ title: s.title, status: statuses[i]! }));
+  const coreResults = rec?.core ?? {};
+  const extraResults = rec?.extra ?? {};
+  const coreComplete = allCoreAnswered(coreResults, core.length);
+  const correctCount = core.filter((_q, i) => coreResults[i]?.correct).length;
+  const anyIncorrect = core.some((_q, i) => coreResults[i] && !coreResults[i]!.correct);
   const isLastStage = stageIndex === area.stages.length - 1;
-  const ruleFormula = stage.notes.find(
-    (b) => b.type === "paragraph" && DISPLAY_FORMULA.test(b.text),
-  );
 
-  function recordCore(qIndex: number, outcome: Outcome) {
+  function recordCore(qIndex: number, result: AnswerRecord) {
     const before = allCoreAnswered(store.getStageProgress(areaId, stageIndex)?.core, core.length);
-    store.recordOutcome(areaId, stageIndex, "core", qIndex, outcome);
+    store.recordResult(areaId, stageIndex, "core", qIndex, result);
     const after = allCoreAnswered(store.getStageProgress(areaId, stageIndex)?.core, core.length);
     if (after && !before) store.recordAttempt(areaId, stageIndex, true);
   }
-  function recordExtra(qIndex: number, outcome: Outcome) {
-    store.recordOutcome(areaId, stageIndex, "extra", qIndex, outcome);
+  function recordExtra(qIndex: number, result: AnswerRecord) {
+    store.recordResult(areaId, stageIndex, "extra", qIndex, result);
   }
 
   const openFocus = (pool: Pool, index: number, opener?: HTMLElement | null) => {
@@ -109,133 +98,99 @@ export function ExercisePage() {
   };
 
   const focusQuestions = focus?.pool === "extra" ? extra : core;
-  const focusOutcomes = focus?.pool === "extra" ? extraOutcomes : coreOutcomes;
+  const focusResults = focus?.pool === "extra" ? extraResults : coreResults;
   const solutionQuestion =
     solution !== null ? (solution.pool === "extra" ? extra : core)[solution.index] : undefined;
 
   return (
-    <main className="app-page exercise-page">
-      <nav className="breadcrumb" aria-label="Breadcrumb">
-        <Link className="breadcrumb__link" to="/">
-          {titleCase(area.subject)}
-        </Link>{" "}
-        / {titleCase(area.topic)} /{" "}
-        <Link className="breadcrumb__link" to={stagePath(area, stageNum)}>
-          {titleCase(area.topicArea)}
-        </Link>
-      </nav>
-      <header className="area-head">
-        <h1 className="sel-title">{area.title}</h1>
-      </header>
+    <main className="app-page exercise-v2">
+      <Panel bodyless className="ws-panel">
+        <div className="ws-head">
+          <h1 className="ws-title">
+            {titleCase(stage.title)} · Exercise {stageNum} of {area.stages.length}
+          </h1>
+          <p className="ws-count v2-mono">
+            {core.length} question{core.length === 1 ? "" : "s"}
+          </p>
+          <p className="ws-instr">Work each one on paper, type your final answer, and check it.</p>
+        </div>
 
-      <StageStepper steps={steps} activeIndex={stageIndex} hrefFor={(i) => stagePath(area, i + 1)} />
+        <ol className="qgrid">
+          {core.map((q, i) => (
+            <QuestionCard
+              key={i}
+              q={q}
+              num={i + 1}
+              ariaName={`question ${i + 1}`}
+              recorded={coreResults[i]}
+              onRecord={(r) => recordCore(i, r)}
+              onSolution={(opener) => openSolution("core", i, opener)}
+              onEnlarge={(opener) => openFocus("core", i, opener)}
+            />
+          ))}
+        </ol>
 
-      <div className="ex-grid">
-        <div className="ex-grid__main">
-          <section className="area-section" aria-label={`Exercise ${stageNum} core set`}>
-            <p className="section-label">
-              Exercise {stageNum} · Core set
+        {coreComplete ? (
+          <div className="ws-complete">
+            <p className="ws-complete__text">
+              <StatusCircle variant="check" size="sm" label="Complete" /> {correctCount} of{" "}
+              {core.length} correct — Exercise {stageNum} complete
             </p>
-            <p className="area-meta">
-              {core.length} question{core.length === 1 ? "" : "s"} · work on paper, then check each
-            </p>
-            <ol className="ws-list">
-              {core.map((q, i) => (
-                <QuestionRow
+            {isLastStage ? (
+              <Link className="v2-btn v2-btn--primary" to={areaBasePath(area)}>
+                Back to {titleCase(area.topicArea)}
+              </Link>
+            ) : (
+              <Link className="v2-btn v2-btn--primary" to={stagePath(area, stageNum + 1)}>
+                Next: Video {stageNum + 1} <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            )}
+            {anyIncorrect ? (
+              <p className="ws-nudge">
+                Worth opening the solutions on the ones marked Incorrect before moving on.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+      </Panel>
+
+      {extra.length > 0 ? (
+        <section className="area-section" aria-label="More practice">
+          <button
+            type="button"
+            className="ex-expander"
+            aria-expanded={expanded}
+            onClick={() => setExpanded((e) => !e)}
+          >
+            More practice · {extra.length} question{extra.length === 1 ? "" : "s"} · optional · same
+            skill, fresh numbers
+          </button>
+          {expanded ? (
+            <ol className="qgrid">
+              {extra.map((q, i) => (
+                <QuestionCard
                   key={i}
                   q={q}
-                  num={`${i + 1}`}
-                  outcome={coreOutcomes[i]}
-                  onOutcome={(o) => recordCore(i, o)}
-                  onSolution={(opener) => openSolution("core", i, opener)}
-                  onEnlarge={(opener) => openFocus("core", i, opener)}
+                  num={i + 1}
+                  ariaName={`practice question ${i + 1}`}
+                  recorded={extraResults[i]}
+                  onRecord={(r) => recordExtra(i, r)}
+                  onSolution={(opener) => openSolution("extra", i, opener)}
+                  onEnlarge={(opener) => openFocus("extra", i, opener)}
                 />
               ))}
             </ol>
-
-            {coreComplete ? (
-              <div className="ex-complete">
-                <p className="ex-complete__text">
-                  <StatusCircle variant="check" size="sm" label="Complete" /> {correctCount} of{" "}
-                  {core.length} checked — Exercise {stageNum} complete
-                </p>
-                {isLastStage ? (
-                  <Link className="btn btn--ghost" to={areaBasePath(area)}>
-                    Back to {titleCase(area.topicArea)}
-                  </Link>
-                ) : (
-                  <Link className="btn btn--primary" to={stagePath(area, stageNum + 1)}>
-                    Next: Video {stageNum + 1} <ArrowRight size={16} aria-hidden="true" />
-                  </Link>
-                )}
-                {anyIncorrect ? (
-                  <p className="ex-nudge">
-                    Worth opening the solutions on the ones marked red before moving on.
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-          </section>
-
-          {extra.length > 0 ? (
-            <section className="area-section" aria-label="More practice">
-              <button
-                type="button"
-                className="ex-expander"
-                aria-expanded={expanded}
-                onClick={() => setExpanded((e) => !e)}
-              >
-                More practice · {extra.length} question{extra.length === 1 ? "" : "s"} · optional ·
-                same skill, fresh numbers
-              </button>
-              {expanded ? (
-                <ol className="ws-list ws-list--extra">
-                  {extra.map((q, i) => (
-                    <QuestionRow
-                      key={i}
-                      q={q}
-                      num={`M${i + 1}`}
-                      outcome={extraOutcomes[i]}
-                      onOutcome={(o) => recordExtra(i, o)}
-                      onSolution={(opener) => openSolution("extra", i, opener)}
-                      onEnlarge={(opener) => openFocus("extra", i, opener)}
-                    />
-                  ))}
-                </ol>
-              ) : null}
-            </section>
           ) : null}
-        </div>
-
-        <aside className="ex-grid__rail" aria-label="Exercise rail">
-          <section className="rail-card">
-            <p className="section-label">Recap</p>
-            {ruleFormula && ruleFormula.type === "paragraph" ? (
-              <div className="rule-formula">
-                <MathText>{ruleFormula.text}</MathText>
-              </div>
-            ) : null}
-            <Link className="ex-rewatch" to={stagePath(area, stageNum)}>
-              <RotateCcw size={16} aria-hidden="true" /> Rewatch Video {stageNum}
-            </Link>
-          </section>
-          <section className="rail-card">
-            <p className="section-label">This exercise</p>
-            <p className="rail-note">
-              {core.length} core question{core.length === 1 ? "" : "s"}. Work on paper, then check
-              each solution.
-            </p>
-          </section>
-        </aside>
-      </div>
+        </section>
+      ) : null}
 
       {focus !== null ? (
         <FocusView
           questions={focusQuestions}
           index={focus.index}
           onIndex={(i) => setFocus({ pool: focus.pool, index: i })}
-          outcomes={focusOutcomes}
-          onOutcome={(qi, o) => (focus.pool === "extra" ? recordExtra(qi, o) : recordCore(qi, o))}
+          results={focusResults}
+          onRecord={(qi, r) => (focus.pool === "extra" ? recordExtra(qi, r) : recordCore(qi, r))}
           onClose={() => setFocus(null)}
           returnFocusTo={openerRef.current}
         />
@@ -245,15 +200,6 @@ export function ExercisePage() {
         <SolutionModal
           questionNumber={solution.index + 1}
           question={solutionQuestion}
-          onMark={
-            solutionQuestion.type === "multiple-choice"
-              ? undefined
-              : (o) => {
-                  if (solution.pool === "extra") recordExtra(solution.index, o);
-                  else recordCore(solution.index, o);
-                  setSolution(null);
-                }
-          }
           onClose={() => setSolution(null)}
           returnFocusTo={openerRef.current}
         />
@@ -262,78 +208,46 @@ export function ExercisePage() {
   );
 }
 
-function QuestionRow({
+function QuestionCard({
   q,
   num,
-  outcome,
-  onOutcome,
+  ariaName,
+  recorded,
+  onRecord,
   onSolution,
   onEnlarge,
 }: {
   q: Question;
-  num: string;
-  outcome: Outcome | undefined;
-  onOutcome: (outcome: Outcome) => void;
-  onSolution: (opener: HTMLElement | null) => void;
-  onEnlarge: (opener: HTMLElement | null) => void;
+  num: number;
+  ariaName: string;
+  recorded: AnswerRecord | undefined;
+  onRecord: (result: AnswerRecord) => void;
+  onSolution: (opener: HTMLElement) => void;
+  onEnlarge: (opener: HTMLElement) => void;
 }) {
-  const isMc = q.type === "multiple-choice";
   const figure = "figure" in q ? q.figure : undefined;
   return (
-    <li className="ws-row ws-row--tappable" onClick={(e) => onEnlarge(e.currentTarget)}>
-      <span className="ws-row__num" aria-hidden="true">
-        {num}
-      </span>
-      <div className="ws-row__main">
-        <div className="ws-row__head">
-          <div className="ws-row__prompt">
-            <MathText>{q.prompt}</MathText>
-          </div>
-          <div className="ws-row__tools" onClick={(e) => e.stopPropagation()}>
-            {q.difficulty ? <span className="qr-difficulty">{q.difficulty}</span> : null}
-            <OutcomeBadge outcome={outcome} />
-            <button
-              type="button"
-              className="ws-row__solve"
-              aria-label={`Show ${isMc ? "explanation" : "solution"} for question ${num}`}
-              onClick={(e) => onSolution(e.currentTarget)}
-            >
-              <Lightbulb size={16} aria-hidden="true" />
-              <span className="ws-row__solve-label">{isMc ? "Explain" : "Solution"}</span>
-            </button>
-            <button
-              type="button"
-              className="ws-row__enlarge"
-              aria-label={`Enlarge question ${num}`}
-              onClick={(e) => onEnlarge(e.currentTarget)}
-            >
-              <Maximize2 size={16} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-
-        {figure ? <FigureSlot figure={figure} /> : null}
-
-        {/* MC marks on select; everything else self-marks directly (solution
-            optional). Stop propagation so these don't trigger the row → focus. */}
-        {isMc ? (
-          <div onClick={(e) => e.stopPropagation()}>
-            <MultipleChoice question={q} onOutcome={onOutcome} />
-          </div>
-        ) : (
-          <div onClick={(e) => e.stopPropagation()}>
-            <SelfMark outcome={outcome} onOutcome={onOutcome} />
-          </div>
-        )}
+    <li className="qcard">
+      <div className="qcard__head">
+        <span className="qcard__num v2-badge" aria-hidden="true">
+          {num}
+        </span>
+        <button
+          type="button"
+          className="qcard__expand"
+          aria-label={`Enlarge ${ariaName}`}
+          onClick={(e) => onEnlarge(e.currentTarget)}
+        >
+          <Maximize2 size={16} aria-hidden="true" />
+        </button>
       </div>
+      <div className="qcard__box">
+        <div className="qcard__prompt">
+          <MathText>{q.prompt}</MathText>
+        </div>
+        {figure ? <FigureSlot figure={figure} /> : null}
+      </div>
+      <AnswerControl question={q} recorded={recorded} onRecord={onRecord} onOpenSolution={onSolution} />
     </li>
   );
-}
-
-function OutcomeBadge({ outcome }: { outcome: Outcome | undefined }) {
-  if (!outcome) return null;
-  if (outcome === "correct") {
-    return <StatusCircle variant="check" size="sm" label="Answered correctly" />;
-  }
-  return <StatusCircle variant="dot" size="sm" label="Marked for review" />;
 }

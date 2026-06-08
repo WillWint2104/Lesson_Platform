@@ -22,10 +22,13 @@ const mcQuestion = (prompt: string, right: string, wrong: string) => ({
     { text: wrong, isCorrect: false },
   ],
 });
-const textQ = (prompt: string, answer?: string) => ({
+// v2 §8: exercise text questions carry a canonical answer (the equivalence
+// check needs one). Default to "$x$" so areas built in tests are valid; pass an
+// explicit answer where a test checks correctness.
+const textQ = (prompt: string, answer = "$x$") => ({
   type: "text",
   prompt,
-  ...(answer !== undefined ? { answer } : {}),
+  answer,
 });
 
 function stage(
@@ -292,167 +295,206 @@ describe("StagePage", () => {
 describe("ExercisePage — completion & gating", () => {
   const EX1 = `/${AREA_ID}/stage/1/exercise`;
 
-  it("completes when all core are ANSWERED (even incorrectly) + shows the nudge", () => {
+  /** Type an answer + click Check, scoped to a card/dialog (defaults to the page). */
+  function answer(value: string, scope?: HTMLElement) {
+    const root = scope ?? document.body;
+    fireEvent.change(within(root).getByLabelText("Your answer"), { target: { value } });
+    fireEvent.click(within(root).getByRole("button", { name: "Check" }));
+  }
+
+  it("marks a correct answer by algebraic equivalence (a reordering still passes)", () => {
     const reg = buildReg(
-      mkArea("brackets", { stages: [stage("Only", { questions: [mcQuestion("q", "Yes", "No")] })] }),
+      mkArea("brackets", { stages: [stage("S", { questions: [textQ("Expand 4(x+3)", "$4x+12$")] })] }),
+    );
+    const store = buildStore(reg);
+    renderAt(EX1, reg, store);
+    answer("12 + 4x"); // reordered — equivalent
+    expect(screen.getByText("Correct")).toBeTruthy();
+    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toEqual({ answer: "12 + 4x", correct: true });
+  });
+
+  it("marks a wrong answer 'Incorrect' (no 'Try again') yet still completes the stage", () => {
+    const reg = buildReg(
+      mkArea("brackets", { stages: [stage("Only", { questions: [textQ("Expand", "$4x+12$")] })] }),
     );
     const store = buildStore(reg);
     renderAt(EX1, reg, store);
     expect(screen.queryByText(/Exercise 1 complete/)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "No" })); // wrong, but answered
-    expect(screen.getByText(/Exercise 1 complete/)).toBeTruthy();
-    expect(screen.getByText(/marked red before moving on/)).toBeTruthy(); // nudge
+    answer("4x + 9"); // wrong
+    expect(screen.getByText("Incorrect")).toBeTruthy();
+    expect(screen.queryByText(/try again/i)).toBeNull();
+    expect(screen.getByText(/Exercise 1 complete/)).toBeTruthy(); // answered → complete
+    expect(screen.getByText(/marked Incorrect/)).toBeTruthy(); // nudge
     expect(store.getStageProgress(AREA_ID, 0)?.completedAt).not.toBeNull();
   });
 
-  it("on completion links to the NEXT stage's video (Back to area on the last stage)", () => {
-    const reg = buildReg(
-      mkArea("brackets", {
-        stages: [stage("A", { questions: [mcQuestion("q", "Y", "N")] }), stage("B")],
-      }),
-    );
+  it("the Solution button is LOCKED until the question is answered (§8)", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("S", { questions: [textQ("q", "$x+1$")] })] }));
     renderAt(EX1, reg, buildStore(reg));
-    fireEvent.click(screen.getByRole("button", { name: "Y" }));
-    const next = screen.getByRole("link", { name: /Next: Video 2/ });
-    expect(next.getAttribute("href")).toBe(`/${AREA_ID}/stage/2`); // the next stage's (video) page
-  });
-
-  it("on the LAST stage, completion links back to the area instead", () => {
-    const reg = buildReg(
-      mkArea("brackets", { stages: [stage("Only", { questions: [mcQuestion("q", "Y", "N")] })] }),
+    expect((screen.getByRole("button", { name: /Solution locked/ }) as HTMLButtonElement).disabled).toBe(
+      true,
     );
-    renderAt(EX1, reg, buildStore(reg));
-    fireEvent.click(screen.getByRole("button", { name: "Y" }));
-    expect(screen.queryByText(/Next: Video/)).toBeNull();
-    expect(screen.getByRole("link", { name: /Back to Brackets/ })).toBeTruthy();
+    answer("x+1");
+    expect((screen.getByRole("button", { name: "Solution" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("more-practice expander is collapsed by default and reveals extra rows", () => {
-    const reg = buildReg(
-      mkArea("brackets", {
-        stages: [stage("S", { questions: [mcQuestion("core", "R", "W")], extra: [mcQuestion("extra-q", "ER", "EW")] })],
-      }),
-    );
-    renderAt(EX1, reg, buildStore(reg));
-    expect(screen.queryByRole("button", { name: "ER" })).toBeNull(); // collapsed
-    fireEvent.click(screen.getByRole("button", { name: /More practice/ }));
-    expect(screen.getByRole("button", { name: "ER" })).toBeTruthy();
-  });
-
-  it("extra solutions are ALWAYS available, and extra never completes the stage", () => {
-    const reg = buildReg(
-      mkArea("brackets", {
-        stages: [stage("S", { questions: [textQ("core")], extra: [mcQuestion("extra-q", "ER", "EW")] })],
-      }),
-    );
-    const store = buildStore(reg);
-    renderAt(EX1, reg, store);
-    fireEvent.click(screen.getByRole("button", { name: /More practice/ }));
-    // Extra solution is NOT locked, even with the core unanswered.
-    const extraSolve = screen.getByRole("button", { name: "Show explanation for question M1" });
-    expect((extraSolve as HTMLButtonElement).disabled).toBe(false);
-    // Answering the extra question records to store.extra but does NOT complete.
-    fireEvent.click(screen.getByRole("button", { name: "ER" }));
-    expect(store.getStageProgress(AREA_ID, 0)?.extra[0]).toBe("correct");
-    expect(store.getStageProgress(AREA_ID, 0)?.completedAt).toBeNull();
-  });
-
-  it("a row self-marks directly (✓ Got it) without opening the solution", () => {
-    const reg = buildReg(
-      mkArea("brackets", { stages: [stage("S", { questions: [textQ("q", "A")] })] }),
-    );
-    const store = buildStore(reg);
-    renderAt(EX1, reg, store);
-    fireEvent.click(screen.getByRole("button", { name: "Got it" }));
-    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toBe("correct");
-    expect(screen.queryByRole("dialog")).toBeNull(); // never opened a solution
-    expect(screen.getByText(/Exercise 1 complete/)).toBeTruthy(); // single core → complete
-  });
-
-  it("the solution shows the working BEFORE the answer chip", () => {
+  it("the solution shows the working BEFORE the answer", () => {
     const reg = buildReg(
       mkArea("brackets", {
         stages: [
           stage("S", {
-            questions: [{ type: "text", prompt: "q", answer: "FINAL", working: ["stepone", "steptwo"] }],
+            questions: [{ type: "text", prompt: "q", answer: "$x+1$", working: ["stepone", "steptwo"] }],
           }),
         ],
       }),
     );
     const { container } = renderAt(EX1, reg, buildStore(reg));
-    fireEvent.click(screen.getByRole("button", { name: "Show solution for question 1" }));
+    answer("x+1");
+    fireEvent.click(screen.getByRole("button", { name: "Solution" }));
     const working = container.querySelector(".qr-reveal__working")!;
-    const answer = container.querySelector(".qr-reveal__answer")!;
-    expect(working.compareDocumentPosition(answer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const ans = container.querySelector(".qr-reveal__answer")!;
+    expect(working.compareDocumentPosition(ans) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("restores answered-state + records sticky completedAt that survives a re-run", () => {
+  it("on completion links to the NEXT stage's video; Back to area on the last stage", () => {
     const reg = buildReg(
-      mkArea("brackets", { stages: [stage("S", { questions: [textQ("q", "A")] })] }),
+      mkArea("brackets", { stages: [stage("A", { questions: [textQ("q", "$x$")] }), stage("B")] }),
+    );
+    renderAt(EX1, reg, buildStore(reg));
+    answer("x");
+    expect(screen.getByRole("link", { name: /Next: Video 2/ }).getAttribute("href")).toBe(
+      `/${AREA_ID}/stage/2`,
+    );
+
+    cleanup();
+    const last = buildReg(mkArea("brackets", { stages: [stage("Only", { questions: [textQ("q", "$x$")] })] }));
+    renderAt(EX1, last, buildStore(last));
+    answer("x");
+    expect(screen.queryByText(/Next: Video/)).toBeNull();
+    expect(screen.getByRole("link", { name: /Back to Brackets/ })).toBeTruthy();
+  });
+
+  it("more-practice expander is collapsed by default and reveals the extra cards", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [stage("S", { questions: [textQ("core", "$x$")], extra: [textQ("extra-q", "$y$")] })],
+      }),
+    );
+    renderAt(EX1, reg, buildStore(reg));
+    expect(screen.queryByRole("button", { name: "Enlarge practice question 1" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /More practice/ }));
+    expect(screen.getByRole("button", { name: "Enlarge practice question 1" })).toBeTruthy();
+  });
+
+  it("extra records to store.extra but NEVER completes the stage", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [stage("S", { questions: [textQ("core", "$x$")], extra: [textQ("extra-q", "$y$")] })],
+      }),
     );
     const store = buildStore(reg);
     renderAt(EX1, reg, store);
-    fireEvent.click(screen.getByRole("button", { name: "Show solution for question 1" }));
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "I got it" }));
-    const first = store.getStageProgress(AREA_ID, 0);
-    expect(first?.completedAt).not.toBeNull();
-    expect(screen.getByLabelText("Answered correctly")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /More practice/ }));
+    const extraCard = screen
+      .getByRole("button", { name: "Enlarge practice question 1" })
+      .closest("li") as HTMLElement;
+    answer("y", extraCard);
+    expect(store.getStageProgress(AREA_ID, 0)?.extra[0]).toEqual({ answer: "y", correct: true });
+    expect(store.getStageProgress(AREA_ID, 0)?.completedAt).toBeNull(); // extra never completes
+  });
+
+  it("restores the recorded answer + sticky completedAt across a remount (no re-check)", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("S", { questions: [textQ("q", "$x$")] })] }));
+    const store = buildStore(reg);
+    renderAt(EX1, reg, store);
+    answer("zzz"); // wrong
+    expect(store.getStageProgress(AREA_ID, 0)?.completedAt).not.toBeNull();
+    cleanup();
+    renderAt(EX1, reg, store);
+    expect(screen.getByText("Incorrect")).toBeTruthy(); // result restored
+    expect(screen.queryByLabelText("Your answer")).toBeNull(); // no field → no retake
+  });
+
+  it("never renders the difficulty tag in the student UI (§8)", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [stage("S", { questions: [{ type: "text", prompt: "q", answer: "$x$", difficulty: "hard" }] })],
+      }),
+    );
+    const { container } = renderAt(EX1, reg, buildStore(reg));
+    expect(container.querySelector(".qr-difficulty")).toBeNull();
+    expect(screen.queryByText(/hard/i)).toBeNull();
   });
 });
 
-describe("Question focus view", () => {
+describe("Question focus view (§7c)", () => {
   const EX1 = `/${AREA_ID}/stage/1/exercise`;
   const twoQ = mkArea("brackets", {
-    stages: [stage("S", { questions: [textQ("first q", "A1"), textQ("second q", "A2")] })],
+    stages: [stage("S", { questions: [textQ("first q", "$a$"), textQ("second q", "$b$")] })],
   });
+  const enlarge = (n = 1) =>
+    fireEvent.click(screen.getByRole("button", { name: `Enlarge question ${n}` }));
 
-  it("opens from the enlarge icon, labels Question N of M, navigates and closes (Esc)", () => {
+  it("opens from the enlarge icon, labels Question N of M, navigates, closes (Esc), restores focus", () => {
     const reg = buildReg(twoQ);
     renderAt(EX1, reg, buildStore(reg));
-    const enlarge = screen.getByRole("button", { name: "Enlarge question 1" });
-    fireEvent.click(enlarge);
+    const opener = screen.getByRole("button", { name: "Enlarge question 1" });
+    fireEvent.click(opener);
     const dialog = screen.getByRole("dialog", { name: "Question 1 of 2" });
-    expect(dialog).toBeTruthy();
     expect(dialog.contains(document.activeElement)).toBe(true);
-
     fireEvent.keyDown(dialog, { key: "ArrowRight" });
     expect(screen.getByRole("dialog", { name: "Question 2 of 2" })).toBeTruthy();
-
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(document.activeElement).toBe(enlarge); // focus restored to the row's opener
+    expect(document.activeElement).toBe(opener); // focus restored to the opener
   });
 
-  it("the S key opens the solution inside the focus view", () => {
-    const reg = buildReg(twoQ);
-    renderAt(EX1, reg, buildStore(reg));
-    fireEvent.click(screen.getByRole("button", { name: "Enlarge question 1" }));
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "s" });
-    expect(screen.getByText("A1")).toBeTruthy(); // solution answer shown
-  });
-
-  it("is an in-place dialog over a blurred backdrop (not a route — the page stays mounted)", () => {
+  it("is an in-place dialog over a blurred scrim (the worksheet stays mounted, not a route)", () => {
     const reg = buildReg(twoQ);
     const { container } = renderAt(EX1, reg, buildStore(reg));
-    fireEvent.click(screen.getByRole("button", { name: "Enlarge question 1" }));
+    enlarge(1);
     const backdrop = container.querySelector(".focus-backdrop");
     expect(backdrop).not.toBeNull();
     const dialog = screen.getByRole("dialog");
     expect(dialog.getAttribute("aria-modal")).toBe("true");
     expect(backdrop!.contains(dialog)).toBe(true);
-    // the exercise page is still mounted behind the dialog (enlarge-in-place, not navigation)
-    expect(container.querySelector(".ex-grid")).not.toBeNull();
+    expect(container.querySelector(".ws-panel")).not.toBeNull(); // worksheet still mounted
   });
 
-  it("self-marks from the focus view with the G and N keys (no solution needed)", () => {
+  it("answering inside the focus view records the result and shows the bar", () => {
     const reg = buildReg(twoQ);
     const store = buildStore(reg);
     renderAt(EX1, reg, store);
-    fireEvent.click(screen.getByRole("button", { name: "Enlarge question 1" }));
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "g" });
-    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toBe("correct");
-    fireEvent.keyDown(screen.getByRole("dialog"), { key: "n" });
-    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toBe("incorrect");
+    enlarge(1);
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Your answer"), { target: { value: "a" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Check" }));
+    expect(within(dialog).getByText("Correct")).toBeTruthy();
+    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toEqual({ answer: "a", correct: true });
+  });
+
+  it("CRITICAL: the solution stays locked until THAT question is answered, even via prev/next", () => {
+    const reg = buildReg(twoQ);
+    renderAt(EX1, reg, buildStore(reg));
+    enlarge(1);
+    let dialog = screen.getByRole("dialog");
+    // q1 unanswered → S does nothing; the Solution button is locked.
+    fireEvent.keyDown(dialog, { key: "s" });
+    expect(within(dialog).queryByText(/Worked solution/)).toBeNull();
+    expect(
+      (within(dialog).getByRole("button", { name: /Solution locked/ }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    // Answer q1 → its solution unlocks.
+    fireEvent.change(within(dialog).getByLabelText("Your answer"), { target: { value: "a" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Check" }));
+    fireEvent.keyDown(dialog, { key: "s" });
+    expect(within(dialog).getByText(/Worked solution/)).toBeTruthy();
+    // Navigate to q2 (unanswered): the solution is NOT carried over, and S is inert.
+    fireEvent.keyDown(dialog, { key: "ArrowRight" });
+    dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByText(/Worked solution/)).toBeNull();
+    fireEvent.keyDown(dialog, { key: "s" });
+    expect(within(dialog).queryByText(/Worked solution/)).toBeNull(); // still locked for q2
   });
 
   it("MC renders inline inside the focus view", () => {
@@ -461,16 +503,16 @@ describe("Question focus view", () => {
     );
     const store = buildStore(reg);
     renderAt(EX1, reg, store);
-    fireEvent.click(screen.getByRole("button", { name: "Enlarge question 1" }));
+    enlarge(1);
     const dialog = screen.getByRole("dialog");
     fireEvent.click(within(dialog).getByRole("button", { name: "Yes" }));
-    expect(store.getStageProgress(AREA_ID, 0)?.core[0]).toBe("correct");
+    expect(store.getStageProgress(AREA_ID, 0)?.core[0]?.correct).toBe(true);
   });
 
-  it("the exercise grid + stage grid expose stacking containers (mobile smoke)", () => {
+  it("the exercise worksheet + stage notes expose stacking containers (mobile smoke)", () => {
     const reg = buildReg(mkArea("brackets"));
     const { container } = renderAt(EX1, reg, buildStore(reg));
-    expect(container.querySelector(".ex-grid")).not.toBeNull();
+    expect(container.querySelector(".qgrid")).not.toBeNull();
     cleanup();
     const { container: c2 } = renderAt(STAGE1, reg, buildStore(reg));
     expect(c2.querySelector(".notes-cols")).not.toBeNull();
