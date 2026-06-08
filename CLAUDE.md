@@ -360,7 +360,9 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   is the nav); it remains only in the dormant runner's tests. The **question
   focus view** (`FocusView`, §7c) **enlarges the question IN PLACE** — a centered
   v2 card over a dimmed + blurred scrim (`--scrim` + `backdrop-filter`), NOT a
-  route (role=dialog, aria-modal; ← → navigate / S = solution / Esc close), with
+  route (role=dialog, aria-modal, **Tab focus trap** + restore; ← → navigate /
+  S = solution / Esc close — arrows/S are **suppressed while typing** in the
+  answer field), with
   three states: **unanswered** (field + Check + LOCKED solution), **answered**
   (result bar + active solution), **solution** (working → answer, shown in place).
   Solution gating is **per-question** — it stays locked when you arrive via

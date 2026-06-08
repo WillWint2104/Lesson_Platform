@@ -509,6 +509,36 @@ describe("Question focus view (§7c)", () => {
     expect(store.getStageProgress(AREA_ID, 0)?.core[0]?.correct).toBe(true);
   });
 
+  it("arrow keys do NOT navigate while typing in the answer field (§7c)", () => {
+    const reg = buildReg(twoQ);
+    renderAt(EX1, reg, buildStore(reg));
+    enlarge(1);
+    const field = within(screen.getByRole("dialog")).getByLabelText("Your answer");
+    fireEvent.keyDown(field, { key: "ArrowRight" }); // caret move, not a question jump
+    expect(screen.getByRole("dialog", { name: "Question 1 of 2" })).toBeTruthy(); // still q1
+  });
+
+  it("traps Tab focus within the dialog (cycles last → first)", () => {
+    const reg = buildReg(twoQ);
+    renderAt(EX1, reg, buildStore(reg));
+    enlarge(1);
+    const dialog = screen.getByRole("dialog");
+    const focusables = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((el) => !el.hasAttribute("disabled"));
+    const first = focusables[0]!;
+    const last = focusables[focusables.length - 1]!;
+    last.focus();
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(first); // forward wrap: last → first
+
+    first.focus();
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last); // reverse wrap: first → last
+  });
+
   it("the exercise worksheet + stage notes expose stacking containers (mobile smoke)", () => {
     const reg = buildReg(mkArea("brackets"));
     const { container } = renderAt(EX1, reg, buildStore(reg));
