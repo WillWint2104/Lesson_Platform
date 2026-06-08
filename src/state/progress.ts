@@ -1,19 +1,21 @@
 /**
- * @file progress.ts — Learner progress store, SCHEMA v3 (CLAUDE.md §a, §c 3 & 7).
+ * @file progress.ts — Learner progress store, SCHEMA v4 (CLAUDE.md §a, §c 3 & 7).
  *
- * v3 keys progress by **areaId + stage index**, each stage with separate `core`
- * and `extra` outcome maps. A stage is complete when every CORE question has an
- * outcome (ANY outcome — never gated on correctness); extra never affects
- * completion. completedAt is sticky: review re-runs record fresh outcomes +
- * attempts but never clear it.
+ * v4 keys progress by **areaId + stage index**, each stage with separate `core`
+ * and `extra` maps. Each entry is an **AnswerRecord `{ answer, correct }`** — the
+ * learner's typed answer and whether the algebraic-equivalence check passed
+ * (design-language-v2 §8, replacing the v3 honour-system outcome). A stage is
+ * complete when every CORE question has a recorded answer (ANY result — never
+ * gated on correctness); extra never affects completion. completedAt is sticky:
+ * review re-runs record fresh results + attempts but never clear it.
  *
  * Save/restore symmetry (lesson 3): ONE serialize + ONE restore, colocated, with
  * an explicit whitelist. The round-trip test fails if a field is dropped.
  *
- * Migration: older (v2/v1) data has no derivable v3 mapping in this pure layer,
- * so it is **preserved verbatim under `legacy` (.v2 / .v1), never destroyed**,
- * and the old key is left intact. Bump SCHEMA_VERSION + add a migration on ANY
- * breaking shape change.
+ * Migration: older (v3/v2/v1) data is **preserved verbatim under `legacy`
+ * (.v3 / .v2 / .v1), never destroyed**, and the old key is left intact; current
+ * progress starts fresh. Bump SCHEMA_VERSION + add a migration on ANY breaking
+ * shape change.
  */
 
 import {
@@ -25,14 +27,23 @@ import {
   type StorageBackend,
 } from "./storage";
 
-export type Outcome = "correct" | "incorrect";
 export type StageView = "stage" | "exercise";
 export type QuestionPool = "core" | "extra";
 
+/**
+ * One answered question (design-language-v2 §8): the learner's typed answer and
+ * whether the algebraic-equivalence check marked it correct. The result IS the
+ * mark — there is no honour-system self-mark.
+ */
+export interface AnswerRecord {
+  answer: string;
+  correct: boolean;
+}
+
 /** Progress within one stage. */
 export interface StageRecord {
-  core: Record<number, Outcome>;
-  extra: Record<number, Outcome>;
+  core: Record<number, AnswerRecord>;
+  extra: Record<number, AnswerRecord>;
   attempts: number;
   completedAt: string | null;
 }
@@ -53,10 +64,11 @@ export interface LastVisited {
 export interface LegacyBucket {
   v1?: unknown;
   v2?: unknown;
+  v3?: unknown;
 }
 
 export interface ProgressState {
-  version: 3;
+  version: 4;
   lastVisited: LastVisited | null;
   areas: Record<string, AreaRecord>;
   legacy: LegacyBucket | null;
@@ -70,12 +82,12 @@ export interface ProgressStore {
   getLastVisited(): LastVisited | null;
   /** Stage record for (area, stage), or null (stale area excluded). */
   getStageProgress(areaId: string, stageIndex: number): StageRecord | null;
-  recordOutcome(
+  recordResult(
     areaId: string,
     stageIndex: number,
     pool: QuestionPool,
     questionIndex: number,
-    outcome: Outcome,
+    result: AnswerRecord,
   ): void;
   recordAttempt(areaId: string, stageIndex: number, completed: boolean): void;
   setLastVisited(areaId: string, stageIndex: number, view: StageView): void;
@@ -105,10 +117,16 @@ function isObject(v: unknown): v is Record<string, unknown> {
 // Save / restore — ONE serialize + ONE restore, explicit whitelist.
 // ---------------------------------------------------------------------------
 
+function cloneResults(m: Record<number, AnswerRecord>): Record<number, AnswerRecord> {
+  const out: Record<number, AnswerRecord> = {};
+  for (const [k, v] of Object.entries(m)) out[Number(k)] = { answer: v.answer, correct: v.correct };
+  return out;
+}
+
 function cloneStage(rec: StageRecord): StageRecord {
   return {
-    core: { ...rec.core },
-    extra: { ...rec.extra },
+    core: cloneResults(rec.core),
+    extra: cloneResults(rec.extra),
     attempts: rec.attempts,
     completedAt: rec.completedAt,
   };
@@ -137,11 +155,13 @@ export function serializeState(state: ProgressState): string {
   });
 }
 
-function restoreOutcomes(raw: unknown): Record<number, Outcome> {
-  const out: Record<number, Outcome> = {};
+function restoreResults(raw: unknown): Record<number, AnswerRecord> {
+  const out: Record<number, AnswerRecord> = {};
   if (isObject(raw)) {
     for (const [k, v] of Object.entries(raw)) {
-      if (v === "correct" || v === "incorrect") out[Number(k)] = v;
+      if (isObject(v) && typeof v["answer"] === "string" && typeof v["correct"] === "boolean") {
+        out[Number(k)] = { answer: v["answer"] as string, correct: v["correct"] as boolean };
+      }
     }
   }
   return out;
@@ -150,8 +170,8 @@ function restoreOutcomes(raw: unknown): Record<number, Outcome> {
 function restoreStage(raw: unknown): StageRecord {
   const r = isObject(raw) ? raw : {};
   return {
-    core: restoreOutcomes(r["core"]),
-    extra: restoreOutcomes(r["extra"]),
+    core: restoreResults(r["core"]),
+    extra: restoreResults(r["extra"]),
     attempts: typeof r["attempts"] === "number" ? (r["attempts"] as number) : 0,
     completedAt: typeof r["completedAt"] === "string" ? (r["completedAt"] as string) : null,
   };
@@ -187,6 +207,7 @@ export function restoreState(parsed: Record<string, unknown>): ProgressState {
     legacy = {};
     if (l["v1"] !== undefined) legacy.v1 = l["v1"];
     if (l["v2"] !== undefined) legacy.v2 = l["v2"];
+    if (l["v3"] !== undefined) legacy.v3 = l["v3"];
   }
 
   return {
@@ -198,16 +219,26 @@ export function restoreState(parsed: Record<string, unknown>): ProgressState {
 }
 
 /**
- * Migrate older (v2/v1) data to v3. Older records have no derivable area/stage
- * mapping in this pure layer, so they are preserved VERBATIM under `legacy`:
- * `legacy.v2` = the v2 blob, and `legacy.v1` = any v1 nested inside it (or the
- * v1 blob directly when migrating straight from v1).
+ * Migrate older (v3/v2/v1) data to v4. The leaf shape changed (an honour-system
+ * outcome → an `{ answer, correct }` AnswerRecord) with no faithful answer to
+ * recover, so older records are preserved VERBATIM under `legacy` and current
+ * progress starts fresh:
+ *   - from v3 → `legacy.v3` = the v3 blob (carrying forward its own v2/v1 chain),
+ *   - from v2 → `legacy.v2` = the v2 blob (+ nested v1),
+ *   - from v1 → `legacy.v1` = the v1 blob.
  */
-export function migrateToV3(parsed: Record<string, unknown>, fromVersion: number): ProgressState {
+export function migrateToV4(parsed: Record<string, unknown>, fromVersion: number): ProgressState {
   const legacy: LegacyBucket = {};
-  if (fromVersion >= 2) {
+  if (fromVersion >= 3) {
+    legacy.v3 = parsed;
+    // A v3 blob carries its own `legacy` ({ v1, v2 }) — carry the chain forward.
+    if (isObject(parsed["legacy"])) {
+      const l = parsed["legacy"] as Record<string, unknown>;
+      if (l["v1"] !== undefined) legacy.v1 = l["v1"];
+      if (l["v2"] !== undefined) legacy.v2 = l["v2"];
+    }
+  } else if (fromVersion >= 2) {
     legacy.v2 = parsed;
-    // A v2 blob carries its own `legacy` (the original v1) — preserve it too.
     if (isObject(parsed["legacy"])) legacy.v1 = parsed["legacy"];
   } else {
     legacy.v1 = parsed;
@@ -248,8 +279,8 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
       state = restoreState(load.parsed);
       break;
     case "migrate":
-      state = migrateToV3(load.parsed, load.fromVersion);
-      migrated = true; // persist the migrated v3 (leaving the old key intact)
+      state = migrateToV4(load.parsed, load.fromVersion);
+      migrated = true; // persist the migrated v4 (leaving the old key intact)
       break;
     case "future":
       persistDisabled = true;
@@ -290,7 +321,7 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   }
   if (migrated) {
     console.warn(
-      "[progress] migrated older progress to v3 — old records preserved verbatim under `legacy` (the old key is left intact).",
+      "[progress] migrated older progress to v4 — old records preserved verbatim under `legacy` (the old key is left intact); current progress starts fresh.",
     );
     persist();
   }
@@ -346,9 +377,12 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
       return stage ? cloneStage(stage) : null;
     },
 
-    recordOutcome(areaId, stageIndex, pool, questionIndex, outcome) {
+    recordResult(areaId, stageIndex, pool, questionIndex, result) {
       if (!isKnownAreaId(areaId)) return; // never persist ghost area records
-      ensureStage(areaId, stageIndex)[pool][questionIndex] = outcome;
+      ensureStage(areaId, stageIndex)[pool][questionIndex] = {
+        answer: result.answer,
+        correct: result.correct,
+      };
       persist();
       notify();
     },

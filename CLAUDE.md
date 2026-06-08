@@ -131,12 +131,18 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
     field (specVersion defaults to 1). `kind` selects a sealed renderer family
     (see §g). `graphData`/`geometryData` are **deprecated aliases** — still
     accepted (mapped to a kind, with a warning), but new content uses `figure`.
-- **Optional:** `skill`, `difficulty`.
-- **Optional reveal (non-MC only):** `answer?: string` and `working?: string[]`
-  on `text` / `table` / `graph` / `geometry` — both render through MathText. The
-  runtime reveals them, then self-marks. `multiple-choice` does NOT take these
-  (its options carry correctness). A `text` question with **no `answer`** is
-  valid but **warns** — the runtime falls back to self-marking with no reveal.
+- **Optional:** `skill`. **`difficulty`** (`easy|medium|hard`) is an authored
+  **hidden** tag — stored for a future teacher mode, **NEVER rendered in the
+  student UI** (design-language-v2 §8). Out-of-enum values warn.
+- **`answer` + `working` (non-MC):** `answer: string` and `working?: string[]`,
+  both render through MathText. **In an area exercise, a `text` question's
+  `answer` is REQUIRED** — it is the *canonical* answer the algebraic-equivalence
+  check (`mathjs`, client-side) marks the learner's typed answer against (v2 §8);
+  a missing exercise-text answer is a validator **error** (path-precise). The
+  other answerable types (`table`/`graph`/`geometry`) keep `answer` optional
+  (future variants, §10), and a **standalone** `questions.json` text question
+  still only **warns** (preserves the frozen back-compat corpus, §g).
+  `multiple-choice` takes neither (its options carry correctness).
 - **NO `topic` field inside questions** (topic comes from the content hierarchy).
 
 ### Notes JSON — block types
@@ -223,7 +229,8 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 - **Stack: Vite + React + TypeScript** — chosen for a fast, zero-config dev
   server and first-class TS support with a minimal dependency surface.
 - **Dependencies:** runtime `react`, `react-dom`, **`katex`**,
-  **`react-router-dom`**; dev `vite`,
+  **`react-router-dom`**, **`mathjs`** (client-side algebraic-equivalence answer
+  checking, §8), `lucide-react`; dev `vite`,
   `@vitejs/plugin-react`, `typescript`, `@types/react`, `@types/react-dom`,
   `@types/node`, `@types/katex`, **`vitest`**, `@testing-library/react`,
   `@testing-library/dom`, `jsdom`. Routing is `react-router-dom`; no state lib
@@ -276,21 +283,25 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
     (`onOutcome` / `onResult`/`onComplete`) that the AreaPage/store layer
     consumes. Graph/geometry without a `figure` render a token-styled
     placeholder, not real figures.
-- **Progress store is implemented (schema v3, area/stage-keyed):**
+- **Progress store is implemented (schema v4, area/stage-keyed):**
   `/src/state/` — `progress.ts` (localStorage-backed, single versioned key
-  `lp:progress:v3`; state is `areas[areaId].stages[stageIndex]` where each stage
-  carries `{ core, extra, attempts, completedAt }` (separate core/extra outcome
-  maps); `lastVisited` = `{ areaId, stageIndex, view }`; ONE serialize/restore
+  `lp:progress:v4`; state is `areas[areaId].stages[stageIndex]` where each stage
+  carries `{ core, extra, attempts, completedAt }`. **core/extra are maps of
+  `AnswerRecord { answer, correct }`** — the learner's typed answer + whether the
+  equivalence check passed (design-language-v2 §8, replacing the v3 honour-system
+  outcome); `lastVisited` = `{ areaId, stageIndex, view }`; ONE serialize/restore
   pair with an explicit whitelist; stale-id guard on reads AND writes),
   `storage.ts` (backend detection + in-memory fallback + corrupt/future-version
-  robustness; reads the v3 key, falls back to v2 then v1 for migration),
-  `ProgressContext.tsx`. **v2→v3 migration** (`migrateToV3`): older records are
-  **preserved verbatim under `legacy.v2` / `legacy.v1` — never destroyed**; the
-  old key is left intact. `resetAll` preserves `legacy`. Outcomes are recorded
-  via `recordOutcome(areaId, stageIdx, "core"|"extra", qIdx, outcome)`;
+  robustness; reads the v4 key, falls back to v3 → v2 → v1 for migration),
+  `ProgressContext.tsx`. **Migration to v4** (`migrateToV4`): older records
+  (v3/v2/v1) are **preserved verbatim under `legacy.v3` / `.v2` / `.v1` — never
+  destroyed** and current progress **starts fresh** (the leaf shape changed with
+  no faithful answer to recover); the old key is left intact. `resetAll`
+  preserves `legacy`. Results are recorded via
+  `recordResult(areaId, stageIdx, "core"|"extra", qIdx, { answer, correct })`;
   `recordAttempt(areaId, stageIdx, completed)` sets the **sticky `completedAt`**
-  (review re-runs record fresh outcomes + attempts, never clear it). **Completion
-  = every CORE question answered (any outcome), never gated on correctness;**
+  (review re-runs record fresh results + attempts, never clear it). **Completion
+  = every CORE question answered (correct or not), never gated on correctness;**
   extra never affects it. **Bump `SCHEMA_VERSION` (+ migration) on ANY breaking
   shape change** and extend the whitelist — the round-trip test fails otherwise.
 - **Figure-kind registry is implemented:** `/src/render/figures/` — sealed
@@ -307,9 +318,11 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   sidebar** `/src/app/ContentsSidebar.tsx`, the new primary nav driven by
   `parseAreaRoute`), and the **stage page** (§7a). A validator **warning** flags
   Unicode fraction glyphs (author `\frac`). Migration is PR-by-PR; the **Library/home hub** (a
-  scoped `.v2-home` re-skin — grid canvas, white mint-strip panels, mint
-  accents, white continue-hero per §2.5, topic cards with mastery). The
-  **Exercise page** is not yet on the v2 system. Build/run commands unchanged.
+  scoped `.v2-home` re-skin), and the **exercise page + answer-lock behaviour**
+  (§7b/§7c/§8): `mathjs` algebraic-equivalence checking (`answerCheck.ts`,
+  client-side), `{ answer, correct }` results in the store (schema v4), per-question
+  solution gating, hidden difficulty — the honour-system self-mark is gone. **All
+  screens are now on the v2 system.** Build/run commands unchanged.
 - **App shell is implemented:** `react-router-dom` routing (`/src/app/`).
   `main.tsx` calls `loadAllAreas` to build the `AreaRegistry` + `createProgressStore`
   (keyed by `registry.areas.map(a => a.id)`) and provides them (RegistryProvider +
@@ -330,25 +343,31 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   `StepPlayer`, collapsing to one column < 920px) → an "Up next · Exercise N"
   footer with the single primary CTA. Stage nav is the contents sidebar (§4) —
   **no in-page stepper here**);
-  `/…/stage/:n/exercise` is the **ExercisePage** (worksheet 7 / recap rail 4: core rows tappable → focus view,
-  inline MC, **every non-MC row self-marks directly** (✓ Got it / ✕ Not yet —
-  opening the solution is optional, never required), completion row whose CTA
-  links to the **next stage's video** ("Next: Video N+1", or "Back to <area>" on
-  the last stage) + gentle incorrect-nudge, a collapsed "More practice" expander
-  whose extra **solutions are always available** (never locked) and never
-  counting). Invalid `:n` → not-found. The shared `StageStepper`
-  (`/src/app/StageStepper.tsx`) still sits on the **ExercisePage** (until its v2
-  rebuild) — every stage clickable both directions, nothing locks; the StagePage
-  now navigates via the **contents sidebar** instead. The **question focus view** (`FocusView`) **enlarges
-  the question IN PLACE** — a centered card over a dimmed + blurred backdrop
-  (`--scrim` + `backdrop-filter`), NOT a full-surface page/route (role=dialog,
-  aria-modal; ← → navigate / G = got it / N = not yet / S = solution / Esc close;
-  rem-scaled type; focus in/restore; self-mark inside; works for core AND extra).
-  Completion/outcome wiring is unchanged
-  (recordOutcome core/extra; sticky `completedAt` on all-core-answered);
-  `setLastVisited(area, stage, view)` updates on navigation and the hub deep-links
-  to the stored stage/view. Stage helpers + path builders live in
-  `/src/app/stageProgress.ts`.
+  `/…/stage/:n/exercise` is the **ExercisePage** (**design-language-v2 §7b/§8**:
+  ONE worksheet panel (mint strip) on the grid canvas — no stepper/breadcrumb
+  (the shell bar + contents sidebar carry chrome/nav); the panel header holds the
+  title + question count + instruction, then a grid of **question cards** (mint
+  number badge + expand icon, mint-outlined question box, an **answer field** the
+  learner **Checks by algebraic equivalence** (`mathjs`, `answerCheck.ts`), and a
+  Solution button **LOCKED until that question is answered**). The result IS the
+  mark — **no honour-system self-mark**; wrong answers show **"Incorrect"** (no
+  retake). Completion = every core question answered (correct or not); the
+  completion CTA links to the **next stage's video** ("Next: Video N+1", or "Back
+  to <area>" on the last stage). A "More practice" expander holds the extra pool
+  (solvable + gated per-question like core; **never affects completion**).
+  **Difficulty is never rendered** (§8). Invalid `:n` → not-found. The
+  `StageStepper` is no longer used by either stage-flow page (the contents sidebar
+  is the nav); it remains only in the dormant runner's tests. The **question
+  focus view** (`FocusView`, §7c) **enlarges the question IN PLACE** — a centered
+  v2 card over a dimmed + blurred scrim (`--scrim` + `backdrop-filter`), NOT a
+  route (role=dialog, aria-modal; ← → navigate / S = solution / Esc close), with
+  three states: **unanswered** (field + Check + LOCKED solution), **answered**
+  (result bar + active solution), **solution** (working → answer, shown in place).
+  Solution gating is **per-question** — it stays locked when you arrive via
+  prev/next on an unanswered question. The shared `AnswerControl` powers both the
+  cards and the focus view; results record via `recordResult` (sticky
+  `completedAt` on all-core-answered); `setLastVisited` updates on navigation.
+  Stage helpers + path builders live in `/src/app/stageProgress.ts`.
 - **Responsive layout system:** `.app-page` is a centered container, fluid
   below a per-screen max-width (`--app-page--wide` Library / `--app-page--area`
   area page, `--container-area` 960px). The **Library is a hub**: greeting + day/date kicker, registry-driven
@@ -374,7 +393,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   | `/` | Library **hub** (v2 `.v2-home` skin: grid canvas, mint-strip panels, white continue/start hero, subject pills, responsive topic grid with in-card area rows + mastery + empty-room placeholder) |
   | `/:subject/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
   | `/:subject/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
-  | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page — stepper, worksheet (7) + recap rail (4); tappable rows → enlarge-in-place focus view; per-row self-mark; completion row → next-stage video; always-open "More practice" expander |
+  | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page (v2 §7b/§8) — one worksheet panel + question-card grid; type a final answer → **Check** (algebraic-equivalence, math.js); Solution locked until answered; completion → next-stage video; "More practice" expander (never gates); difficulty hidden; nav via the contents sidebar |
   | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
 

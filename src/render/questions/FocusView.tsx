@@ -1,29 +1,31 @@
 /**
- * @file FocusView.tsx — enlarge a question IN PLACE.
+ * @file FocusView.tsx — enlarge a question IN PLACE (design-language-v2 §7c).
  *
- * A centered enlarged question card over a dimmed + blurred backdrop (not a
- * full-surface page/route). role=dialog + aria-modal, labelled "Question N of M".
- * rem-scaled type (browser zoom compounds), scaled figure, difficulty badge,
- * self-mark (✓ Got it / ✕ Not yet) that records directly, an optional
- * Show-solution, and prev/next. Keyboard: ← → navigate, G = got it, N = not yet,
- * S = solution, Esc = close. Focus moves in on open and returns to the opener on
- * close. Works for core AND extra (extra solutions are NOT locked).
+ * A centred card over a dimmed + blurred scrim (role=dialog, aria-modal), with
+ * prev/next at the foot. Three states per question:
+ *   1. Unanswered — question box + answer field + Check + LOCKED solution.
+ *   2. Answered   — result bar + active Solution button.
+ *   3. Solution   — working first, answer last (shown in place).
+ * Solution gating is PER QUESTION (a property of that question's stored result),
+ * so it stays locked when you arrive via prev/next on an unanswered question —
+ * never auto-opening. Keyboard: ← → navigate, S = solution (only once answered),
+ * Esc = close. Focus moves in on open and returns to the opener on close.
  */
 import { useEffect, useRef, useState } from "react";
-import { X, ArrowLeft, ArrowRight, Lightbulb, Check } from "lucide-react";
+import { X, ArrowLeft, ArrowRight } from "lucide-react";
 import { MathText } from "@/shared/MathText";
 import { FigureSlot } from "@/render/figures/FigureSlot";
 import type { Question } from "@/ingest/types";
-import type { Outcome } from "./types";
-import { MultipleChoice } from "./MultipleChoice";
-import { SolutionModal } from "./SolutionModal";
+import type { AnswerRecord } from "@/state/progress";
+import { AnswerControl } from "./AnswerControl";
+import { WorkedSolution } from "./WorkedSolution";
 
 export interface FocusViewProps {
   questions: Question[];
   index: number;
   onIndex: (i: number) => void;
-  outcomes: Record<number, Outcome>;
-  onOutcome: (questionIndex: number, outcome: Outcome) => void;
+  results: Record<number, AnswerRecord>;
+  onRecord: (questionIndex: number, result: AnswerRecord) => void;
   onClose: () => void;
   returnFocusTo?: HTMLElement | null;
 }
@@ -32,17 +34,15 @@ export function FocusView({
   questions,
   index,
   onIndex,
-  outcomes,
-  onOutcome,
+  results,
+  onRecord,
   onClose,
   returnFocusTo,
 }: FocusViewProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const solveBtnRef = useRef<HTMLButtonElement>(null);
   const [solutionOpen, setSolutionOpen] = useState(false);
   const q = questions[index];
   const total = questions.length;
-  const isMc = q?.type === "multiple-choice";
 
   useEffect(() => {
     const restore = returnFocusTo ?? (document.activeElement as HTMLElement | null);
@@ -53,12 +53,16 @@ export function FocusView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Changing question resets the in-place solution reveal (per-question gating).
   useEffect(() => setSolutionOpen(false), [index]);
 
   if (!q) return null;
 
+  const recorded = results[index];
+  const answered = !!recorded;
+  const isMc = q.type === "multiple-choice";
+
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (solutionOpen) return; // the SolutionModal handles its own keys
     switch (e.key) {
       case "Escape":
         onClose();
@@ -71,15 +75,7 @@ export function FocusView({
         break;
       case "s":
       case "S":
-        setSolutionOpen(true);
-        break;
-      case "g":
-      case "G":
-        onOutcome(index, "correct");
-        break;
-      case "n":
-      case "N":
-        onOutcome(index, "incorrect");
+        if (answered) setSolutionOpen(true); // gated: never opens while unanswered
         break;
       default:
         break;
@@ -87,7 +83,6 @@ export function FocusView({
   }
 
   const figure = "figure" in q ? q.figure : undefined;
-  const outcome = outcomes[index];
 
   return (
     <div
@@ -97,7 +92,7 @@ export function FocusView({
       }}
     >
       <div
-        className="focus-card"
+        className="focus-card v2-panel"
         role="dialog"
         aria-modal="true"
         aria-label={`Question ${index + 1} of ${total}`}
@@ -105,8 +100,9 @@ export function FocusView({
         ref={cardRef}
         onKeyDown={onKeyDown}
       >
+        <div className="v2-panel__strip" aria-hidden="true" />
         <div className="focus-card__bar">
-          <span className="focus-card__count">
+          <span className="focus-card__count v2-mono">
             Question {index + 1} of {total}
           </span>
           <button type="button" className="focus-card__close" onClick={onClose} aria-label="Close">
@@ -115,36 +111,42 @@ export function FocusView({
         </div>
 
         <div className="focus-card__body">
-          {q.difficulty ? <span className="qr-difficulty">{q.difficulty}</span> : null}
-          <p className="focus-q__prompt">
-            <MathText>{q.prompt}</MathText>
-          </p>
-          {figure ? (
-            <div className="focus-q__figure">
-              <FigureSlot figure={figure} />
+          <div className="qcard__box focus-q__box">
+            <p className="focus-q__prompt">
+              <MathText>{q.prompt}</MathText>
+            </p>
+            {figure ? (
+              <div className="focus-q__figure">
+                <FigureSlot figure={figure} />
+              </div>
+            ) : null}
+          </div>
+
+          <AnswerControl
+            question={q}
+            recorded={recorded}
+            onRecord={(r) => onRecord(index, r)}
+            onOpenSolution={() => setSolutionOpen(true)}
+            large
+          />
+
+          {solutionOpen && answered ? (
+            <div className="focus-q__solution">
+              <p className="v2-mono focus-q__solution-label">
+                {isMc ? "Explanation" : "Worked solution"}
+              </p>
+              <WorkedSolution
+                answer={"answer" in q ? q.answer : undefined}
+                working={"working" in q ? q.working : undefined}
+              />
             </div>
           ) : null}
-
-          {isMc ? (
-            <MultipleChoice key={`focus-mc-${index}`} question={q} onOutcome={(o) => onOutcome(index, o)} />
-          ) : (
-            <SelfMark outcome={outcome} onOutcome={(o) => onOutcome(index, o)} />
-          )}
-
-          <button
-            type="button"
-            className="focus-q__solve btn btn--quiet"
-            ref={solveBtnRef}
-            onClick={() => setSolutionOpen(true)}
-          >
-            <Lightbulb size={18} aria-hidden="true" /> {isMc ? "Show explanation" : "Show solution"}
-          </button>
         </div>
 
         <div className="focus-card__nav">
           <button
             type="button"
-            className="btn btn--quiet"
+            className="v2-btn v2-btn--ghost"
             disabled={index === 0}
             onClick={() => onIndex(index - 1)}
           >
@@ -152,7 +154,7 @@ export function FocusView({
           </button>
           <button
             type="button"
-            className="btn btn--quiet"
+            className="v2-btn v2-btn--ghost"
             disabled={index === total - 1}
             onClick={() => onIndex(index + 1)}
           >
@@ -160,53 +162,6 @@ export function FocusView({
           </button>
         </div>
       </div>
-
-      {solutionOpen ? (
-        <SolutionModal
-          questionNumber={index + 1}
-          question={q}
-          onMark={
-            isMc
-              ? undefined
-              : (o) => {
-                  onOutcome(index, o);
-                  setSolutionOpen(false);
-                }
-          }
-          onClose={() => setSolutionOpen(false)}
-          returnFocusTo={solveBtnRef.current}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-/** Self-mark controls — record an outcome directly (no solution required). */
-export function SelfMark({
-  outcome,
-  onOutcome,
-}: {
-  outcome: Outcome | undefined;
-  onOutcome: (outcome: Outcome) => void;
-}) {
-  return (
-    <div className="selfmark" role="group" aria-label="Self-mark">
-      <button
-        type="button"
-        className={`selfmark__btn selfmark__btn--got${outcome === "correct" ? " selfmark__btn--on" : ""}`}
-        aria-pressed={outcome === "correct"}
-        onClick={() => onOutcome("correct")}
-      >
-        <Check size={16} aria-hidden="true" /> Got it
-      </button>
-      <button
-        type="button"
-        className={`selfmark__btn selfmark__btn--not${outcome === "incorrect" ? " selfmark__btn--on" : ""}`}
-        aria-pressed={outcome === "incorrect"}
-        onClick={() => onOutcome("incorrect")}
-      >
-        <X size={16} aria-hidden="true" /> Not yet
-      </button>
     </div>
   );
 }

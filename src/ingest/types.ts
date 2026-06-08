@@ -47,6 +47,12 @@ export interface Figure {
 
 export interface TextQuestion extends AnswerableBase {
   type: "text";
+  /**
+   * REQUIRED for text (design-language-v2 §8): the canonical answer the
+   * algebraic-equivalence check marks the learner's input against. (Optional on
+   * the other answerable types, which are future variants — see §10.)
+   */
+  answer: string;
 }
 
 export interface TableQuestion extends AnswerableBase {

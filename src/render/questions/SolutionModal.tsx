@@ -1,23 +1,21 @@
 /**
  * @file SolutionModal.tsx — accessible worked-solution / explanation modal.
  *
- * Opened from a worksheet row's answer icon. Two modes (derived from the
- * question type):
- *   - "self-mark"   (non-MC): shows the worked solution (answer chip + working
- *     lines, NoteExample treatment) or an honest "no worked solution" state,
- *     plus "I got it" / "Not yet" actions that record an outcome and close.
- *   - "explanation" (MC): shows the options with the correct one highlighted;
- *     no self-mark actions (MC correctness is recorded inline in the row).
+ * Opened from a worksheet card's Solution button (only AFTER the question has
+ * been answered — gating lives at the call site, design-language-v2 §8). A
+ * display-only dialog: the worked solution (working → answer, via the shared
+ * WorkedSolution) for non-MC, or the highlighted options for MC. There is NO
+ * self-mark — the equivalence check is the mark.
  *
  * A11y: role="dialog" + aria-modal, labelled by the question heading. Focus
- * moves into the dialog on open and returns to the opener (the icon button) on
- * close; Escape and a backdrop click close; Tab is trapped within the dialog.
+ * moves into the dialog on open and returns to the opener on close; Escape and a
+ * backdrop click close; Tab is trapped within the dialog.
  */
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { MathText } from "@/shared/MathText";
 import type { Question } from "@/ingest/types";
-import type { Outcome } from "./types";
+import { WorkedSolution } from "./WorkedSolution";
 
 const FOCUSABLE =
   'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
@@ -26,17 +24,14 @@ export interface SolutionModalProps {
   /** 1-based question number within its exercise (for the heading). */
   questionNumber: number;
   question: Question;
-  /** Present in self-mark mode (non-MC). Records the learner's self-mark. */
-  onMark?: (outcome: Outcome) => void;
   onClose: () => void;
-  /** Element to return focus to on close (the opener icon button). */
+  /** Element to return focus to on close (the opener button). */
   returnFocusTo?: HTMLElement | null;
 }
 
 export function SolutionModal({
   questionNumber,
   question,
-  onMark,
   onClose,
   returnFocusTo,
 }: SolutionModalProps) {
@@ -111,55 +106,13 @@ export function SolutionModal({
           {isMc ? (
             <McExplanation question={question} />
           ) : (
-            <WorkedSolution answer={question.answer} working={question.working} />
+            <WorkedSolution
+              answer={"answer" in question ? question.answer : undefined}
+              working={"working" in question ? question.working : undefined}
+            />
           )}
         </div>
-
-        {!isMc && onMark ? (
-          <div className="modal__actions">
-            <button
-              type="button"
-              className="qr-button qr-button--correct"
-              onClick={() => onMark("correct")}
-            >
-              I got it
-            </button>
-            <button
-              type="button"
-              className="qr-button qr-button--review"
-              onClick={() => onMark("incorrect")}
-            >
-              Not yet
-            </button>
-          </div>
-        ) : null}
       </div>
-    </div>
-  );
-}
-
-/** Worked solution for a non-MC question: answer chip + working, or honest state. */
-function WorkedSolution({ answer, working }: { answer?: string; working?: string[] }) {
-  if (!answer && (!working || working.length === 0)) {
-    return <p className="modal__empty">No worked solution provided.</p>;
-  }
-  return (
-    <div className="qr-reveal">
-      {/* Working/steps FIRST so the reasoning isn't spoiled; answer chip LAST. */}
-      {working && working.length > 0 ? (
-        <div className="qr-reveal__working">
-          {working.map((line, idx) => (
-            <div key={idx} className="qr-reveal__working-line">
-              <MathText>{line}</MathText>
-            </div>
-          ))}
-        </div>
-      ) : null}
-      {answer ? (
-        <span className="qr-reveal__answer">
-          <MathText>{answer}</MathText>
-        </span>
-      ) : null}
     </div>
   );
 }

@@ -23,13 +23,16 @@ const mc = (correctIndex: number): MultipleChoiceQuestion => ({
   ],
 });
 
-// Wire the dormant QuestionRunner to the v3 store: outcomes → core; completion
-// is "all answered" (v3, any outcome), not "all correct".
+// Wire the dormant QuestionRunner to the v4 store: each outcome becomes an
+// AnswerRecord { answer, correct }; completion is "all answered" (any result),
+// not "all correct".
 function wire(store: ReturnType<typeof createProgressStore>) {
   return render(
     <QuestionRunner
       questions={[mc(1)]}
-      onResult={(i, o) => store.recordOutcome(AREA, STAGE, "core", i, o)}
+      onResult={(i, o) =>
+        store.recordResult(AREA, STAGE, "core", i, { answer: o, correct: o === "correct" })
+      }
       onComplete={(results) =>
         store.recordAttempt(AREA, STAGE, results.length > 0 && results.every((r) => !!r.outcome))
       }
@@ -37,15 +40,15 @@ function wire(store: ReturnType<typeof createProgressStore>) {
   );
 }
 
-describe("QuestionRunner → v3 progress store wiring (area + stage, core pool)", () => {
-  it("persists a correct outcome + a completed attempt", () => {
+describe("QuestionRunner → v4 progress store wiring (area + stage, core pool)", () => {
+  it("persists a correct result + a completed attempt", () => {
     const store = createProgressStore({ backend: createMemoryBackend(), now: () => "T" });
     wire(store);
     fireEvent.click(screen.getByRole("button", { name: "Option B" })); // correct
     fireEvent.click(screen.getByRole("button", { name: "Finish" }));
 
     const st = store.getStageProgress(AREA, STAGE);
-    expect(st?.core[0]).toBe("correct");
+    expect(st?.core[0]?.correct).toBe(true);
     expect(st?.attempts).toBe(1);
     expect(st?.completedAt).toBe("T");
   });
@@ -57,7 +60,7 @@ describe("QuestionRunner → v3 progress store wiring (area + stage, core pool)"
     fireEvent.click(screen.getByRole("button", { name: "Finish" }));
 
     const st = store.getStageProgress(AREA, STAGE);
-    expect(st?.core[0]).toBe("incorrect");
+    expect(st?.core[0]?.correct).toBe(false);
     expect(st?.attempts).toBe(1);
     expect(st?.completedAt).toBe("T"); // answered → complete, regardless of correctness
   });

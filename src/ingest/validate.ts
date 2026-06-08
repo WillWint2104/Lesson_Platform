@@ -158,6 +158,12 @@ function validateQuestion(
   path: string,
   raw: unknown,
   figureSchemas?: FigureSchemaRegistry,
+  /**
+   * In an AREA EXERCISE, a text question's `answer` is the canonical answer the
+   * equivalence check marks against, so it is REQUIRED (design-language-v2 §8).
+   * Standalone questions files stay lenient (warn) for back-compat.
+   */
+  requireAnswer = false,
 ): void {
   if (!isPlainObject(raw)) {
     report.error(path, "must be an object");
@@ -209,13 +215,21 @@ function validateQuestion(
       knownFields = [...QUESTION_BASE_FIELDS, ...ANSWER_FIELDS, FIGURE_FIELD];
       validateAnswerWorking(report, path, raw);
       validateFigure(report, path, raw, figureSchemas);
-      // A text question with no answer is allowed, but warn: the runtime can
-      // only self-mark (no reveal) without one.
-      if (raw["answer"] === undefined) {
-        report.warn(
-          `${path} (text)`,
-          "no answer provided — the runtime will fall back to self-marking without a reveal",
-        );
+      // design-language-v2 §8: in an exercise, the text `answer` is the canonical
+      // answer the equivalence check needs — REQUIRED there. Standalone questions
+      // files stay lenient (warn), preserving the frozen back-compat corpus.
+      if (!isNonEmptyString(raw["answer"])) {
+        if (requireAnswer) {
+          report.error(
+            `${path} (text)`,
+            "missing required field 'answer' — exercise text questions need a canonical answer for the equivalence check",
+          );
+        } else {
+          report.warn(
+            `${path} (text)`,
+            "no answer provided — the runtime cannot mark this question by equivalence without one",
+          );
+        }
       }
       break;
     case "table":
@@ -710,7 +724,8 @@ function validateQuestionPool(
     );
     return;
   }
-  value.forEach((q, i) => validateQuestion(report, `${at}[${i}]`, q, figureSchemas));
+  // Area-exercise questions require a canonical answer (text) — see §8.
+  value.forEach((q, i) => validateQuestion(report, `${at}[${i}]`, q, figureSchemas, true));
 }
 
 /** Validate a video segment's `src` (YouTube source or null). */
