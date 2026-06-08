@@ -37,7 +37,7 @@ The status circle (check / play-ring / number / lock) is THE state motif — reu
 
 **Stage stepper** is THE cross-stage navigator (stage + exercise pages): each stage = status circle + title, connected by lines that turn green once done. ALL steps clickable, both directions — nothing locks (§8).
 
-**Worked-example step player** (stage notes): "Example 1 / Example 2" chunky tabs (plain numbering, no question text) switch examples; within the active example steps reveal one at a time via "Next step →" with progress dots. Revealed steps = `--green-soft` 1.5px border on white; the current step adds the faint green-tint bg; future steps are ghosted placeholder rows. Each revealed step has a "why?" toggle (cyan chip) expanding a cyan-tinted explanation when why text exists; the answer chip appears after the final step. Legacy `working` examples render as a fully-revealed stack in the same anatomy.
+**Worked-example step player** (stage notes): "Example 1 / Example 2" chunky tabs (plain numbering, no question text) switch examples; within the active example **all steps are shown at once** (no step-by-step reveal, no "Next step →", no progress dots — segmenting is per *example*, not per step). Each step = `--green-soft` 1.5px border on white and carries a "why?" toggle (cyan chip) expanding a cyan-tinted explanation when why text exists; the answer chip appears after the final step. Legacy `working` examples render as a stack in the same anatomy.
 
 **Expander pattern** (e.g. "More practice"): a chunky full-width button (collapsed by default) that reveals optional content on a recessed (`--page-bg`) panel. Optional, never gating.
 

@@ -41,7 +41,8 @@ export function StepPlayer({ examples }: { examples: ExampleData[] }) {
           ))}
         </div>
       ) : null}
-      <Example data={examples[current]!} />
+      {/* key={current} remounts on tab switch so per-step `why?` toggles reset. */}
+      <Example key={current} data={examples[current]!} />
     </div>
   );
 }
