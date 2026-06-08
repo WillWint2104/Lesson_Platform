@@ -94,6 +94,7 @@ describe("app chrome (page, not frame)", () => {
     store.recordAttempt(AREA_ID, 0, true); // 1 of 2 stages → 50%
     renderAt(STAGE1, reg, store);
     const bar = screen.getByRole("banner");
+    expect(within(bar).getByLabelText("Breadcrumb")).toBeTruthy(); // breadcrumb present
     expect(within(bar).getByText("Brackets")).toBeTruthy(); // area title (breadcrumb current)
     expect(within(bar).getByLabelText("50% mastery")).toBeTruthy();
   });
@@ -102,6 +103,7 @@ describe("app chrome (page, not frame)", () => {
     const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
     renderAt("/", reg, buildStore(reg));
     const bar = screen.getByRole("banner");
+    expect(within(bar).queryByLabelText("Breadcrumb")).toBeNull(); // breadcrumb absent
     expect(within(bar).queryByText(/mastery/)).toBeNull();
   });
 });
