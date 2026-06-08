@@ -4,26 +4,185 @@
     "stages": [
       {
         "title": "Single brackets",
-        "notes": "notes.json",
         "video": { "src": null, "duration": null },
-        "exercise": { "questions": "exercise-1.json", "extra": "exercise-1-extra.json" }
+        "notes": [
+          { "type": "heading", "text": "Expanding a single bracket" },
+          { "type": "paragraph", "text": "To expand a single bracket, multiply the term outside the bracket by every term inside it." },
+          { "type": "paragraph", "text": "$$a(b + c) = ab + ac$$" },
+          { "type": "callout", "style": "key", "text": "Multiply the outside term by each term inside — including the last one. Write down every product before you simplify." },
+          {
+            "type": "example",
+            "prompt": "Expand $3(x + 4)$.",
+            "steps": [
+              { "tex": "\\emA{3} \\times \\emB{x} = 3x", "why": "The outside term multiplies the first term inside the bracket." },
+              { "tex": "\\emA{3} \\times \\emB{4} = 12", "why": "It also multiplies the second term — the one that is most often missed." },
+              { "tex": "3(x + 4) = 3x + 12" }
+            ],
+            "answer": "$3x + 12$"
+          },
+          {
+            "type": "example",
+            "prompt": "Expand $5(2x + 3)$.",
+            "steps": [
+              { "tex": "\\emA{5} \\times \\emB{2x} = 10x", "why": "Multiply the numbers: five times two is ten." },
+              { "tex": "\\emA{5} \\times \\emB{3} = 15" },
+              { "tex": "5(2x + 3) = 10x + 15" }
+            ],
+            "answer": "$10x + 15$"
+          }
+        ],
+        "exercise": {
+          "questions": [
+            {
+              "type": "text", "skill": "single-bracket-expand", "difficulty": "easy",
+              "prompt": "Expand $4(x + 3)$.",
+              "working": ["$4 \\times x = 4x$", "$4 \\times 3 = 12$"],
+              "answer": "$4x + 12$"
+            },
+            {
+              "type": "text", "skill": "single-bracket-expand", "difficulty": "easy",
+              "prompt": "Expand $5(2x + 1)$.",
+              "working": ["$5 \\times 2x = 10x$", "$5 \\times 1 = 5$"],
+              "answer": "$10x + 5$"
+            },
+            {
+              "type": "multiple-choice", "skill": "fraction-factor", "difficulty": "medium",
+              "prompt": "Which is the correct expansion of $\\tfrac{1}{2}(2x + 6)$?",
+              "options": [
+                { "text": "$x + 3$", "isCorrect": true },
+                { "text": "$x + 6$", "isCorrect": false },
+                { "text": "$2x + 3$", "isCorrect": false },
+                { "text": "$\\tfrac{1}{2}x + 6$", "isCorrect": false }
+              ]
+            },
+            {
+              "type": "text", "skill": "expand-and-simplify", "difficulty": "hard",
+              "prompt": "Expand and simplify $2(x + 5) + 3(x + 1)$.",
+              "working": ["$2(x + 5) = 2x + 10$", "$3(x + 1) = 3x + 3$", "$2x + 10 + 3x + 3 = 5x + 13$"],
+              "answer": "$5x + 13$"
+            }
+          ],
+          "extra": [
+            {
+              "type": "text", "skill": "single-bracket-expand", "difficulty": "easy",
+              "prompt": "Expand $6(x + 2)$.",
+              "working": ["$6 \\times x = 6x$", "$6 \\times 2 = 12$"],
+              "answer": "$6x + 12$"
+            },
+            {
+              "type": "text", "skill": "single-bracket-expand", "difficulty": "medium",
+              "prompt": "Expand $3(4x - 5)$.",
+              "working": ["$3 \\times 4x = 12x$", "$3 \\times (-5) = -15$"],
+              "answer": "$12x - 15$"
+            },
+            {
+              "type": "text", "skill": "single-bracket-expand", "difficulty": "medium",
+              "prompt": "Expand $9(2a + 7)$.",
+              "working": ["$9 \\times 2a = 18a$", "$9 \\times 7 = 63$"],
+              "answer": "$18a + 63$"
+            },
+            {
+              "type": "text", "skill": "expand-and-simplify", "difficulty": "hard",
+              "prompt": "Expand and simplify $4(x + 1) + 2(3x - 2)$.",
+              "working": ["$4(x + 1) = 4x + 4$", "$2(3x - 2) = 6x - 4$", "$4x + 4 + 6x - 4 = 10x$"],
+              "answer": "$10x$"
+            }
+          ]
+        }
       },
       {
         "title": "Negative factors",
         "video": { "src": null, "duration": null },
+        "notes": [
+          { "type": "heading", "text": "Multiplying by a negative" },
+          { "type": "paragraph", "text": "When the term outside the bracket is negative, the same rule applies — but watch the sign of each product." },
+          { "type": "paragraph", "text": "$$-a(b + c) = -ab - ac$$" },
+          { "type": "callout", "style": "key", "text": "A negative outside the bracket flips the sign of every term inside, not just the first." },
+          {
+            "type": "example",
+            "prompt": "Expand $-2(x + 5)$.",
+            "steps": [
+              { "tex": "\\emA{-2} \\times \\emB{x} = -2x", "why": "A negative times a positive gives a negative." },
+              { "tex": "\\emA{-2} \\times \\emB{5} = -10", "why": "The second term changes sign too." },
+              { "tex": "-2(x + 5) = -2x - 10" }
+            ],
+            "answer": "$-2x - 10$"
+          }
+        ],
         "exercise": {
           "questions": [
-            { "type": "text", "prompt": "Expand $-2(x + 3)$.", "answer": "$-2x - 6$", "difficulty": "medium" },
-            { "type": "text", "prompt": "Expand $-5(x - 4)$.", "answer": "$-5x + 20$", "difficulty": "hard" }
+            {
+              "type": "text", "skill": "negative-factor", "difficulty": "easy",
+              "prompt": "Expand $-3(x + 2)$.",
+              "working": ["$-3 \\times x = -3x$", "$-3 \\times 2 = -6$"],
+              "answer": "$-3x - 6$"
+            },
+            {
+              "type": "text", "skill": "negative-factor", "difficulty": "medium",
+              "prompt": "Expand $-4(2x - 3)$.",
+              "working": ["$-4 \\times 2x = -8x$", "$-4 \\times (-3) = 12$"],
+              "answer": "$-8x + 12$"
+            },
+            {
+              "type": "multiple-choice", "skill": "negative-factor", "difficulty": "medium",
+              "prompt": "Which is the correct expansion of $-(x - 7)$?",
+              "options": [
+                { "text": "$-x + 7$", "isCorrect": true },
+                { "text": "$-x - 7$", "isCorrect": false },
+                { "text": "$x - 7$", "isCorrect": false },
+                { "text": "$x + 7$", "isCorrect": false }
+              ]
+            },
+            {
+              "type": "text", "skill": "expand-and-simplify", "difficulty": "hard",
+              "prompt": "Expand and simplify $3(x + 2) - 2(x + 5)$.",
+              "working": ["$3(x + 2) = 3x + 6$", "$-2(x + 5) = -2x - 10$", "$3x + 6 - 2x - 10 = x - 4$"],
+              "answer": "$x - 4$"
+            }
           ]
         }
       },
       {
         "title": "Double brackets",
         "video": { "src": null, "duration": null },
+        "notes": [
+          { "type": "heading", "text": "Expanding two brackets" },
+          { "type": "paragraph", "text": "To expand two brackets, multiply each term in the first bracket by each term in the second, then collect like terms." },
+          { "type": "paragraph", "text": "$$(x + a)(x + b) = x^2 + (a + b)x + ab$$" },
+          { "type": "callout", "style": "key", "text": "Every term in the first bracket meets every term in the second — four products before you collect like terms." },
+          {
+            "type": "example",
+            "prompt": "Expand $(x + 2)(x + 3)$.",
+            "steps": [
+              { "tex": "\\emA{x} \\times \\emB{x} = x^2", "why": "First term times first term." },
+              { "tex": "\\emA{x} \\times \\emB{3} = 3x", "why": "First term times second term." },
+              { "tex": "\\emA{2} \\times \\emB{x} = 2x", "why": "Second term times first term." },
+              { "tex": "\\emA{2} \\times \\emB{3} = 6", "why": "Second term times second term." },
+              { "tex": "(x + 2)(x + 3) = x^2 + 5x + 6", "why": "Collect the like terms 3x and 2x into 5x." }
+            ],
+            "answer": "$x^2 + 5x + 6$"
+          }
+        ],
         "exercise": {
           "questions": [
-            { "type": "text", "prompt": "Expand $(x + 2)(x + 3)$.", "answer": "$x^2 + 5x + 6$", "difficulty": "medium" }
+            {
+              "type": "text", "skill": "double-bracket", "difficulty": "medium",
+              "prompt": "Expand $(x + 1)(x + 4)$.",
+              "working": ["$x \\times x = x^2$", "$x \\times 4 = 4x$", "$1 \\times x = x$", "$1 \\times 4 = 4$", "$x^2 + 4x + x + 4 = x^2 + 5x + 4$"],
+              "answer": "$x^2 + 5x + 4$"
+            },
+            {
+              "type": "text", "skill": "double-bracket", "difficulty": "medium",
+              "prompt": "Expand $(x + 5)(x - 2)$.",
+              "working": ["$x \\times x = x^2$", "$x \\times (-2) = -2x$", "$5 \\times x = 5x$", "$5 \\times (-2) = -10$", "$x^2 - 2x + 5x - 10 = x^2 + 3x - 10$"],
+              "answer": "$x^2 + 3x - 10$"
+            },
+            {
+              "type": "text", "skill": "double-bracket", "difficulty": "hard",
+              "prompt": "Expand $(2x + 3)(x + 4)$.",
+              "working": ["$2x \\times x = 2x^2$", "$2x \\times 4 = 8x$", "$3 \\times x = 3x$", "$3 \\times 4 = 12$", "$2x^2 + 8x + 3x + 12 = 2x^2 + 11x + 12$"],
+              "answer": "$2x^2 + 11x + 12$"
+            }
           ]
         }
       }
