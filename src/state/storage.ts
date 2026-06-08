@@ -12,9 +12,10 @@
 
 export const PROGRESS_KEY_V1 = "lp:progress:v1";
 export const PROGRESS_KEY_V2 = "lp:progress:v2";
-export const PROGRESS_KEY = "lp:progress:v3"; // current
+export const PROGRESS_KEY_V3 = "lp:progress:v3";
+export const PROGRESS_KEY = "lp:progress:v4"; // current
 export const CORRUPT_KEY = "lp:progress:corrupt";
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export interface StorageBackend {
   getItem(key: string): string | null;
@@ -81,16 +82,16 @@ function backupCorrupt(backend: StorageBackend, raw: string): void {
 }
 
 /**
- * Read + classify stored progress. Prefers the current (v3) key; falls back to
- * the v2 then v1 keys for migration (leaving the old key intact). Never throws,
+ * Read + classify stored progress. Prefers the current (v4) key; falls back to
+ * the v3 → v2 → v1 keys for migration (leaving the old key intact). Never throws,
  * never destroys.
  */
 export function loadRaw(backend: StorageBackend): LoadResult {
-  const raw3 = safeGet(backend, PROGRESS_KEY);
-  if (raw3 != null) {
-    const parsed = parseObject(raw3);
+  const rawCurrent = safeGet(backend, PROGRESS_KEY);
+  if (rawCurrent != null) {
+    const parsed = parseObject(rawCurrent);
     if (!parsed) {
-      backupCorrupt(backend, raw3);
+      backupCorrupt(backend, rawCurrent);
       return { status: "corrupt" };
     }
     const version = parsed["version"];
@@ -99,6 +100,7 @@ export function loadRaw(backend: StorageBackend): LoadResult {
   }
 
   for (const [key, fromVersion] of [
+    [PROGRESS_KEY_V3, 3],
     [PROGRESS_KEY_V2, 2],
     [PROGRESS_KEY_V1, 1],
   ] as const) {

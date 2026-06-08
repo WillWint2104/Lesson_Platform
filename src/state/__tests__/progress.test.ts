@@ -2,13 +2,14 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   serializeState,
   restoreState,
-  migrateToV3,
+  migrateToV4,
   createProgressStore,
   type ProgressState,
 } from "@/state/progress";
 import {
   createMemoryBackend,
   PROGRESS_KEY,
+  PROGRESS_KEY_V3,
   PROGRESS_KEY_V2,
   PROGRESS_KEY_V1,
   CORRUPT_KEY,
@@ -17,16 +18,17 @@ import {
 afterEach(() => vi.restoreAllMocks());
 
 const AREA = "math/algebra/expanding-brackets";
+const r = (answer: string, correct: boolean) => ({ answer, correct });
 
 const fullState: ProgressState = {
-  version: 3,
+  version: 4,
   lastVisited: { areaId: AREA, stageIndex: 1, view: "exercise" },
   areas: {
     [AREA]: {
       stages: {
         0: {
-          core: { 0: "correct", 1: "incorrect" },
-          extra: { 0: "correct" },
+          core: { 0: r("4x + 12", true), 1: r("x", false) },
+          extra: { 0: r("6x + 12", true) },
           attempts: 2,
           completedAt: "2026-01-01T00:00:00.000Z",
         },
@@ -35,6 +37,7 @@ const fullState: ProgressState = {
     },
   },
   legacy: {
+    v3: { version: 3, lastVisited: null, areas: {}, legacy: null },
     v2: { version: 2, lastVisitedAreaId: null, areas: {}, legacy: null },
     v1: { lessons: { L: {} }, lastVisitedLessonId: null },
   },
@@ -44,8 +47,8 @@ const fullState: ProgressState = {
 // Save/restore symmetry — the whitelist round-trip (centrepiece)
 // ---------------------------------------------------------------------------
 
-describe("save/restore symmetry (v3)", () => {
-  it("preserves the whole v3 state through serialize -> restore", () => {
+describe("save/restore symmetry (v4)", () => {
+  it("preserves the whole v4 state through serialize -> restore", () => {
     expect(restoreState(JSON.parse(serializeState(fullState)))).toEqual(fullState);
   });
 
@@ -54,52 +57,63 @@ describe("save/restore symmetry (v3)", () => {
     for (const key of Object.keys(fullState)) expect(round).toHaveProperty(key);
     const stageKeys = Object.keys(fullState.areas[AREA]!.stages[0]!).sort();
     expect(Object.keys(round.areas[AREA]!.stages[0]!).sort()).toEqual(stageKeys);
-    expect(Object.keys(round.legacy!).sort()).toEqual(["v1", "v2"]);
+    // AnswerRecord leaf survives intact.
+    expect(round.areas[AREA]!.stages[0]!.core[0]).toEqual({ answer: "4x + 12", correct: true });
+    expect(Object.keys(round.legacy!).sort()).toEqual(["v1", "v2", "v3"]);
   });
 });
 
 // ---------------------------------------------------------------------------
-// v2/v1 → v3 migration
+// v3/v2/v1 → v4 migration (old progress preserved verbatim, current starts fresh)
 // ---------------------------------------------------------------------------
 
-describe("migration to v3", () => {
-  const v2 = {
-    version: 2,
-    lastVisitedAreaId: "x",
-    areas: { x: { segments: {} } },
-    legacy: { lessons: { L: {} }, lastVisitedLessonId: null },
+describe("migration to v4", () => {
+  const v3blob = {
+    version: 3,
+    lastVisited: { areaId: AREA, stageIndex: 0, view: "exercise" },
+    areas: { [AREA]: { stages: { 0: { core: { 0: "correct" }, extra: {}, attempts: 1, completedAt: "T" } } } },
+    legacy: { v2: { version: 2, areas: {} }, v1: { lessons: {} } },
   };
 
-  it("migrateToV3 preserves a v2 blob verbatim under legacy.v2 (+ nested v1)", () => {
-    const v3 = migrateToV3(v2, 2);
-    expect(v3.version).toBe(3);
-    expect(v3.areas).toEqual({});
-    expect(v3.legacy?.v2).toEqual(v2);
-    expect(v3.legacy?.v1).toEqual(v2.legacy);
+  it("migrateToV4 from v3 preserves it under legacy.v3 and carries the v2/v1 chain", () => {
+    const v4 = migrateToV4(v3blob, 3);
+    expect(v4.version).toBe(4);
+    expect(v4.areas).toEqual({}); // current progress resets
+    expect(v4.legacy?.v3).toEqual(v3blob);
+    expect(v4.legacy?.v2).toEqual(v3blob.legacy.v2);
+    expect(v4.legacy?.v1).toEqual(v3blob.legacy.v1);
   });
 
-  it("migrateToV3 from v1 preserves it under legacy.v1 only", () => {
+  it("migrateToV4 from v2 preserves it under legacy.v2 (+ nested v1)", () => {
+    const v2 = { version: 2, areas: {}, legacy: { lessons: {} } };
+    const v4 = migrateToV4(v2, 2);
+    expect(v4.legacy?.v2).toEqual(v2);
+    expect(v4.legacy?.v1).toEqual(v2.legacy);
+    expect(v4.legacy?.v3).toBeUndefined();
+  });
+
+  it("migrateToV4 from v1 preserves it under legacy.v1 only", () => {
     const v1 = { version: 1, lessons: { L: {} }, lastVisitedLessonId: null };
-    const v3 = migrateToV3(v1, 1);
-    expect(v3.legacy?.v1).toEqual(v1);
-    expect(v3.legacy?.v2).toBeUndefined();
+    const v4 = migrateToV4(v1, 1);
+    expect(v4.legacy?.v1).toEqual(v1);
+    expect(v4.legacy?.v2).toBeUndefined();
   });
 
-  it("loads v2 data as a migrated v3 store, writing v3 and leaving v2 intact", () => {
+  it("loads v3 data as a migrated v4 store, writing v4 and leaving v3 intact", () => {
     const backend = createMemoryBackend();
-    backend.setItem(PROGRESS_KEY_V2, JSON.stringify(v2));
+    backend.setItem(PROGRESS_KEY_V3, JSON.stringify(v3blob));
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const store = createProgressStore({ backend, persistent: true });
     const s = store.getState();
-    expect(s.version).toBe(3);
-    expect(s.legacy?.v2).toBeDefined();
-    expect(s.areas).toEqual({});
+    expect(s.version).toBe(4);
+    expect(s.legacy?.v3).toBeDefined();
+    expect(s.areas).toEqual({}); // current progress starts fresh
     expect(backend.getItem(PROGRESS_KEY)).not.toBeNull();
-    expect(backend.getItem(PROGRESS_KEY_V2)).toBe(JSON.stringify(v2));
+    expect(backend.getItem(PROGRESS_KEY_V3)).toBe(JSON.stringify(v3blob));
   });
 
-  it("falls all the way back to v1 when no v2/v3 exists", () => {
+  it("falls all the way back to v1 when no newer key exists", () => {
     const backend = createMemoryBackend();
     backend.setItem(PROGRESS_KEY_V1, JSON.stringify({ version: 1, lessons: {}, lastVisitedLessonId: null }));
     vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -107,13 +121,13 @@ describe("migration to v3", () => {
     expect(store.getState().legacy?.v1).toBeDefined();
   });
 
-  it("a fresh v3 store round-trips through the backend", () => {
+  it("a fresh v4 store round-trips through the backend", () => {
     const backend = createMemoryBackend();
     const store = createProgressStore({ backend, persistent: true, now: () => "T" });
-    store.recordOutcome("A", 0, "core", 0, "correct");
+    store.recordResult("A", 0, "core", 0, r("4x+12", true));
     store.setLastVisited("A", 0, "exercise");
     const reopened = createProgressStore({ backend, persistent: true });
-    expect(reopened.getStageProgress("A", 0)?.core[0]).toBe("correct");
+    expect(reopened.getStageProgress("A", 0)?.core[0]).toEqual({ answer: "4x+12", correct: true });
     expect(reopened.getLastVisited()).toEqual({ areaId: "A", stageIndex: 0, view: "exercise" });
   });
 });
@@ -125,21 +139,21 @@ describe("migration to v3", () => {
 describe("stage recording", () => {
   it("records core + extra separately; completedAt is sticky", () => {
     const store = createProgressStore({ backend: createMemoryBackend(), now: () => "DAY1" });
-    store.recordOutcome("A", 0, "core", 0, "correct");
-    store.recordOutcome("A", 0, "extra", 0, "incorrect");
+    store.recordResult("A", 0, "core", 0, r("4x+12", true));
+    store.recordResult("A", 0, "extra", 0, r("oops", false));
     store.recordAttempt("A", 0, true);
     const st = store.getStageProgress("A", 0);
-    expect(st?.core[0]).toBe("correct");
-    expect(st?.extra[0]).toBe("incorrect");
+    expect(st?.core[0]).toEqual({ answer: "4x+12", correct: true });
+    expect(st?.extra[0]).toEqual({ answer: "oops", correct: false });
     expect(st?.completedAt).toBe("DAY1");
     expect(st?.attempts).toBe(1);
 
-    // Review re-run records fresh outcomes + attempt, never clears completedAt.
-    store.recordOutcome("A", 0, "core", 0, "incorrect");
+    // Review re-run records fresh results + attempt, never clears completedAt.
+    store.recordResult("A", 0, "core", 0, r("wrong", false));
     store.recordAttempt("A", 0, true);
     const after = store.getStageProgress("A", 0);
     expect(after?.completedAt).toBe("DAY1");
-    expect(after?.core[0]).toBe("incorrect");
+    expect(after?.core[0]).toEqual({ answer: "wrong", correct: false });
     expect(after?.attempts).toBe(2);
   });
 
@@ -163,23 +177,25 @@ describe("stale-id guard + encapsulation", () => {
       areaIds: ["real"],
       now: () => "T",
     });
-    store.recordOutcome("ghost", 0, "core", 0, "correct");
+    store.recordResult("ghost", 0, "core", 0, r("x", true));
     store.recordAttempt("ghost", 0, true);
     store.setLastVisited("ghost", 0, "stage");
     expect(store.getState().areas["ghost"]).toBeUndefined();
     expect(store.getLastVisited()).toBeNull();
 
-    store.recordOutcome("real", 0, "core", 0, "correct");
-    expect(store.getStageProgress("real", 0)?.core[0]).toBe("correct");
+    store.recordResult("real", 0, "core", 0, r("x", true));
+    expect(store.getStageProgress("real", 0)?.core[0]).toEqual({ answer: "x", correct: true });
   });
 
   it("getState returns a copy that cannot mutate the store", () => {
     const store = createProgressStore({ backend: createMemoryBackend() });
-    store.recordOutcome("A", 0, "core", 0, "correct");
+    store.recordResult("A", 0, "core", 0, r("x", true));
     const snap = store.getState();
     snap.areas["A"]!.stages[0]!.attempts = 999;
+    snap.areas["A"]!.stages[0]!.core[0]!.correct = false;
     snap.areas["hacked"] = { stages: {} };
     expect(store.getState().areas["A"]!.stages[0]!.attempts).toBe(0);
+    expect(store.getState().areas["A"]!.stages[0]!.core[0]).toEqual({ answer: "x", correct: true });
     expect(store.getState().areas["hacked"]).toBeUndefined();
   });
 
@@ -188,7 +204,7 @@ describe("stale-id guard + encapsulation", () => {
     backend.setItem(PROGRESS_KEY_V2, JSON.stringify({ version: 2, areas: {}, lastVisitedAreaId: null, legacy: null }));
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = createProgressStore({ backend, persistent: true });
-    store.recordOutcome("A", 0, "core", 0, "correct");
+    store.recordResult("A", 0, "core", 0, r("x", true));
     store.resetAll();
     expect(store.getState().areas).toEqual({});
     expect(store.getState().legacy?.v2).toBeDefined(); // legacy never destroyed
@@ -213,8 +229,8 @@ describe("robustness", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = createProgressStore();
     expect(store.persistent).toBe(false);
-    store.recordOutcome("A", 0, "core", 0, "correct");
-    expect(store.getStageProgress("A", 0)?.core[0]).toBe("correct");
+    store.recordResult("A", 0, "core", 0, r("x", true));
+    expect(store.getStageProgress("A", 0)?.core[0]).toEqual({ answer: "x", correct: true });
   });
 
   it("leaves newer-version stored data untouched and reports persistent=false", () => {
@@ -223,7 +239,7 @@ describe("robustness", () => {
     backend.setItem(PROGRESS_KEY, future);
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const store = createProgressStore({ backend, persistent: true });
-    store.recordOutcome("A", 0, "core", 0, "correct");
+    store.recordResult("A", 0, "core", 0, r("x", true));
     expect(backend.getItem(PROGRESS_KEY)).toBe(future);
     expect(store.persistent).toBe(false);
   });
