@@ -1,0 +1,66 @@
+/*
+ * tokens-v2.css — Design tokens for the v2 re-theme (Studio-matched Khan-light).
+ *
+ * Single source of truth: /docs/design-language-v2.md §2. These tokens are the
+ * exact §2 scale; the v2 primitives + (later) the v2 screens reference ONLY
+ * these — if a value isn't a token here, it doesn't go in (§2).
+ *
+ * Loaded AFTER tokens.css. Almost every name below is NEW (does not exist in
+ * the v1 tokens.css), so v1 screens are visually untouched by this file. The
+ * ONLY two names shared with v1 are `--muted` / `--faint`; v2 fixes them to the
+ * §2 hexes (a sub-perceptual shift from v1's #5b6b61 / #8a978f). This converges
+ * the greys onto the locked v2 scale; pages keep their layout until migrated.
+ *
+ * Colour rules (§2.5) are HARD: green is an accent only (never green-on-green
+ * text, never green hero fills), grey signals disabled ONLY, red is an incorrect
+ * result only, body/answer text lives on white in --ink. The v2 primitives are
+ * authored to comply; screens inherit the rules as they migrate.
+ */
+
+:root {
+  /* ---- Canvas & surfaces (§2) ---- */
+  --page: #eef1f4; /* canvas base */
+  --grid: rgba(33, 40, 55, 0.045); /* grid lines on the canvas */
+  --surface: #ffffff; /* panels, cards, sidebar, chrome */
+  --line: #e3e6eb; /* primary borders */
+  --line-2: #eef0f3; /* hairline dividers, inner borders */
+
+  /* ---- Ink ladder (§2) ---- */
+  --ink: #1c2026; /* primary text, math */
+  --body: #3a414b; /* body copy */
+  --muted: #5b6470; /* secondary text, labels (v2 fixes v1's #5b6b61) */
+  --faint: #8b94a0; /* tertiary text, placeholders (v2 fixes v1's #8a978f) */
+
+  /* ---- ONE green scale (single hue, varied by lightness) (§2) ---- */
+  --mint-strip: #b9f5d6; /* the lime header strip on every panel/video */
+  --mint: #cdeede; /* fills: number badges, primary buttons */
+  --mint-tint: #edfbf4; /* faint backgrounds: correct result, tints */
+  --mint-line: #a8e0c4; /* mint borders */
+  --qline: #cfeadd; /* question-box outline (mint, lighter) */
+  --mint-ink: #1c6b43; /* text / icon on mint, accents */
+
+  /* ---- ONE red (incorrect result ONLY) (§2) ---- */
+  --red: #c4625b;
+  --red-tint: #fbeceb;
+  --red-line: #eec4c1;
+
+  /* ---- Disabled (grey is reserved for disabled — §2.5) ---- */
+  --v2-disabled-bg: #e6e8ec;
+  --v2-disabled-ink: var(--faint);
+
+  /* ---- Shape language (§5) — radii are tokens, never arbitrary ---- */
+  --v2-radius-panel: 16px; /* panels 14–16 */
+  --v2-radius-card: 12px; /* cards */
+  --v2-radius-control: 10px; /* boxes / inputs / buttons 9–10 */
+  --v2-radius-badge: 8px; /* badges 7–8 */
+  --v2-strip-h: 8px; /* mint header-strip height */
+
+  /* ---- Surface treatment (§4) ---- */
+  --v2-panel-shadow: 0 6px 20px rgba(33, 40, 55, 0.06);
+  --v2-grid-size: 30px; /* grid motif cell */
+
+  /* ---- Typography (§3) ---- */
+  --v2-font-head: "Plus Jakarta Sans", system-ui, sans-serif; /* headings, UI, buttons, badges */
+  --v2-font-body: "Manrope", system-ui, sans-serif; /* body, instructions */
+  --v2-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; /* micro-labels, meta */
+}

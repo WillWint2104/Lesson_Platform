@@ -5,6 +5,10 @@ import { BrowserRouter } from "react-router-dom";
 // Global styling source of truth — design tokens (CLAUDE.md §d). Imported once,
 // here, so every component can reference the CSS custom properties.
 import "../styles/tokens.css";
+// v2 re-theme tokens + primitives (design-language-v2). Loaded after the v1
+// tokens; additive — screens migrate onto these PR-by-PR (no page restyle yet).
+import "../styles/tokens-v2.css";
+import "../styles/v2-primitives.css";
 import "../styles/components.css";
 import "../styles/screens.css";
 // KaTeX stylesheet (npm, not CDN — see CLAUDE.md §f). Required for math layout.
