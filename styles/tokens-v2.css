@@ -67,6 +67,7 @@
   /* ---- Typography (§3) — type styles as tokens (face/weight/size/leading).
    * Components reference THESE; no raw px/weight in v2 primitive CSS (§2). ---- */
   --text-v2-body: 500 13.5px/1.55 var(--v2-font-body); /* prose, answers, instructions */
+  --text-v2-unit: 800 16px/1.25 var(--v2-font-head); /* sidebar unit title */
   --text-v2-btn: 700 13.5px/1 var(--v2-font-head); /* button labels */
   --text-v2-badge: 700 13px/1 var(--v2-font-head); /* number badges */
   --text-v2-result: 700 12px/1 var(--v2-font-head); /* result-bar label */

@@ -11,6 +11,8 @@ import "../styles/tokens-v2.css";
 import "../styles/v2-primitives.css";
 import "../styles/components.css";
 import "../styles/screens.css";
+// v2 shell + contents sidebar — loaded last so it re-themes the shared chrome.
+import "../styles/v2-shell.css";
 // KaTeX stylesheet (npm, not CDN — see CLAUDE.md §f). Required for math layout.
 import "katex/dist/katex.min.css";
 

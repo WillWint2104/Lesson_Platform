@@ -1,0 +1,184 @@
+/*
+ * v2-shell.css — the app shell + contents sidebar in the v2 system (§4).
+ *
+ * Loaded AFTER screens.css so it re-themes the shared chrome (top bar / footer)
+ * onto the v2 tokens and adds the grid-canvas body + the [sidebar | main]
+ * layout. Page CONTENT keeps its current styling until each screen is migrated
+ * (PR3+). Tokens only (CLAUDE.md §d): colours/fonts/radii via tokens-v2.css,
+ * spacing via --space-*.
+ */
+
+/* ---- Canvas surface: the cool grid page (§4) ---------------------------- */
+body.lp-app {
+  background: var(--page);
+}
+
+/* ---- Top bar / footer re-themed to the v2 chrome (white + --line) ------- */
+.app-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.app-bar__wordmark {
+  color: var(--ink);
+}
+.app-bar__identity {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+.app-footer {
+  border-top: 1px solid var(--line);
+}
+.app-footer__inner {
+  color: var(--muted);
+}
+.app-footer__wordmark {
+  color: var(--faint);
+}
+
+/* ---- Shell body: sidebar + main ----------------------------------------- */
+.shell-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.shell-body--with-sidebar {
+  flex-direction: row;
+  align-items: stretch;
+}
+.shell-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Contents sidebar (§4): 288px primary nav --------------------------- */
+.contents-sidebar {
+  width: 288px;
+  flex: none;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+.cs-unit-kicker {
+  margin: 0 0 var(--space-1);
+}
+.cs-unit-title {
+  margin: 0 0 var(--space-3);
+  font: var(--text-v2-unit);
+  color: var(--ink);
+}
+.cs-progress {
+  height: var(--v2-strip-h);
+  border-radius: var(--radius-pill);
+  background: var(--line-2);
+  overflow: hidden;
+}
+.cs-progress__fill {
+  display: block;
+  height: 100%;
+  background: var(--mint-line);
+}
+.cs-progress__meta {
+  margin: var(--space-2) 0 0;
+  font: var(--text-v2-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cs-stages {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.cs-stage__label {
+  margin: 0 0 var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+}
+.cs-stage__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--v2-radius-badge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  font: var(--text-v2-badge);
+}
+
+.cs-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--v2-radius-control);
+  text-decoration: none;
+  color: var(--body);
+  font: var(--text-v2-body);
+}
+.cs-item + .cs-item {
+  margin-top: var(--space-1);
+}
+.cs-item:hover {
+  background: var(--mint-tint);
+}
+.cs-item--active {
+  background: var(--mint-tint);
+  box-shadow: inset 3px 0 0 var(--mint-line);
+  color: var(--ink);
+  font-weight: 700;
+}
+.cs-item:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.cs-item__label {
+  flex: 1;
+}
+.cs-item__meta {
+  font: var(--text-v2-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---- Sidebar status circle (§4): 18px ring; done fills + checks --------- */
+.cs-status {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mint-ink);
+}
+.cs-status--done {
+  background: var(--mint-line);
+  border-color: var(--mint-line);
+}
+.cs-status--current {
+  border-color: var(--mint-line);
+}
+
+/* ---- Mobile: hide the sidebar (in-page nav remains until PR3+) ---------- */
+@media (max-width: 920px) {
+  .shell-body--with-sidebar {
+    flex-direction: column;
+  }
+  .contents-sidebar {
+    display: none;
+  }
+}

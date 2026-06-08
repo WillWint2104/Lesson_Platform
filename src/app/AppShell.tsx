@@ -12,6 +12,9 @@ import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useProgressStore } from "@/state/ProgressContext";
+import { useRegistry } from "@/app/RegistryContext";
+import { parseAreaRoute } from "@/app/routeArea";
+import { ContentsSidebar } from "@/app/ContentsSidebar";
 
 /** Map a route to its content container width (kept in sync with each screen). */
 function containerForPath(pathname: string): string {
@@ -26,20 +29,40 @@ function containerForPath(pathname: string): string {
 
 export function AppShell() {
   const { pathname } = useLocation();
+  const registry = useRegistry();
+  const store = useProgressStore();
 
-  // Body-class hook for the page surface (the cream background lives on <body>).
+  // Body-class hook for the page surface.
   useEffect(() => {
     document.body.classList.add("lp-app");
   }, []);
 
   const style = { "--container": containerForPath(pathname) } as CSSProperties;
 
+  // The contents sidebar (§4) renders whenever the route resolves to a known,
+  // valid area. Layout routes can't read route params, so derive from the path.
+  const route = parseAreaRoute(pathname);
+  const area = route ? registry.getAreaById(route.areaId) : undefined;
+  const showSidebar = Boolean(area && area.valid);
+
   return (
-    <div className="app-shell" style={style}>
+    <div className="app-shell v2-canvas" style={style}>
       <AppBar />
       {/* The local-progress notice belongs to the Library hub only. */}
       <NoticeBar visible={pathname === "/"} />
-      <Outlet />
+      <div className={`shell-body${showSidebar ? " shell-body--with-sidebar" : ""}`}>
+        {showSidebar && area ? (
+          <ContentsSidebar
+            area={area}
+            store={store}
+            activeStage={route?.stageNumber}
+            activeView={route?.view}
+          />
+        ) : null}
+        <div className="shell-main">
+          <Outlet />
+        </div>
+      </div>
       <AppFooter />
     </div>
   );
