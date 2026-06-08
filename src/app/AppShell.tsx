@@ -15,6 +15,9 @@ import { useProgressStore } from "@/state/ProgressContext";
 import { useRegistry } from "@/app/RegistryContext";
 import { parseAreaRoute } from "@/app/routeArea";
 import { ContentsSidebar } from "@/app/ContentsSidebar";
+import { stageInputs } from "@/app/stageProgress";
+import { titleCase } from "@/app/format";
+import type { ValidatedArea } from "@/ingest/load";
 
 /** Map a route to its content container width (kept in sync with each screen). */
 function containerForPath(pathname: string): string {
@@ -43,11 +46,19 @@ export function AppShell() {
   // valid area. Layout routes can't read route params, so derive from the path.
   const route = parseAreaRoute(pathname);
   const area = route ? registry.getAreaById(route.areaId) : undefined;
-  const showSidebar = Boolean(area && area.valid);
+  const activeArea = area && area.valid ? area : undefined;
+  const showSidebar = Boolean(activeArea);
+
+  // Area mastery for the top bar (§7a): completed stages / total.
+  let mastery: number | null = null;
+  if (activeArea) {
+    const inputs = stageInputs(activeArea, store);
+    mastery = inputs.length === 0 ? 0 : Math.round((inputs.filter((s) => s.complete).length / inputs.length) * 100);
+  }
 
   return (
     <div className="app-shell v2-canvas" style={style}>
-      <AppBar />
+      <AppBar area={activeArea} mastery={mastery} />
       {/* The local-progress notice belongs to the Library hub only. */}
       <NoticeBar visible={pathname === "/"} />
       <div className={`shell-body${showSidebar ? " shell-body--with-sidebar" : ""}`}>
@@ -99,16 +110,35 @@ function NoticeBar({ visible }: { visible: boolean }) {
   );
 }
 
-function AppBar() {
+function AppBar({ area, mastery }: { area?: ValidatedArea; mastery: number | null }) {
   return (
     <header className="app-bar">
       <div className="app-bar__inner">
-        <Link className="app-bar__wordmark" to="/">
-          Lesson Platform
-        </Link>
-        <span className="app-bar__identity" aria-label="Profile (placeholder)">
-          LP
-        </span>
+        <div className="app-bar__lead">
+          <Link className="app-bar__wordmark" to="/">
+            Lesson Platform
+          </Link>
+          {area ? (
+            <nav className="appbar-crumb" aria-label="Breadcrumb">
+              <span className="appbar-crumb__step">{titleCase(area.topic)}</span>
+              <span className="appbar-crumb__sep" aria-hidden="true">
+                ›
+              </span>
+              <span className="appbar-crumb__current">{area.title}</span>
+            </nav>
+          ) : null}
+        </div>
+        <div className="app-bar__trail">
+          {mastery !== null ? (
+            <span className="appbar-mastery" aria-label={`${mastery}% mastery`}>
+              <span className="appbar-mastery__pct">{mastery}%</span>
+              <span className="appbar-mastery__label v2-mono">mastery</span>
+            </span>
+          ) : null}
+          <span className="app-bar__identity" aria-label="Profile (placeholder)">
+            LP
+          </span>
+        </div>
       </div>
     </header>
   );

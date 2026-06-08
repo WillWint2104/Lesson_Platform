@@ -297,6 +297,17 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   per-kind modules dispatched by (kind, specVersion); see §g. Two proof kinds
   ship: `triangle-figure` and `bearing-diagram`. The question runtime renders
   figures through the registry's `FigureSlot`.
+- **v2 re-theme is in progress (`docs/design-language-v2.md`, the locked source
+  of truth that supersedes the v1 `design-language.md`).** Shipped so far:
+  tokens (`styles/tokens-v2.css` — the §2 scale + §3 fonts incl. JetBrains Mono +
+  `--text-v2-*` type tokens), primitives (`styles/v2-primitives.css` +
+  `/src/shared/v2/` — GridCanvas, mint-strip `Panel`, `Card`, rounded `Button`,
+  `ResultBar`, the inline-SVG icon set, NO emoji), the **app shell** (grid
+  canvas + white top bar with breadcrumb + mastery % + the 288px **contents
+  sidebar** `/src/app/ContentsSidebar.tsx`, the new primary nav driven by
+  `parseAreaRoute`), and the **stage page** (§7a). A validator **warning** flags
+  Unicode fraction glyphs (author `\frac`). Migration is PR-by-PR; the Library
+  and Exercise pages are not yet on the v2 system. Build/run commands unchanged.
 - **App shell is implemented:** `react-router-dom` routing (`/src/app/`).
   `main.tsx` calls `loadAllAreas` to build the `AreaRegistry` + `createProgressStore`
   (keyed by `registry.areas.map(a => a.id)`) and provides them (RegistryProvider +
@@ -311,18 +322,22 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   REMOVED; its row + `SolutionModal` patterns are reused). Routes: the area root
   `/:subject/:topic/:topicArea` **redirects** to the current stage
   (`AreaRedirect`, progress-derived); `/…/stage/:n` is the **StagePage**
-  (container 1280, main 1.6 / rail 1 — MAIN = video + WORKED EXAMPLES
-  `StepPlayer`; RAIL = THE RULE + REMEMBER + the "Start Exercise N →" CTA at its
-  foot; stacks below 980 as video → worked examples → rule → remember → CTA);
+  (**design-language-v2 §7a**: a plain title row → the VIDEO BAND full-width on
+  its own row (mint-strip panel + dark 16:9 + caption, gap-proof) → ONE notes
+  panel with two internal columns (THE RULE + REMEMBER | WORKED EXAMPLES
+  `StepPlayer`, collapsing to one column < 920px) → an "Up next · Exercise N"
+  footer with the single primary CTA. Stage nav is the contents sidebar (§4) —
+  **no in-page stepper here**);
   `/…/stage/:n/exercise` is the **ExercisePage** (worksheet 7 / recap rail 4: core rows tappable → focus view,
   inline MC, **every non-MC row self-marks directly** (✓ Got it / ✕ Not yet —
   opening the solution is optional, never required), completion row whose CTA
   links to the **next stage's video** ("Next: Video N+1", or "Back to <area>" on
   the last stage) + gentle incorrect-nudge, a collapsed "More practice" expander
   whose extra **solutions are always available** (never locked) and never
-  counting). Invalid `:n` → not-found. A shared `StageStepper`
-  (`/src/app/StageStepper.tsx`) sits on both pages — every stage clickable both
-  directions, nothing locks. The **question focus view** (`FocusView`) **enlarges
+  counting). Invalid `:n` → not-found. The shared `StageStepper`
+  (`/src/app/StageStepper.tsx`) still sits on the **ExercisePage** (until its v2
+  rebuild) — every stage clickable both directions, nothing locks; the StagePage
+  now navigates via the **contents sidebar** instead. The **question focus view** (`FocusView`) **enlarges
   the question IN PLACE** — a centered card over a dimmed + blurred backdrop
   (`--scrim` + `backdrop-filter`), NOT a full-surface page/route (role=dialog,
   aria-modal; ← → navigate / G = got it / N = not yet / S = solution / Esc close;
@@ -356,7 +371,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   |-------|--------|
   | `/` | Library **hub** (greeting + day/date kicker, subject pills, always-present hero, responsive topic grid with in-card area rows + empty-room placeholder) |
   | `/:subject/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
-  | `/:subject/:topic/:topicArea/stage/:n` | Stage page — stepper, video (7) + notes (4: rule / remember / worked-example step player), "Start Exercise N" |
+  | `/:subject/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
   | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page — stepper, worksheet (7) + recap rail (4); tappable rows → enlarge-in-place focus view; per-row self-mark; completion row → next-stage video; always-open "More practice" expander |
   | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |

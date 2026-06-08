@@ -1,0 +1,180 @@
+/*
+ * v2-stage.css — the lesson / stage page (design-language-v2 §7a).
+ *
+ * Composition: title row → full-width video band → one notes panel with two
+ * internal columns (THE RULE + REMEMBER | WORKED EXAMPLES) → "Up next" footer.
+ * Tokens only (CLAUDE.md §d). The worked-example look is layered onto the shared
+ * StepPlayer markup here (scoped to .stage-v2) so the component stays unchanged.
+ */
+
+.stage-v2 {
+  gap: var(--space-4); /* tighter than the v1 page default; bands stack */
+}
+
+/* ---- Title row ---------------------------------------------------------- */
+.stage-v2__titlerow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  flex-wrap: wrap;
+}
+.stage-v2__title {
+  font: var(--text-v2-unit);
+  color: var(--ink);
+}
+.stage-v2__lesson {
+  color: var(--muted);
+}
+
+/* ---- Video band: full width, alone on its row -------------------------- */
+.stage-v2__video {
+  width: 100%;
+}
+/* The dark 16:9 frame sits flush under the mint strip (bodyless panel). */
+.stage-v2__video .video-stage {
+  border-radius: 0;
+}
+.stage-v2__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.stage-v2__caption-title {
+  font: var(--text-v2-btn);
+  color: var(--ink);
+}
+.stage-v2__caption-meta {
+  color: var(--muted);
+}
+
+/* ---- Notes panel: two internal columns --------------------------------- */
+.notes-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+@media (max-width: 920px) {
+  .notes-cols {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+.notes-block + .notes-block {
+  margin-top: var(--space-4);
+}
+.notes-block__label {
+  margin: 0 0 var(--space-2);
+}
+.note-heading {
+  margin: 0 0 var(--space-2);
+  font: var(--text-v2-unit);
+  color: var(--ink);
+}
+.note-paragraph {
+  margin: 0 0 var(--space-3);
+  font: var(--text-v2-body);
+  color: var(--body);
+}
+.note-list {
+  margin: 0 0 var(--space-3);
+  padding-left: var(--space-4);
+  font: var(--text-v2-body);
+  color: var(--body);
+}
+.note-list__item {
+  margin: 0 0 var(--space-1);
+}
+.notes-empty {
+  margin: 0;
+  font: var(--text-v2-body);
+  color: var(--muted);
+}
+
+/* Formula box — sized to its contents (§7a): inline-block, mint-tint, ink. */
+.stage-v2 .v2-formula {
+  display: inline-block;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--v2-radius-control);
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+
+/* Remember callout — mint left-border (§7a). */
+.v2-remember {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--mint-line);
+  background: var(--mint-tint);
+  border-radius: 0 var(--v2-radius-control) var(--v2-radius-control) 0;
+  font: var(--text-v2-body);
+  color: var(--body);
+}
+.v2-remember + .v2-remember {
+  margin-top: var(--space-2);
+}
+
+/* ---- Up-next footer ----------------------------------------------------- */
+.stage-v2__upnext .v2-panel__body,
+.stage-v2__upnext {
+  /* the panel body holds a space-between row */
+}
+.stage-v2__upnext .v2-panel__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.stage-v2__upnext-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.stage-v2__upnext-title {
+  font: var(--text-v2-btn);
+  color: var(--ink);
+}
+
+/* ---- Worked-example look layered on the shared StepPlayer (scoped) ------ */
+.stage-v2 .example__steps {
+  counter-reset: step;
+}
+.stage-v2 .example__step {
+  position: relative;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-6);
+  border: 1px solid var(--qline);
+  border-radius: var(--v2-radius-control);
+  background: var(--surface);
+}
+.stage-v2 .example__step + .example__step {
+  margin-top: var(--space-2);
+}
+.stage-v2 .example__step-tex::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: var(--space-3);
+  color: var(--mint-ink);
+  font: var(--text-v2-badge);
+}
+/* Explicit ANSWER row — --ink on mint-tint (§7a). */
+.stage-v2 .example__answer {
+  display: block;
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--v2-radius-control);
+  background: var(--mint-tint);
+  color: var(--ink);
+}
+.stage-v2 .example__answer::before {
+  content: "Answer";
+  display: block;
+  margin-bottom: var(--space-1);
+  font: var(--text-v2-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--mint-ink);
+}
