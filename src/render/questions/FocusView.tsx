@@ -8,10 +8,10 @@
  *   3. Solution   — working first, answer last (shown in place).
  * Solution gating is PER QUESTION (a property of that question's stored result),
  * so it stays locked when you arrive via prev/next on an unanswered question —
- * never auto-opening. Keyboard: ← → navigate, S = solution (only once answered),
- * Esc = close — but these are SUPPRESSED while typing in the answer field so the
- * field stays usable. Focus is trapped within the dialog (Tab cycles) and returns
- * to the opener on close.
+ * never auto-opening. Keyboard: ← → navigate, S = solution (only once answered);
+ * Esc = close (always, even while typing). The ← → / S shortcuts are SUPPRESSED
+ * while typing in the answer field so the field stays usable. Focus is trapped
+ * within the dialog (Tab cycles) and returns to the opener on close.
  */
 import { useEffect, useRef, useState } from "react";
 import { X, ArrowLeft, ArrowRight } from "lucide-react";

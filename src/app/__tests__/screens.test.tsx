@@ -532,7 +532,11 @@ describe("Question focus view (§7c)", () => {
     const last = focusables[focusables.length - 1]!;
     last.focus();
     fireEvent.keyDown(dialog, { key: "Tab" });
-    expect(document.activeElement).toBe(first); // wrapped to the first focusable
+    expect(document.activeElement).toBe(first); // forward wrap: last → first
+
+    first.focus();
+    fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last); // reverse wrap: first → last
   });
 
   it("the exercise worksheet + stage notes expose stacking containers (mobile smoke)", () => {
