@@ -59,8 +59,16 @@
   --v2-panel-shadow: 0 6px 20px rgba(33, 40, 55, 0.06);
   --v2-grid-size: 30px; /* grid motif cell */
 
-  /* ---- Typography (§3) ---- */
+  /* ---- Typography (§3) — faces ---- */
   --v2-font-head: "Plus Jakarta Sans", system-ui, sans-serif; /* headings, UI, buttons, badges */
   --v2-font-body: "Manrope", system-ui, sans-serif; /* body, instructions */
   --v2-font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; /* micro-labels, meta */
+
+  /* ---- Typography (§3) — type styles as tokens (face/weight/size/leading).
+   * Components reference THESE; no raw px/weight in v2 primitive CSS (§2). ---- */
+  --text-v2-body: 500 13.5px/1.55 var(--v2-font-body); /* prose, answers, instructions */
+  --text-v2-btn: 700 13.5px/1 var(--v2-font-head); /* button labels */
+  --text-v2-badge: 700 13px/1 var(--v2-font-head); /* number badges */
+  --text-v2-result: 700 12px/1 var(--v2-font-head); /* result-bar label */
+  --text-v2-mono: 700 11px/1.2 var(--v2-font-mono); /* micro-labels / meta */
 }

@@ -49,7 +49,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  font: 700 13.5px/1 var(--v2-font-head);
+  font: var(--text-v2-btn);
   border-radius: var(--v2-radius-control);
   border: 1px solid transparent;
   padding: 10px 16px;
@@ -87,7 +87,7 @@
   gap: var(--space-3);
   border-radius: var(--v2-radius-control);
   padding: 10px 14px;
-  font: var(--text-meta);
+  font: var(--text-v2-body);
 }
 .v2-result--correct {
   background: var(--mint-tint);
@@ -107,7 +107,7 @@
   color: var(--red);
 }
 .v2-result__label {
-  font: 700 12px/1 var(--v2-font-head);
+  font: var(--text-v2-result);
 }
 .v2-result--correct .v2-result__label {
   color: var(--mint-ink);
@@ -118,7 +118,7 @@
 .v2-result__answer {
   margin-left: auto;
   color: var(--ink); /* §2.5: answers always in --ink, never the role colour */
-  font: var(--text-body);
+  font: var(--text-v2-body);
 }
 
 /* ---- Mint number badge (§7b) — Plus Jakarta, mint fill ------------------ */
@@ -132,12 +132,12 @@
   border-radius: var(--v2-radius-badge);
   background: var(--mint);
   color: var(--mint-ink);
-  font: 700 13px/1 var(--v2-font-head);
+  font: var(--text-v2-badge);
 }
 
 /* ---- Mono micro-label (§3) ---------------------------------------------- */
 .v2-mono {
-  font: 700 11px/1.2 var(--v2-font-mono);
+  font: var(--text-v2-mono);
   letter-spacing: 1.2px;
   color: var(--muted);
   text-transform: uppercase;
