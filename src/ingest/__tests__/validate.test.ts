@@ -600,6 +600,16 @@ describe("/content is a living fixture", () => {
     expect(jsonFiles.length).toBeGreaterThan(0);
   });
 
+  // The shipped Expanding Brackets area deliberately uses NO multiple-choice
+  // questions (a content choice — MC remains supported in code for future use).
+  it("the expanding-brackets area contains no multiple-choice questions", () => {
+    const raw = readFileSync(
+      join(contentDir, "math", "algebra", "expanding-brackets", "area.json"),
+      "utf8",
+    );
+    expect(raw.includes("multiple-choice")).toBe(false);
+  });
+
   it.each(jsonFiles)("validates cleanly: %s", (rel) => {
     const raw = JSON.parse(readFileSync(join(contentDir, rel), "utf8"));
     const base = rel.split(/[\\/]/).pop();
