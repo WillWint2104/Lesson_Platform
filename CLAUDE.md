@@ -307,7 +307,10 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 - **Figure-kind registry is implemented:** `/src/render/figures/` — sealed
   per-kind modules dispatched by (kind, specVersion); see §g. Two proof kinds
   ship: `triangle-figure` and `bearing-diagram`. The question runtime renders
-  figures through the registry's `FigureSlot`.
+  figures through the registry's `FigureSlot`. The shared figure **palette is on
+  the v2 token scale** (`shared/palette.ts` — neutral `--ink`/`--muted` + the one
+  green accent; no gold/cyan per §2.5); the two kind goldens were re-snapshotted
+  for that re-theme.
 - **v2 re-theme is in progress (`docs/design-language-v2.md`, the locked source
   of truth that supersedes the v1 `design-language.md`).** Shipped so far:
   tokens (`styles/tokens-v2.css` — the §2 scale + §3 fonts incl. JetBrains Mono +
