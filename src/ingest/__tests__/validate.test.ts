@@ -203,12 +203,10 @@ describe("optional answer/working", () => {
     expect(has(res.errors, "questions[0]", "working must be an array of strings")).toBe(true);
   });
 
-  it("warns (not errors) when a text question has no answer", () => {
+  it("warns (not errors) when a STANDALONE text question has no answer (back-compat)", () => {
     const res = validateQuestionsFile(qfile([{ type: "text", prompt: "Discuss." }]));
     expect(res.valid).toBe(true);
-    expect(
-      has(res.warnings, "questions[0] (text)", "no answer provided — the runtime will fall back"),
-    ).toBe(true);
+    expect(has(res.warnings, "questions[0] (text)", "no answer provided")).toBe(true);
   });
 
   it("does not warn about a missing answer for non-text types", () => {
@@ -541,7 +539,11 @@ describe("buildAreaRegistry (v3 stages)", () => {
   it("derives hierarchy + areaId from the path and resolves stages", () => {
     const reg = buildAreaRegistry({
       "/content/science/biology/cells/area.json": area("Cells", [
-        { title: "S", video: { src: null, duration: null }, exercise: { questions: [{ type: "text", prompt: "Q" }] } },
+        {
+          title: "S",
+          video: { src: null, duration: null },
+          exercise: { questions: [{ type: "text", prompt: "Q", answer: "$x$" }] },
+        },
       ]),
     });
     const a = reg.getAreaById("science/biology/cells");
