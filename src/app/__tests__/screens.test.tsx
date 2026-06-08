@@ -89,6 +89,31 @@ describe("app chrome (page, not frame)", () => {
   });
 });
 
+describe("Contents sidebar (shell, §4)", () => {
+  it("renders on an area/stage route and links its items to the right routes", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("Alpha"), stage("Beta")] }));
+    renderAt(STAGE1, reg, buildStore(reg));
+    const nav = screen.getByRole("navigation", { name: "Lesson contents" });
+    expect(nav).toBeTruthy();
+    expect(within(nav).getByRole("link", { name: "Stage 2 exercise" }).getAttribute("href")).toBe(
+      `/${AREA_ID}/stage/2/exercise`,
+    );
+    // The active stage's video item is marked current.
+    expect(
+      within(nav).getByRole("link", { name: "Stage 1 video" }).getAttribute("aria-current"),
+    ).toBe("page");
+  });
+
+  it("is absent on the Library (no active area) and on not-found", () => {
+    const reg = buildReg(mkArea("brackets"));
+    renderAt("/", reg, buildStore(reg));
+    expect(screen.queryByRole("navigation", { name: "Lesson contents" })).toBeNull();
+    cleanup();
+    renderAt("/no/such/area", reg, buildStore(reg));
+    expect(screen.queryByRole("navigation", { name: "Lesson contents" })).toBeNull();
+  });
+});
+
 describe("Library", () => {
   it("renders subject pills + a 'more soon' pill", () => {
     const reg = buildReg(mkArea("brackets"));
