@@ -1,0 +1,152 @@
+/*
+ * v2-primitives.css — shared building blocks for the v2 re-theme.
+ *
+ * Classes here are consumed by the primitives in /src/shared/v2/* and, later,
+ * by the migrated screens. They reference ONLY tokens-v2.css (§2/§4/§5). No
+ * screen logic lives here. Colour rules (§2.5) are honoured structurally:
+ * disabled uses grey tokens; result/answer text uses --ink; green is accent only.
+ */
+
+/* ---- Grid canvas (§4) — the textured page background -------------------- */
+.v2-canvas {
+  background-color: var(--page);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: var(--v2-grid-size) var(--v2-grid-size);
+}
+
+/* ---- Panel (§4) — white surface with the signature 8px mint strip ------- */
+.v2-panel {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--v2-radius-panel);
+  box-shadow: var(--v2-panel-shadow);
+  overflow: hidden; /* clip the strip to the panel radius */
+}
+.v2-panel__strip {
+  height: var(--v2-strip-h);
+  background: var(--mint-strip);
+}
+.v2-panel__body {
+  padding: var(--space-4);
+}
+
+/* ---- Card (§4) — lives inside a panel, never on the bare canvas --------- */
+.v2-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--v2-radius-card);
+  padding: var(--space-4);
+}
+
+/* ---- Button (§5) — one rounded language ---------------------------------
+ * primary = mint accent; ghost = white with a line border. Grey is ONLY the
+ * disabled state (§2.5). */
+.v2-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font: var(--text-v2-btn);
+  border-radius: var(--v2-radius-control);
+  border: 1px solid transparent;
+  padding: 10px 16px;
+  cursor: pointer;
+  color: var(--ink);
+  background: var(--surface);
+}
+.v2-btn--primary {
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-color: var(--mint-line);
+}
+.v2-btn--ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.v2-btn:disabled,
+.v2-btn[aria-disabled="true"] {
+  background: var(--v2-disabled-bg);
+  color: var(--v2-disabled-ink);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.v2-btn:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+
+/* ---- Result bar (§7d) — rounded bar, colour on the edge + mark only ------
+ * The student's answer always renders in --ink (readable); never grey/green. */
+.v2-result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-radius: var(--v2-radius-control);
+  padding: 10px 14px;
+  font: var(--text-v2-body);
+}
+.v2-result--correct {
+  background: var(--mint-tint);
+  box-shadow: inset 3px 0 0 var(--mint-line);
+}
+.v2-result--incorrect {
+  background: var(--red-tint);
+  box-shadow: inset 3px 0 0 var(--red-line);
+}
+.v2-result__mark {
+  display: inline-flex;
+}
+.v2-result--correct .v2-result__mark {
+  color: var(--mint-ink);
+}
+.v2-result--incorrect .v2-result__mark {
+  color: var(--red);
+}
+.v2-result__label {
+  font: var(--text-v2-result);
+}
+.v2-result--correct .v2-result__label {
+  color: var(--mint-ink);
+}
+.v2-result--incorrect .v2-result__label {
+  color: var(--red);
+}
+.v2-result__answer {
+  margin-left: auto;
+  color: var(--ink); /* §2.5: answers always in --ink, never the role colour */
+  font: var(--text-v2-body);
+}
+
+/* ---- Mint number badge (§7b) — Plus Jakarta, mint fill ------------------ */
+.v2-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: var(--v2-radius-badge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  font: var(--text-v2-badge);
+}
+
+/* ---- Mono micro-label (§3) ---------------------------------------------- */
+.v2-mono {
+  font: var(--text-v2-mono);
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* ---- Icon sizing (§5) — inline SVG, currentColor ------------------------ */
+.v2-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex: none;
+  color: currentColor;
+}
