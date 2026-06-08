@@ -134,6 +134,12 @@ describe("Contents sidebar (shell, §4)", () => {
 });
 
 describe("Library", () => {
+  it("carries the v2 home skin on its root (grid-canvas hub)", () => {
+    const reg = buildReg(mkArea("brackets"));
+    const { container } = renderAt("/", reg, buildStore(reg));
+    expect(container.querySelector("main.lib.v2-home")).not.toBeNull();
+  });
+
   it("renders subject pills + a 'more soon' pill", () => {
     const reg = buildReg(mkArea("brackets"));
     renderAt("/", reg, buildStore(reg));

@@ -306,8 +306,10 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   canvas + white top bar with breadcrumb + mastery % + the 288px **contents
   sidebar** `/src/app/ContentsSidebar.tsx`, the new primary nav driven by
   `parseAreaRoute`), and the **stage page** (§7a). A validator **warning** flags
-  Unicode fraction glyphs (author `\frac`). Migration is PR-by-PR; the Library
-  and Exercise pages are not yet on the v2 system. Build/run commands unchanged.
+  Unicode fraction glyphs (author `\frac`). Migration is PR-by-PR; the **Library/home hub** (a
+  scoped `.v2-home` re-skin — grid canvas, white mint-strip panels, mint
+  accents, white continue-hero per §2.5, topic cards with mastery). The
+  **Exercise page** is not yet on the v2 system. Build/run commands unchanged.
 - **App shell is implemented:** `react-router-dom` routing (`/src/app/`).
   `main.tsx` calls `loadAllAreas` to build the `AreaRegistry` + `createProgressStore`
   (keyed by `registry.areas.map(a => a.id)`) and provides them (RegistryProvider +
@@ -369,7 +371,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 
   | Route | Screen |
   |-------|--------|
-  | `/` | Library **hub** (greeting + day/date kicker, subject pills, always-present hero, responsive topic grid with in-card area rows + empty-room placeholder) |
+  | `/` | Library **hub** (v2 `.v2-home` skin: grid canvas, mint-strip panels, white continue/start hero, subject pills, responsive topic grid with in-card area rows + mastery + empty-room placeholder) |
   | `/:subject/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
   | `/:subject/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
   | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page — stepper, worksheet (7) + recap rail (4); tappable rows → enlarge-in-place focus view; per-row self-mark; completion row → next-stage video; always-open "More practice" expander |

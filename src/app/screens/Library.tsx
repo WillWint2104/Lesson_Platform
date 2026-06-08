@@ -16,7 +16,7 @@ export function Library() {
   const [subject, setSubject] = useState<string | null>(subjects[0] ?? null);
 
   return (
-    <main className="app-page lib">
+    <main className="app-page lib v2-home">
       <section className="lib-greeting">
         <p className="lib-kicker">{todayKicker()}</p>
         <h1 className="lib-headline">Welcome back</h1>
