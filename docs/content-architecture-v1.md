@@ -77,7 +77,7 @@ All surfaces reuse the v2 tokens, panels, mint-strip, and shape language — no 
 Location: `/docs/topic-specs/<topic>.md`, with a `TEMPLATE.md` and a short `README.md` explaining the model. These are authoring guides; the app does not read them.
 
 ### Topic-spec template (what each spec captures)
-```
+```text
 # Topic spec: <Topic name>
 Skill summary: <one line — what the whole topic builds toward>
 

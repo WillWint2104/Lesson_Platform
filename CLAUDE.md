@@ -21,7 +21,7 @@ lesson-as-unit and v2 area-sequence models are superseded; see §e.)
 Content is organised as a strict hierarchy (**course is the new top level** —
 content-architecture-v1 §2):
 
-```
+```text
 course → topic → topic area  (each area = notes + an ordered video/exercise sequence)
 ```
 
@@ -160,7 +160,7 @@ are conventional **ordered lesson-card lists**. **Do not reintroduce maps.**
 
 ### Course manifest (`course.json`, content-architecture-v1 §3)
 The **course** is the top of the hierarchy. Each `/content/<course>/course.json`:
-```
+```jsonc
 { "id": string,            // MUST equal the folder name (path-derived, validated)
   "displayName": string,   // single-line, non-empty (e.g. "Year 11 · Mathematics Advanced")
   "year": number,          // integer 7–12
