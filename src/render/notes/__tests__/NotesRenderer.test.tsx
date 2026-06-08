@@ -51,13 +51,14 @@ describe("NotesRenderer", () => {
         type: "example",
         prompt: "P",
         answer: "ANS",
-        steps: [{ tex: "lineone", why: "first reason" }, { tex: "linetwo" }],
+        steps: [{ tex: "x=1", why: "first reason" }, { tex: "x=2" }],
       },
     ];
-    render(<NotesRenderer blocks={blocks} />);
-    expect(screen.getByText("lineone")).toBeTruthy();
+    const { container } = render(<NotesRenderer blocks={blocks} />);
+    // tex is typeset by KaTeX; the why prose is plain.
+    expect(container.querySelectorAll(".note-example__step")).toHaveLength(2);
+    expect(container.querySelectorAll(".note-example__working-line .katex").length).toBeGreaterThan(0);
     expect(screen.getByText("first reason")).toBeTruthy();
-    expect(screen.getByText("linetwo")).toBeTruthy();
   });
 
   it("shows an alert chip for an unknown block type (never silently skips)", () => {

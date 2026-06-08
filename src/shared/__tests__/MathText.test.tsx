@@ -73,4 +73,20 @@ describe("MathText", () => {
   it("does not throw on malformed math (throwOnError: false)", () => {
     expect(() => render(<MathText>{"$\\frac{$"}</MathText>)).not.toThrow();
   });
+
+  it("typesets the \\emA emphasis macro as a coloured KaTeX node, not literal text", () => {
+    const { container } = render(<MathText>{"$\\emA{3}$"}</MathText>);
+    expect(container.querySelector(".mathtext-inline .katex")).not.toBeNull();
+    // The macro expands to a class-tagged span (mapped to a theme token in CSS).
+    expect(container.querySelector(".katex .ktx-em-a")).not.toBeNull();
+    // The VISIBLE (.katex-html) layer shows the argument, never the raw command.
+    // (The MathML annotation legitimately carries the source TeX.)
+    expect(container.querySelector(".katex-html")?.textContent ?? "").not.toContain("emA");
+  });
+
+  it("typesets the \\emB emphasis macro as a coloured KaTeX node", () => {
+    const { container } = render(<MathText>{"$\\emB{x}$"}</MathText>);
+    expect(container.querySelector(".katex .ktx-em-b")).not.toBeNull();
+    expect(container.querySelector(".katex-html")?.textContent ?? "").not.toContain("emB");
+  });
 });
