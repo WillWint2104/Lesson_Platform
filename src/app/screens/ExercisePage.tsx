@@ -2,14 +2,16 @@
  * @file ExercisePage.tsx — /:subject/:topic/:topicArea/stage/:n/exercise
  *
  * Worksheet main column + recap rail. Core set rows are fully tappable → the
- * question focus view; each row also has an inline Solution button and an
- * enlarge icon. Completion (all core answered) reveals a green completion row +
- * "Continue to Stage N+1". A collapsed "More practice" expander holds the extra
- * pool (solutions locked until core is complete; extra never affects completion).
+ * question focus view; each row self-marks directly (✓ Got it / ✕ Not yet, no
+ * solution required) and has an inline Solution button + an enlarge icon.
+ * Completion (all core answered) reveals a green completion row linking to the
+ * next stage's video ("Next: Video N+1", or back to the area on the last stage).
+ * A collapsed "More practice" expander holds the extra pool — its solutions are
+ * always available and extra never affects completion.
  */
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Lightbulb, Lock, Maximize2, ArrowRight, RotateCcw } from "lucide-react";
+import { Lightbulb, Maximize2, ArrowRight, RotateCcw } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
 import type { ProgressStore } from "@/state/progress";
@@ -24,7 +26,7 @@ import { FigureSlot } from "@/render/figures/FigureSlot";
 import { StatusCircle } from "@/shared/StatusCircle";
 import { MultipleChoice } from "@/render/questions/MultipleChoice";
 import { SolutionModal } from "@/render/questions/SolutionModal";
-import { FocusView } from "@/render/questions/FocusView";
+import { FocusView, SelfMark } from "@/render/questions/FocusView";
 import { NotFound } from "@/app/screens/NotFound";
 
 function useStoreTick(store: ProgressStore): void {
@@ -107,7 +109,7 @@ export function ExercisePage() {
   };
 
   const focusQuestions = focus?.pool === "extra" ? extra : core;
-  const focusLocked = focus?.pool === "extra" && !coreComplete;
+  const focusOutcomes = focus?.pool === "extra" ? extraOutcomes : coreOutcomes;
   const solutionQuestion =
     solution !== null ? (solution.pool === "extra" ? extra : core)[solution.index] : undefined;
 
@@ -163,7 +165,7 @@ export function ExercisePage() {
                   </Link>
                 ) : (
                   <Link className="btn btn--primary" to={stagePath(area, stageNum + 1)}>
-                    Continue to Stage {stageNum + 1} <ArrowRight size={16} aria-hidden="true" />
+                    Next: Video {stageNum + 1} <ArrowRight size={16} aria-hidden="true" />
                   </Link>
                 )}
                 {anyIncorrect ? (
@@ -197,7 +199,6 @@ export function ExercisePage() {
                       onOutcome={(o) => recordExtra(i, o)}
                       onSolution={(opener) => openSolution("extra", i, opener)}
                       onEnlarge={(opener) => openFocus("extra", i, opener)}
-                      solutionLocked={!coreComplete}
                     />
                   ))}
                 </ol>
@@ -233,8 +234,8 @@ export function ExercisePage() {
           questions={focusQuestions}
           index={focus.index}
           onIndex={(i) => setFocus({ pool: focus.pool, index: i })}
+          outcomes={focusOutcomes}
           onOutcome={(qi, o) => (focus.pool === "extra" ? recordExtra(qi, o) : recordCore(qi, o))}
-          solutionsLocked={focusLocked}
           onClose={() => setFocus(null)}
           returnFocusTo={openerRef.current}
         />
@@ -268,7 +269,6 @@ function QuestionRow({
   onOutcome,
   onSolution,
   onEnlarge,
-  solutionLocked = false,
 }: {
   q: Question;
   num: string;
@@ -276,7 +276,6 @@ function QuestionRow({
   onOutcome: (outcome: Outcome) => void;
   onSolution: (opener: HTMLElement | null) => void;
   onEnlarge: (opener: HTMLElement | null) => void;
-  solutionLocked?: boolean;
 }) {
   const isMc = q.type === "multiple-choice";
   const figure = "figure" in q ? q.figure : undefined;
@@ -296,11 +295,10 @@ function QuestionRow({
             <button
               type="button"
               className="ws-row__solve"
-              disabled={solutionLocked}
               aria-label={`Show ${isMc ? "explanation" : "solution"} for question ${num}`}
               onClick={(e) => onSolution(e.currentTarget)}
             >
-              {solutionLocked ? <Lock size={16} aria-hidden="true" /> : <Lightbulb size={16} aria-hidden="true" />}
+              <Lightbulb size={16} aria-hidden="true" />
               <span className="ws-row__solve-label">{isMc ? "Explain" : "Solution"}</span>
             </button>
             <button
@@ -316,11 +314,17 @@ function QuestionRow({
 
         {figure ? <FigureSlot figure={figure} /> : null}
 
+        {/* MC marks on select; everything else self-marks directly (solution
+            optional). Stop propagation so these don't trigger the row → focus. */}
         {isMc ? (
           <div onClick={(e) => e.stopPropagation()}>
             <MultipleChoice question={q} onOutcome={onOutcome} />
           </div>
-        ) : null}
+        ) : (
+          <div onClick={(e) => e.stopPropagation()}>
+            <SelfMark outcome={outcome} onOutcome={onOutcome} />
+          </div>
+        )}
       </div>
     </li>
   );

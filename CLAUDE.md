@@ -315,13 +315,19 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   `StepPlayer`; RAIL = THE RULE + REMEMBER + the "Start Exercise N →" CTA at its
   foot; stacks below 980 as video → worked examples → rule → remember → CTA);
   `/…/stage/:n/exercise` is the **ExercisePage** (worksheet 7 / recap rail 4: core rows tappable → focus view,
-  inline MC, completion row + Continue/Back + gentle incorrect-nudge, a collapsed
-  "More practice" expander with extra solutions locked until core is complete and
-  never counting). Invalid `:n` → not-found. A shared `StageStepper`
+  inline MC, **every non-MC row self-marks directly** (✓ Got it / ✕ Not yet —
+  opening the solution is optional, never required), completion row whose CTA
+  links to the **next stage's video** ("Next: Video N+1", or "Back to <area>" on
+  the last stage) + gentle incorrect-nudge, a collapsed "More practice" expander
+  whose extra **solutions are always available** (never locked) and never
+  counting). Invalid `:n` → not-found. A shared `StageStepper`
   (`/src/app/StageStepper.tsx`) sits on both pages — every stage clickable both
-  directions, nothing locks. The **question focus view** (`FocusView`) is a
-  full-surface takeover (role=dialog; ← → / S / Esc; rem-scaled type; focus
-  in/restore; works for core AND extra). Completion/outcome wiring is unchanged
+  directions, nothing locks. The **question focus view** (`FocusView`) **enlarges
+  the question IN PLACE** — a centered card over a dimmed + blurred backdrop
+  (`--scrim` + `backdrop-filter`), NOT a full-surface page/route (role=dialog,
+  aria-modal; ← → navigate / G = got it / N = not yet / S = solution / Esc close;
+  rem-scaled type; focus in/restore; self-mark inside; works for core AND extra).
+  Completion/outcome wiring is unchanged
   (recordOutcome core/extra; sticky `completedAt` on all-core-answered);
   `setLastVisited(area, stage, view)` updates on navigation and the hub deep-links
   to the stored stage/view. Stage helpers + path builders live in
@@ -351,7 +357,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   | `/` | Library **hub** (greeting + day/date kicker, subject pills, always-present hero, responsive topic grid with in-card area rows + empty-room placeholder) |
   | `/:subject/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
   | `/:subject/:topic/:topicArea/stage/:n` | Stage page — stepper, video (7) + notes (4: rule / remember / worked-example step player), "Start Exercise N" |
-  | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page — stepper, worksheet (7) + recap rail (4); tappable rows → question focus view; completion row; locked-extra "More practice" expander |
+  | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page — stepper, worksheet (7) + recap rail (4); tappable rows → enlarge-in-place focus view; per-row self-mark; completion row → next-stage video; always-open "More practice" expander |
   | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
 
