@@ -176,6 +176,10 @@
   background: var(--mint-tint);
   color: var(--mint-ink);
 }
+.exercise-v2 .ex-expander:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
 
 /* ---- Focus card (§7c): v2 panel over the scrim ------------------------- */
 .focus-card {
