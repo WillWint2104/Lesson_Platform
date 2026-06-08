@@ -85,9 +85,13 @@ export function AnswerControl({ question, recorded, onRecord, onOpenSolution, la
     );
   }
 
+  // A canonical answer is guaranteed for exercise text (validator error otherwise);
+  // gate Check on it too so a (bypassed-validation) answerless question can't show
+  // an enabled-but-inert button.
+  const canCheck = trimmed.length > 0 && canonical !== undefined;
   const submit = () => {
-    if (!trimmed || canonical === undefined) return;
-    onRecord({ answer: trimmed, correct: checkEquivalence(trimmed, canonical) });
+    if (!canCheck) return;
+    onRecord({ answer: trimmed, correct: checkEquivalence(trimmed, canonical!) });
   };
 
   return (
@@ -111,7 +115,7 @@ export function AnswerControl({ question, recorded, onRecord, onOpenSolution, la
         <button
           type="button"
           className="v2-btn v2-btn--primary ans__check"
-          disabled={!trimmed}
+          disabled={!canCheck}
           onClick={submit}
         >
           Check

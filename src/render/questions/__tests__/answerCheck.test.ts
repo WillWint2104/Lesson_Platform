@@ -29,10 +29,21 @@ describe("checkEquivalence (algebraic, §8)", () => {
     expect(checkEquivalence("18a + 63", "$9(2a + 7)$")).toBe(true);
   });
 
+  it("accepts equivalence even where the expression crosses zero in range", () => {
+    // (x-2)(x+2) = x^2 - 4 has a root at x=2 (inside the sample sweep).
+    expect(checkEquivalence("(x-2)(x+2)", "$x^2 - 4$")).toBe(true);
+  });
+
   it("rejects wrong answers and near-misses", () => {
     expect(checkEquivalence("4x + 9", "$4x + 12$")).toBe(false);
     expect(checkEquivalence("x + 3.01", "$x + 3$")).toBe(false);
     expect(checkEquivalence("x - 4", "$x + 4$")).toBe(false);
+  });
+
+  it("catches sign/abs mistakes that a positive-only sweep would miss", () => {
+    // The sample sweep spans negatives, so these only agree on the positive half.
+    expect(checkEquivalence("abs(x)", "$x$")).toBe(false);
+    expect(checkEquivalence("-x", "$x$")).toBe(false);
   });
 
   it("rejects empty / unparseable input rather than throwing", () => {

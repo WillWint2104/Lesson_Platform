@@ -77,10 +77,12 @@ export function checkEquivalence(student: string, canonical: string): boolean {
 
   for (let t = 0; t < SAMPLE_POINTS; t++) {
     const scope: Record<string, number> = {};
-    // Distinct non-integer values per variable + per sample, to avoid the
-    // coincidental agreement that integer roots could produce.
+    // Distinct, NON-INTEGER values per variable + per sample, spanning NEGATIVE
+    // and positive (centred near 0, never exactly 0). Non-integers avoid the
+    // coincidental agreement integer roots could produce; the negative half
+    // catches sign/abs mistakes (e.g. abs(x) vs x) a positive-only sweep misses.
     vars.forEach((v, i) => {
-      scope[v] = 2 + t * 1.3 + i * 0.7;
+      scope[v] = (t - SAMPLE_POINTS / 2) * 1.3 + 0.5 + i * 0.7;
     });
     let va: unknown;
     let vb: unknown;
