@@ -185,6 +185,31 @@ describe("StagePage", () => {
     expect(screen.getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
   });
 
+  it("places worked examples in the MAIN column; rule / remember / CTA in the RAIL", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [
+          stage("S", {
+            notes: [
+              { type: "paragraph", text: "Rule prose." },
+              { type: "callout", style: "key", text: "Remember me." },
+              { type: "example", prompt: "Ex", answer: "$3$", steps: [{ tex: "3" }] },
+            ],
+            video: { src: null, duration: null },
+          }),
+        ],
+      }),
+    );
+    const { container } = renderAt(STAGE1, reg, buildStore(reg));
+    const main = container.querySelector(".stage-grid__main")!;
+    const rail = container.querySelector(".stage-grid__rail")!;
+    expect(main.querySelector(".step-player")).not.toBeNull(); // worked examples in main
+    expect(rail.querySelector(".step-player")).toBeNull();
+    expect(within(rail as HTMLElement).getByText("The rule")).toBeTruthy();
+    expect(within(rail as HTMLElement).getByText("Remember")).toBeTruthy();
+    expect(within(rail as HTMLElement).getByRole("link", { name: /Start Exercise 1/ })).toBeTruthy();
+  });
+
   it("not-found for an out-of-range stage number", () => {
     const reg = buildReg(mkArea("brackets"));
     renderAt(`/${AREA_ID}/stage/9`, reg, buildStore(reg));

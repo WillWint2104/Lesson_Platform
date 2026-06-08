@@ -96,6 +96,7 @@
   --container-list: 880px;      /* lesson list */
   --container-reading: 720px;   /* lesson content */
   --container-area: 960px;      /* topic-area worksheet page */
+  --container-stage: 1280px;    /* stage + exercise pages (main/rail) */
 
   /* ---- Standard page padding (inline gutter / block top-bottom) ---- */
   --page-pad-inline: var(--space-5);

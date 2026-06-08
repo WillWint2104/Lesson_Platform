@@ -27,8 +27,9 @@ export function NoteExample({
         {steps
           ? steps.map((step, index) => (
               <div key={index} className="note-example__step">
+                {/* `tex` is raw KaTeX by contract — wrap so MathText typesets it. */}
                 <div className="note-example__working-line">
-                  <MathText>{step.tex}</MathText>
+                  <MathText>{`$${step.tex}$`}</MathText>
                 </div>
                 {step.why ? (
                   <p className="note-example__why">

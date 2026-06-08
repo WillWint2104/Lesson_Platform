@@ -113,8 +113,10 @@ function Step({ step, current }: { step: ExampleStep; current: boolean }) {
   const [showWhy, setShowWhy] = useState(false);
   return (
     <div className={`example__step example__step--revealed${current ? " example__step--current" : ""}`}>
+      {/* `tex` is raw KaTeX by contract — wrap so MathText typesets it (emphasis
+          macros included) rather than rendering it as plain text. */}
       <div className="example__step-tex">
-        <MathText>{step.tex}</MathText>
+        <MathText>{`$${step.tex}$`}</MathText>
       </div>
       {step.why ? (
         <>

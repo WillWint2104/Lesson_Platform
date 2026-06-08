@@ -310,10 +310,11 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 - **Stage-flow screens are implemented** (the old single-page AreaPage is
   REMOVED; its row + `SolutionModal` patterns are reused). Routes: the area root
   `/:subject/:topic/:topicArea` **redirects** to the current stage
-  (`AreaRedirect`, progress-derived); `/…/stage/:n` is the **StagePage** (video
-  7fr / notes 4fr, stacks below 980 — STAGE NOTES → THE RULE → REMEMBER → WORKED
-  EXAMPLES `StepPlayer`, + "Start Exercise N →"); `/…/stage/:n/exercise` is the
-  **ExercisePage** (worksheet 7 / recap rail 4: core rows tappable → focus view,
+  (`AreaRedirect`, progress-derived); `/…/stage/:n` is the **StagePage**
+  (container 1280, main 1.6 / rail 1 — MAIN = video + WORKED EXAMPLES
+  `StepPlayer`; RAIL = THE RULE + REMEMBER + the "Start Exercise N →" CTA at its
+  foot; stacks below 980 as video → worked examples → rule → remember → CTA);
+  `/…/stage/:n/exercise` is the **ExercisePage** (worksheet 7 / recap rail 4: core rows tappable → focus view,
   inline MC, completion row + Continue/Back + gentle incorrect-nudge, a collapsed
   "More practice" expander with extra solutions locked until core is complete and
   never counting). Invalid `:n` → not-found. A shared `StageStepper`

@@ -65,7 +65,7 @@ export function StagePage() {
     .map((b) => ({ prompt: b.prompt, answer: b.answer, steps: b.steps, working: b.working }));
 
   return (
-    <main className="app-page app-page--area stage-page">
+    <main className="app-page stage-page">
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link className="breadcrumb__link" to="/">
           {titleCase(area.subject)}
@@ -78,21 +78,21 @@ export function StagePage() {
 
       <StageStepper steps={steps} activeIndex={stageIndex} hrefFor={(i) => stagePath(area, i + 1)} />
 
+      {/* Main: video + worked examples (the player needs the wide column);
+          rail: the rule, remember, and the Start-Exercise CTA at its foot.
+          Stacks under 980 as video → examples → rule → remember → CTA. */}
       <div className="stage-grid">
-        <div className="stage-grid__video">
+        <div className="stage-grid__main">
           <VideoEmbed src={stage.video?.src ?? null} title={stage.title} />
-          <div className="stage-cta">
-            <p className="area-meta">
-              Stage {stageNum} of {area.stages.length} · {stage.exercise.questions.length} core
-              question{stage.exercise.questions.length === 1 ? "" : "s"}
-            </p>
-            <Link className="btn btn--primary" to={exercisePath(area, stageNum)}>
-              Start Exercise {stageNum} <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-          </div>
+          {examples.length > 0 ? (
+            <section className="notes-panel">
+              <p className="section-label">Worked examples</p>
+              <StepPlayer examples={examples} />
+            </section>
+          ) : null}
         </div>
 
-        <aside className="stage-grid__notes">
+        <aside className="stage-grid__rail">
           <p className="section-label">Stage notes · {stage.title}</p>
 
           {prose.length > 0 ? (
@@ -113,12 +113,15 @@ export function StagePage() {
             </section>
           ) : null}
 
-          {examples.length > 0 ? (
-            <section className="notes-panel">
-              <p className="section-label">Worked examples</p>
-              <StepPlayer examples={examples} />
-            </section>
-          ) : null}
+          <div className="stage-cta">
+            <p className="area-meta">
+              Stage {stageNum} of {area.stages.length} · {stage.exercise.questions.length} core
+              question{stage.exercise.questions.length === 1 ? "" : "s"}
+            </p>
+            <Link className="btn btn--primary" to={exercisePath(area, stageNum)}>
+              Start Exercise {stageNum} <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+          </div>
         </aside>
       </div>
 
