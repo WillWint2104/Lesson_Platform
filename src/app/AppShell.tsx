@@ -18,7 +18,9 @@ function containerForPath(pathname: string): string {
   if (pathname === "/") return "var(--container-wide)"; // Library hub
   if (pathname === "/debug") return "var(--container-area)";
   const segments = pathname.split("/").filter(Boolean);
-  if (segments.length === 3) return "var(--container-area)"; // /:subject/:topic/:topicArea
+  // /:subject/:topic/:topicArea/stage/:n[/exercise] — the stage-flow pages.
+  if (segments.length >= 4 && segments[3] === "stage") return "var(--container-stage)";
+  if (segments.length === 3) return "var(--container-area)"; // area redirect (brief)
   return "var(--container-list)"; // not-found / everything else
 }
 

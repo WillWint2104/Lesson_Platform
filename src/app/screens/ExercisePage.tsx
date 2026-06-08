@@ -112,7 +112,7 @@ export function ExercisePage() {
     solution !== null ? (solution.pool === "extra" ? extra : core)[solution.index] : undefined;
 
   return (
-    <main className="app-page app-page--area exercise-page">
+    <main className="app-page exercise-page">
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <Link className="breadcrumb__link" to="/">
           {titleCase(area.subject)}

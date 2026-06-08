@@ -691,7 +691,7 @@ body {
   white-space: nowrap;
 }
 
-/* ===== Stage page (video 7 / notes 4) ===== */
+/* ===== Stage page (main 1.6 [video + worked examples] / rail 1 [rule, remember, CTA]) ===== */
 .stage-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -700,27 +700,27 @@ body {
 }
 @media (min-width: 980px) {
   .stage-grid {
-    grid-template-columns: 7fr 4fr;
+    grid-template-columns: 1.6fr 1fr;
   }
 }
-.stage-grid__video {
+.stage-grid__main {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
 }
+.stage-grid__rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+/* CTA sits at the foot of the rail. */
 .stage-cta {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-.stage-grid__notes {
-  display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 .notes-panel {
   display: flex;
