@@ -137,6 +137,10 @@
 }
 .v2-home .topic-area-row {
   border-radius: var(--v2-radius-control);
+  /* §2.5: white surface + --line hairline (replaces the v1 cream bg + tan
+     chunky border); mint-tint highlight on hover below. */
+  background: var(--surface);
+  border: 1px solid var(--line);
   color: var(--body);
   text-decoration: none;
 }
@@ -169,6 +173,10 @@
 }
 .v2-home .up-next {
   border-radius: var(--v2-radius-control);
+  /* §2.5: a white-based mint highlight (replaces the v1 cream bg + tan chunky
+     border) — it's the actionable "up next", so a gentle mint-tint accent. */
+  background: var(--mint-tint);
+  border: 1px solid var(--mint-line);
   text-decoration: none;
 }
 .v2-home .up-next:hover {
