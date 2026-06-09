@@ -50,8 +50,9 @@ body.lp-app {
 }
 /* "Hub" — the way back to the home route from a lesson/exercise (§4). */
 .appbar-crumb__home {
+  /* Inherits the crumb's --text-v2-body token; distinguished as a link by the
+     mint-ink colour + hover underline + focus ring (no raw font-weight). */
   color: var(--mint-ink);
-  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
 }
