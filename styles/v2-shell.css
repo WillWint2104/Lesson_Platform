@@ -21,6 +21,12 @@ body.lp-app {
 .app-bar__wordmark {
   color: var(--ink);
 }
+/* The brand is a link to the hub (route "/"); give it a visible focus state. */
+.app-bar__wordmark:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+  border-radius: var(--v2-radius-badge);
+}
 .app-bar__identity {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -41,6 +47,22 @@ body.lp-app {
   min-width: 0;
   font: var(--text-v2-body);
   color: var(--muted);
+}
+/* "Hub" — the way back to the home route from a lesson/exercise (§4). */
+.appbar-crumb__home {
+  /* Inherits the crumb's --text-v2-body token; distinguished as a link by the
+     mint-ink colour + hover underline + focus ring (no raw font-weight). */
+  color: var(--mint-ink);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.appbar-crumb__home:hover {
+  text-decoration: underline;
+}
+.appbar-crumb__home:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+  border-radius: var(--v2-radius-badge);
 }
 .appbar-crumb__sep {
   color: var(--faint);

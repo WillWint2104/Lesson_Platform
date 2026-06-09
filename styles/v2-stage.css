@@ -178,3 +178,34 @@
   text-transform: uppercase;
   color: var(--mint-ink);
 }
+
+/* Example tabs + why? toggle on the v2 single-mint system (§2.5/§5/§7a) —
+   override the v1 action-green tab + cyan why-chip from components.css. */
+.stage-v2 .step-tab {
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-bottom-width: 1px; /* flat — not the v1 chunky bottom edge */
+}
+.stage-v2 .step-tab--active {
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-color: var(--mint-line);
+}
+.stage-v2 .step-tab:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.stage-v2 .example__why-toggle {
+  background: var(--mint-tint);
+  color: var(--mint-ink);
+  border: 1px solid var(--mint-line);
+}
+.stage-v2 .example__why-toggle:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.stage-v2 .example__why {
+  background: var(--mint-tint);
+  color: var(--body);
+}
