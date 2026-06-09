@@ -179,6 +179,35 @@ export interface AreaManifest {
   area: Area;
 }
 
+/**
+ * A `course.json` manifest (content-architecture-v1 §3). The course is the new
+ * TOP of the content hierarchy: `/content/<course>/<topic>/<area>/area.json` plus
+ * `/content/<course>/course.json`. Everything below the course (topic/area/stage)
+ * keeps contract v3/v4 unchanged. The course list is derived by scanning each
+ * `/content/<course>/course.json`.
+ */
+export interface CourseManifest {
+  /** Must equal the folder name (path-derived, validated). */
+  id: string;
+  /** Single-line, non-empty display label, e.g. "Year 11 · Mathematics Advanced". */
+  displayName: string;
+  /** Integer 7–12. */
+  year: number;
+  /** Senior stream; `null` for junior years with no stream. */
+  stream: CourseStream | null;
+  /** Reserved for future multi-subject; defaults to "Mathematics". */
+  subject: string;
+  /** Picker sort key (e.g. year*10 + stream rank). */
+  order: number;
+}
+
+/** The senior maths streams (content-architecture-v1 §3). */
+export const COURSE_STREAMS = ["Advanced", "Standard", "Extension"] as const;
+export type CourseStream = (typeof COURSE_STREAMS)[number];
+
+/** Default subject when a course omits one (§3 — reserved for multi-subject). */
+export const DEFAULT_COURSE_SUBJECT = "Mathematics";
+
 /** A standalone `questions.json` (contract UNCHANGED). */
 export interface QuestionsFile {
   questions: Question[];

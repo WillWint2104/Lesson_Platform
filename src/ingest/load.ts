@@ -13,9 +13,11 @@
  * unit-testable without Vite.
  */
 
-import type { NoteBlock, Question, Stage } from "./types";
+import type { CourseStream, NoteBlock, Question, Stage } from "./types";
+import { DEFAULT_COURSE_SUBJECT } from "./types";
 import {
   validateAreaManifest,
+  validateCourseManifest,
   validateNotesFile,
   validateQuestionsFile,
   type Issue,
@@ -58,7 +60,39 @@ interface AreaHierarchy {
   topicArea: string;
 }
 
-const EXPECTED_PATH_SHAPE = "/content/<subject>/<topic>/<topic-area>/area.json";
+/**
+ * A validated course (content-architecture-v1 §3), derived by scanning
+ * `/content/<course>/course.json`. `areaCount` is how many areas live under the
+ * course (0 = registered-but-unauthored → "content coming", never an error).
+ */
+export interface ValidatedCourse {
+  id: string;
+  displayName: string;
+  year: number;
+  stream: CourseStream | null;
+  subject: string;
+  order: number;
+  /** Manifest file path (glob key). */
+  path: string;
+  areaCount: number;
+  valid: boolean;
+  errors: Issue[];
+  warnings: Issue[];
+}
+
+const EXPECTED_PATH_SHAPE = "/content/<course>/<topic>/<topic-area>/area.json";
+const EXPECTED_COURSE_PATH_SHAPE = "/content/<course>/course.json";
+
+/** Derive the course folder id from a `/content/<course>/course.json` path, or null. */
+function deriveCourseId(manifestPath: string): string | null {
+  const marker = "/content/";
+  const start = manifestPath.indexOf(marker);
+  if (start === -1) return null;
+  const segments = manifestPath.slice(start + marker.length).split("/");
+  // [course, "course.json"]
+  if (segments.length !== 2 || segments[1] !== "course.json") return null;
+  return segments[0] || null;
+}
 
 /** Derive { subject, topic, topicArea } from a `.../area.json` path, or null. */
 function deriveAreaHierarchy(manifestPath: string): AreaHierarchy | null {
@@ -75,9 +109,15 @@ function deriveAreaHierarchy(manifestPath: string): AreaHierarchy | null {
 
 export interface AreaRegistry {
   areas: ValidatedArea[];
+  /** All courses (content-architecture-v1 §3), sorted by `order` then id. */
+  courses: ValidatedCourse[];
   issuesByArea: Record<string, { errors: Issue[]; warnings: Issue[] }>;
   /** Stale-ID-safe lookup: returns undefined for unknown ids (never throws). */
   getAreaById: (id: string) => ValidatedArea | undefined;
+  /** All courses, sorted by `order`. */
+  getCourses: () => ValidatedCourse[];
+  /** Stale-ID-safe course lookup: undefined for unknown ids. */
+  getCourseById: (id: string) => ValidatedCourse | undefined;
   getSubjects: () => string[];
   getTopics: (subject: string) => string[];
   /** Distinct topic-area names within a topic, alphabetical. */
@@ -256,13 +296,67 @@ export function buildAreaRegistry(
     }
   }
 
+  // ---- Course discovery (content-architecture-v1 §3) ----
+  // Areas namespace under their top path segment (the course slug); count them
+  // per course so an authored course shows its progress and an empty one is a
+  // calm "content coming", never an error.
+  const areaCountByCourse = new Map<string, number>();
+  for (const area of areas) {
+    areaCountByCourse.set(area.subject, (areaCountByCourse.get(area.subject) ?? 0) + 1);
+  }
+
+  const courses: ValidatedCourse[] = [];
+  const seenCourseIds = new Set<string>();
+  const coursePaths = Object.keys(files)
+    .filter((p) => p.endsWith("/course.json"))
+    .sort();
+  for (const coursePath of coursePaths) {
+    const raw = files[coursePath];
+    const folderId = deriveCourseId(coursePath);
+    const res = validateCourseManifest(raw, folderId ? { folderId } : {});
+    const errors: Issue[] = [...res.errors];
+    const warnings: Issue[] = [...res.warnings];
+    if (folderId === null) {
+      errors.push({
+        path: coursePath,
+        message: `course manifest path has an unexpected shape — expected ${EXPECTED_COURSE_PATH_SHAPE}`,
+      });
+    }
+    const m = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const id = folderId ?? (typeof m["id"] === "string" ? (m["id"] as string) : coursePath);
+    if (seenCourseIds.has(id)) {
+      errors.push({ path: coursePath, message: `duplicate course id '${id}'` });
+    }
+    seenCourseIds.add(id);
+    courses.push({
+      id,
+      displayName: typeof m["displayName"] === "string" ? (m["displayName"] as string) : id,
+      year: typeof m["year"] === "number" ? (m["year"] as number) : 0,
+      stream: (m["stream"] as CourseStream | null | undefined) ?? null,
+      subject: typeof m["subject"] === "string" ? (m["subject"] as string) : DEFAULT_COURSE_SUBJECT,
+      order: typeof m["order"] === "number" ? (m["order"] as number) : 0,
+      path: coursePath,
+      areaCount: areaCountByCourse.get(id) ?? 0,
+      valid: errors.length === 0,
+      errors,
+      warnings,
+    });
+  }
+  courses.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+  const courseById = new Map<string, ValidatedCourse>();
+  for (const c of courses) if (!courseById.has(c.id)) courseById.set(c.id, c);
+
   const distinctSorted = (values: string[]) => Array.from(new Set(values)).sort();
 
   return {
     areas,
+    courses,
     issuesByArea,
     getAreaById: (id: string) =>
       typeof id === "string" && byId.has(id) ? byId.get(id) : undefined,
+    getCourses: () => courses,
+    getCourseById: (id: string) =>
+      typeof id === "string" && courseById.has(id) ? courseById.get(id) : undefined,
     getSubjects: () => distinctSorted(areas.map((a) => a.subject)),
     getTopics: (subject) =>
       distinctSorted(areas.filter((a) => a.subject === subject).map((a) => a.topic)),

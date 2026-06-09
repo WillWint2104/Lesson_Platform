@@ -10,7 +10,13 @@
  * catch that here by scanning content strings for control characters.
  */
 
-import { CALLOUT_STYLES, NOTE_BLOCK_TYPES, QUESTION_TYPES } from "./types";
+import {
+  CALLOUT_STYLES,
+  COURSE_STREAMS,
+  DEFAULT_COURSE_SUBJECT,
+  NOTE_BLOCK_TYPES,
+  QUESTION_TYPES,
+} from "./types";
 import { resolveFigure, schemaKey, type FigureSchemaRegistry } from "./figure";
 import { parseYouTubeId, ACCEPTED_YOUTUBE_FORMATS } from "@/shared/youtube";
 
@@ -564,6 +570,70 @@ export function validateNotesFile(raw: unknown): ValidationResult {
     return report.result();
   }
   validateNoteArray(report, "notes", raw["notes"]);
+  return report.result();
+}
+
+export interface CourseValidateOptions {
+  /** The course folder name (path-derived); `id` must equal it. */
+  folderId?: string;
+}
+
+const COURSE_KNOWN_FIELDS = ["id", "displayName", "year", "stream", "subject", "order"] as const;
+
+/**
+ * Validate a `course.json` manifest (content-architecture-v1 §3): `id` must equal
+ * the folder; `year` is an integer 7–12; `displayName` is single-line non-empty;
+ * `stream` is a senior stream or null; `subject` defaults to "Mathematics";
+ * `order` is the numeric picker sort key.
+ */
+export function validateCourseManifest(
+  raw: unknown,
+  options: CourseValidateOptions = {},
+): ValidationResult {
+  const report = new Report();
+  if (!isPlainObject(raw)) {
+    report.error("course", "course.json must be an object");
+    return report.result();
+  }
+
+  if (requireString(report, "course", raw, "id") && typeof options.folderId === "string") {
+    if (raw["id"] !== options.folderId) {
+      report.error(
+        "course.id",
+        `id ${JSON.stringify(raw["id"])} must equal the folder name ${JSON.stringify(options.folderId)}`,
+      );
+    }
+  }
+
+  // displayName: single-line non-empty (scanLatex inside requireString catches
+  // any control character, incl. a stray newline).
+  requireString(report, "course", raw, "displayName");
+
+  const year = raw["year"];
+  if (typeof year !== "number" || !Number.isInteger(year) || year < 7 || year > 12) {
+    report.error("course.year", "year must be an integer from 7 to 12");
+  }
+
+  // stream: a senior stream or null. Present-but-invalid is a warning (forward-compat).
+  const stream = raw["stream"];
+  if (stream !== undefined && stream !== null && !COURSE_STREAMS.includes(stream as never)) {
+    report.warn(
+      "course.stream",
+      `stream ${JSON.stringify(stream)} is not one of ${COURSE_STREAMS.join(" | ")} | null (ignored)`,
+    );
+  }
+
+  // subject: optional; defaults to "Mathematics". Present-but-not-a-string is an error.
+  const subject = raw["subject"];
+  if (subject !== undefined && (typeof subject !== "string" || subject.trim().length === 0)) {
+    report.error("course.subject", `subject must be a non-empty string (defaults to "${DEFAULT_COURSE_SUBJECT}")`);
+  }
+
+  if (typeof raw["order"] !== "number" || !Number.isFinite(raw["order"])) {
+    report.error("course.order", "order must be a number (the picker sort key)");
+  }
+
+  warnUnknownFields(report, "course", raw, COURSE_KNOWN_FIELDS);
   return report.result();
 }
 
