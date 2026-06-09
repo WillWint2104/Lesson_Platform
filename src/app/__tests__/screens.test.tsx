@@ -91,6 +91,16 @@ describe("app chrome (page, not frame)", () => {
     expect(within(footer).getByText("Lesson Platform")).toBeTruthy();
   });
 
+  it("offers a way back to the hub from a lesson (brand + breadcrumb Hub link → /)", () => {
+    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
+    renderAt(STAGE1, reg, buildStore(reg));
+    const bar = screen.getByRole("banner");
+    // The brand wordmark links to the hub route.
+    expect(within(bar).getByRole("link", { name: "Lesson Platform" }).getAttribute("href")).toBe("/");
+    // The breadcrumb's first segment is an explicit Hub link.
+    expect(within(bar).getByRole("link", { name: "Hub" }).getAttribute("href")).toBe("/");
+  });
+
   it("shows the breadcrumb + mastery % in the top bar on an area route (§7a)", () => {
     const reg = buildReg(mkArea("brackets", { title: "Brackets", stages: [stage("A"), stage("B")] }));
     const store = buildStore(reg);

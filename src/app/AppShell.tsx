@@ -120,6 +120,12 @@ function AppBar({ area, mastery }: { area?: ValidatedArea; mastery: number | nul
           </Link>
           {area ? (
             <nav className="appbar-crumb" aria-label="Breadcrumb">
+              <Link className="appbar-crumb__home" to="/">
+                Hub
+              </Link>
+              <span className="appbar-crumb__sep" aria-hidden="true">
+                ›
+              </span>
               <span className="appbar-crumb__step">{titleCase(area.topic)}</span>
               <span className="appbar-crumb__sep" aria-hidden="true">
                 ›
