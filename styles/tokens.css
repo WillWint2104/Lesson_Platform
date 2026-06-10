@@ -1,65 +1,27 @@
 /*
- * tokens.css — Design tokens for the Lesson Platform ("Style B").
+ * tokens.css — Structural (non-colour) design tokens.
  *
- * THESE TOKENS ARE AUTHORITATIVE. Components MUST reference these custom
- * properties (var(--...)). NEVER hardcode hex values in component CSS or
- * inline styles — if a colour/size is missing here, add a token, don't
- * inline it. See CLAUDE.md §d.
- *
- * Note: studio mint (--studio-mint) is for DARK SURFACES ONLY (video player
- * chrome). Do not use it on the light page/card surfaces.
+ * The light COLOUR palette has moved to the v2 system (`tokens-v2.css`,
+ * design-language-v2 §2 — one mint scale + one red on the cool grid canvas);
+ * the old "Style B" cream/green/gold/cyan/coral tokens were removed once nothing
+ * referenced them. What remains here is structural + cross-cutting: border
+ * widths, the dark video surface, the dialog scrim, spacing, radii, type styles,
+ * container widths, padding, and font families. Components reference v2 colour
+ * tokens; NEVER hardcode hex. See CLAUDE.md §d / design-language-v2.md §2.
  */
 
 :root {
-  /* ---- Surfaces ---- */
-  --page-bg: #fdf8ec;
-  --card-bg: #ffffff;
-  --card-border: #e8e0cc;       /* 2px border + 4-5px bottom edge */
+  /* ---- Border widths (the v2 surfaces are flat; these size the few remaining
+   * bordered chrome rules — colours come from the v2 --line/--mint-* tokens). ---- */
   --card-border-width: 2px;
-  --card-edge-width: 5px;       /* 4-5px bottom edge */
-  --border: #e8e0cc;            /* hairline divider (app bar / footer) */
-
-  /* ---- Action green ---- */
-  --green: #48b178;
-  --green-edge: #2c8a58;
-
-  /* ---- Brand ---- */
-  --brand-ink: #1a4d35;
-
-  /* ---- Gold (rewards / difficulty / checkpoints) ---- */
-  --gold: #f0c75e;
-  --gold-deep: #9a6b0a;
-
-  /* ---- Cyan (XP / hints) ---- */
-  --cyan: #8fd6e8;
-  --cyan-deep: #0e6d86;
-
-  /* ---- Coral (errors) ---- */
-  --coral: #f3b9b6;
-  --coral-deep: #b3423d;
-
-  /* ---- Studio mint — DARK SURFACES ONLY (video player chrome) ---- */
-  --studio-mint: #beffdc;
+  --card-edge-width: 5px;       /* legacy bottom-edge width */
+  --border-flat-width: 1.5px;
 
   /* ---- Video stage (near-black dark panel for the framed video) ---- */
   --video-bg: #0f1a14;
 
-  /* ---- Modal scrim (dim backdrop behind dialogs) ---- */
+  /* ---- Modal / focus scrim (dim backdrop behind dialogs) ---- */
   --scrim: rgba(15, 26, 20, 0.55);
-
-  /* ---- Surface tints (pale backgrounds for callouts / chips) ---- */
-  --green-tint: #e7f4ec;
-  --green-soft: #bfe3cf;   /* revealed-step border (step player) */
-  --gold-tint: #fbf2d9;
-  --cyan-tint: #e4f4f9;
-
-  /* ---- Secondary / tertiary ink (design-language §2) ---- */
-  --muted-ink: #5b6b61;
-  --muted: #5b6b61;   /* meta text (counts, statuses, timestamps) */
-  --faint: #8a978f;   /* small-caps labels / kickers */
-
-  /* ---- Hairline divider for FLAT informational surfaces (§1) ---- */
-  --border-flat-width: 1.5px;
 
   /* ---- Spacing scale (4px base). The §3 rhythm chain uses 4 / 12 / 16 / 32 / 48;
    * --space-2 (8) / --space-5 (24) / --space-8 (64) are OFF the chain — do not

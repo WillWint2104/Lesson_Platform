@@ -89,9 +89,19 @@ suggestions.
 
 ## d. Design system summary
 
-Light, playful theme ("**Style B**"). All values below are authoritative and live as
-CSS custom properties in [`/styles/tokens.css`](styles/tokens.css). **Components must
-never hardcode hex** — always reference tokens.
+> **SUPERSEDED — the live system is v2.** The whole app now runs on the v2 design
+> language (`docs/design-language-v2.md` §2: the cool grid canvas + white
+> mint-strip panels, ONE mint scale + one red), whose tokens live in
+> [`/styles/tokens-v2.css`](styles/tokens-v2.css). The v1 "Style B" cream/green/
+> gold/cyan/coral colour tokens below have been **removed** from `tokens.css`
+> (nothing references them); `tokens.css` now holds only structural tokens
+> (border widths, the dark `--video-bg`, the `--scrim`, spacing, radii, the
+> `--text-*` type styles, container widths, fonts). The v1 palette is retained
+> here as historical context only — **author against the v2 tokens**. **Components
+> must never hardcode hex.**
+
+Light, playful theme ("**Style B**", v1 — historical). The values below describe
+the original palette (now removed as live tokens):
 
 - **Page background:** `#fdf8ec`
 - **Cards:** `#ffffff` with a **2px border** + **4–5px bottom edge** (`#e8e0cc`)
