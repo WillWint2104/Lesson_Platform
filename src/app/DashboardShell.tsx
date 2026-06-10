@@ -8,9 +8,8 @@
  * re-scoped to dashboard values under `.dash-root` — NO grid texture, NO mint
  * strips here. Lesson/stage/exercise routes stay under the lesson AppShell.
  *
- * "Explore courses" is rendered but disabled (SOON) until PR-D3 ships the
- * /explore screens; "Progress" has no specced screen yet → disabled (SOON).
- * Icons are inline SVG (never emoji).
+ * "Progress" has no specced screen yet → a disabled SOON slot. Icons are inline
+ * SVG (never emoji).
  */
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
@@ -116,10 +115,13 @@ export function DashboardShell() {
           >
             <HomeIcon /> Home
           </Link>
-          {/* Enabled in PR-D3 when /explore ships. */}
-          <span className="dash-nav__item dash-nav__item--soon" aria-disabled="true">
-            <ExploreIcon /> Explore courses <span className="dash-chip dash-chip--soon">Soon</span>
-          </span>
+          <Link
+            className={`dash-nav__item${pathname.startsWith("/explore") ? " dash-nav__item--active" : ""}`}
+            to="/explore"
+            aria-current={pathname.startsWith("/explore") ? "page" : undefined}
+          >
+            <ExploreIcon /> Explore courses
+          </Link>
           {/* No Progress screen specced yet — disabled slot per the soon rule. */}
           <span className="dash-nav__item dash-nav__item--soon" aria-disabled="true">
             <ProgressIcon /> Progress <span className="dash-chip dash-chip--soon">Soon</span>

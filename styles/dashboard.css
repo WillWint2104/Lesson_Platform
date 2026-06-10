@@ -31,6 +31,11 @@
   --dash-radius-badge: 8px;
   --dash-radius-chip: 6px;
   --dash-shadow: 0 1px 6px rgba(22, 25, 30, 0.04);
+
+  /* type styles (register-local; no raw font shorthand in component rules) */
+  --text-dash-greeting: 800 25px/1.2 var(--v2-font-head); /* "Welcome back" 25px/800 */
+  --text-dash-title: 800 16px/1.3 var(--v2-font-head); /* continue-card title 16px/800 */
+  --text-dash-badge-lg: 800 20px/1 var(--v2-font-head); /* 52px course-detail badge */
 }
 
 /* ---- Shell: 248px white sidebar + main column ---------------------------- */
@@ -285,7 +290,7 @@
 }
 .dash-greeting {
   margin: 0;
-  font: 800 25px/1.2 var(--v2-font-head);
+  font: var(--text-dash-greeting);
   color: var(--ink);
 }
 
@@ -324,7 +329,7 @@
 }
 .dash-continue__title {
   margin: 0;
-  font: 800 16px/1.3 var(--v2-font-head);
+  font: var(--text-dash-title);
   color: var(--ink);
 }
 .dash-continue__sub {
@@ -459,6 +464,174 @@ a.dash-card {
 .dash-progress__fill {
   height: 100%;
   background: var(--mint-line);
+}
+
+/* ---- EXPLORE: sub line, filter pills, stat chips --------------------------- */
+.dash-explore__sub {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+.dash-pills {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.dash-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--body);
+  font: var(--text-v2-btn);
+  cursor: pointer;
+}
+.dash-pill:hover {
+  background: var(--hover);
+}
+.dash-pill--active {
+  background: var(--mint-tint);
+  border-color: var(--mint-line);
+  color: var(--mint-ink);
+}
+.dash-pill:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.dash-stats {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.dash-card__namelink {
+  color: inherit;
+  text-decoration: none;
+}
+.dash-card__namelink:hover {
+  text-decoration: underline;
+}
+.dash-card__namelink:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.dash-btn--added {
+  color: var(--mint-ink);
+  border-color: var(--mint-line);
+  background: var(--mint-tint);
+  cursor: default;
+}
+
+/* ---- COURSE DETAIL ---------------------------------------------------------- */
+.dash-detail__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.dash-detail__badge {
+  width: 52px;
+  height: 52px;
+  font: var(--text-dash-badge-lg);
+}
+.dash-detail__cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.dash-detail__note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ---- FIRST-VISIT ONBOARDING -------------------------------------------------
+ * A single centered welcome card in the main column. */
+.dash-welcome {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) 0;
+}
+.dash-welcome__card {
+  width: min(560px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--dash-radius-card);
+  box-shadow: var(--dash-shadow);
+  padding: var(--space-6);
+  text-align: center;
+  align-items: center;
+}
+.dash-welcome__tile {
+  width: 42px;
+  height: 42px;
+}
+.dash-welcome__sub {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+.dash-welcome__years {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+}
+.dash-year {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 56px;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--dash-radius-btn);
+  background: var(--surface);
+  cursor: pointer;
+  font: var(--text-v2-body);
+  color: var(--body);
+}
+.dash-year:hover:not(:disabled) {
+  border-color: var(--mint-line);
+}
+.dash-year--selected {
+  background: var(--mint-tint);
+  border-color: var(--mint-line);
+  color: var(--mint-ink);
+}
+.dash-year:disabled {
+  background: var(--line-2); /* grey fill = disabled/soon only */
+  color: var(--muted);
+  cursor: not-allowed;
+}
+.dash-year:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.dash-year__num {
+  font: var(--text-v2-btn);
+}
+.dash-year__name {
+  font-weight: 600;
+  color: var(--muted);
+}
+.dash-year--selected .dash-year__name {
+  color: var(--mint-ink);
+}
+.dash-welcome__start {
+  width: 100%;
+}
+.dash-welcome__foot {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
 }
 
 /* ---- Empty current course (content coming) --------------------------------- */
