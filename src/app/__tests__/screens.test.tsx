@@ -215,9 +215,10 @@ describe("Course picker (/, §5)", () => {
     const store = buildStore(reg, backend);
     renderAt("/", reg, store);
     fireEvent.click(screen.getByText("Year 8 Maths").closest("a")!);
-    // Assert the persisted key directly (not just the in-memory cache).
+    // Assert the persisted key directly (not just the in-memory cache)…
     expect(backend.getItem("lp:selected-course")).toBe("math");
-    expect(store.getSelectedCourse()).toBe("math");
+    // …and that a FRESH store restores it from that backend (the restore path).
+    expect(buildStore(reg, backend).getSelectedCourse()).toBe("math");
   });
 
   it("local-progress notice shows on the picker + persists dismissal", () => {
