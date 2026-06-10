@@ -1,5 +1,5 @@
 /**
- * @file StagePage.tsx — /:subject/:topic/:topicArea/stage/:n  (design-language-v2 §7a)
+ * @file StagePage.tsx — /:course/:topic/:topicArea/stage/:n  (design-language-v2 §7a)
  *
  * On the grid canvas: a plain title row (`Title · Lesson n of N`), then the
  * VIDEO BAND full-width on its own row (panel + mint strip + dark 16:9 + caption
@@ -32,10 +32,10 @@ function useStoreTick(store: ProgressStore): void {
 const DISPLAY_FORMULA = /^\s*\$\$[\s\S]*\$\$\s*$/;
 
 export function StagePage() {
-  const { subject, topic, topicArea, n } = useParams();
+  const { course, topic, topicArea, n } = useParams();
   const registry = useRegistry();
   const store = useProgressStore();
-  const areaId = `${subject}/${topic}/${topicArea}`;
+  const areaId = `${course}/${topic}/${topicArea}`;
   const area = registry.getAreaById(areaId);
   const stageNum = Number(n);
   const stageIndex = stageNum - 1;

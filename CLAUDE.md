@@ -231,11 +231,10 @@ validator **warning**.
 
 **Hierarchy is path-derived, never in the manifest.** The top path segment is
 the **course**; `topic`/`topicArea` follow (`area.json` sits at the topic-area
-level); the **areaId** is `<course>/<topic>/<topicArea>`. (The loader currently
-still exposes the top segment as `ValidatedArea.subject` for back-compat — a
-rename to `.course` lands with the routing PR; `area.subject` now holds the
-course slug, e.g. `year-8`.) A manifest containing hierarchy fields is an error;
-a wrong-depth path is a load-time error.
+level); the **areaId** is `<course>/<topic>/<topicArea>`. The loader stamps the
+top path segment onto `ValidatedArea.course` (the course slug, e.g. `year-8`);
+content routes are `/:course/:topic/:topicArea/...`. A manifest containing
+hierarchy fields is an error; a wrong-depth path is a load-time error.
 
 ### Content strings are single-line by design
 Every content string (`prompt`, `text`, `answer`, `working[]` entries, list
@@ -371,7 +370,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   registry areas + validity + stage count, reset-progress), linked nowhere.
 - **Stage-flow screens are implemented** (the old single-page AreaPage is
   REMOVED; its row + `SolutionModal` patterns are reused). Routes: the area root
-  `/:subject/:topic/:topicArea` **redirects** to the current stage
+  `/:course/:topic/:topicArea` **redirects** to the current stage
   (`AreaRedirect`, progress-derived); `/…/stage/:n` is the **StagePage**
   (**design-language-v2 §7a**: a plain title row → the VIDEO BAND full-width on
   its own row (mint-strip panel + dark 16:9 + caption, gap-proof) → ONE notes
@@ -429,9 +428,9 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   | Route | Screen |
   |-------|--------|
   | `/` | Library **hub** (v2 `.v2-home` skin: grid canvas, mint-strip panels, white continue/start hero, subject pills, responsive topic grid with in-card area rows + mastery + empty-room placeholder) |
-  | `/:subject/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
-  | `/:subject/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
-  | `/:subject/:topic/:topicArea/stage/:n/exercise` | Exercise page (v2 §7b/§8) — one worksheet panel + question-card grid; type a final answer → **Check** (algebraic-equivalence, math.js); Solution locked until answered; completion → next-stage video; "More practice" expander (never gates); difficulty hidden; nav via the contents sidebar |
+  | `/:course/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
+  | `/:course/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
+  | `/:course/:topic/:topicArea/stage/:n/exercise` | Exercise page (v2 §7b/§8) — one worksheet panel + question-card grid; type a final answer → **Check** (algebraic-equivalence, math.js); Solution locked until answered; completion → next-stage video; "More practice" expander (never gates); difficulty hidden; nav via the contents sidebar |
   | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |
 
@@ -456,7 +455,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   the repo root (the Vite root), so the absolute glob resolves it directly — no
   `server.fs` changes needed. The pure core `buildAreaRegistry(files)` takes
   the resulting path→JSON map, so it is unit-testable without Vite.
-- **Path-derived hierarchy:** the loader stamps `subject`/`topic`/`topicArea`
+- **Path-derived hierarchy:** the loader stamps `course`/`topic`/`topicArea`
   onto each `ValidatedArea` from the `area.json` directory path (four path
   segments after `/content/`); the manifest itself carries none of them (it is
   an error if it does). Wrong-depth paths are reported as load-time errors.

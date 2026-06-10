@@ -1,5 +1,5 @@
 /**
- * @file ExercisePage.tsx — /:subject/:topic/:topicArea/stage/:n/exercise (v2 §7b/§8)
+ * @file ExercisePage.tsx — /:course/:topic/:topicArea/stage/:n/exercise (v2 §7b/§8)
  *
  * One worksheet panel (mint strip) on the grid canvas — no extra bars (the shell
  * bar + contents sidebar carry the chrome/nav). The panel header holds the title
@@ -41,10 +41,10 @@ interface Target {
 }
 
 export function ExercisePage() {
-  const { subject, topic, topicArea, n } = useParams();
+  const { course, topic, topicArea, n } = useParams();
   const registry = useRegistry();
   const store = useProgressStore();
-  const areaId = `${subject}/${topic}/${topicArea}`;
+  const areaId = `${course}/${topic}/${topicArea}`;
   const area = registry.getAreaById(areaId);
   const stageNum = Number(n);
   const stageIndex = stageNum - 1;

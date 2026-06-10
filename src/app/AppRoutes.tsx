@@ -15,11 +15,12 @@ export function AppRoutes() {
         <Route path="/" element={<Library />} />
         {/* Dormant dev harness, retained but linked nowhere (lesson 8/9). */}
         <Route path="/debug" element={<DebugHarness />} />
-        {/* Area root redirects to the current stage (progress-derived). */}
-        <Route path="/:subject/:topic/:topicArea" element={<AreaRedirect />} />
-        <Route path="/:subject/:topic/:topicArea/stage/:n" element={<StagePage />} />
+        {/* Course-scoped content routes (content-architecture-v1 §4). Area root
+            redirects to the current stage (progress-derived). */}
+        <Route path="/:course/:topic/:topicArea" element={<AreaRedirect />} />
+        <Route path="/:course/:topic/:topicArea/stage/:n" element={<StagePage />} />
         <Route
-          path="/:subject/:topic/:topicArea/stage/:n/exercise"
+          path="/:course/:topic/:topicArea/stage/:n/exercise"
           element={<ExercisePage />}
         />
         <Route path="*" element={<NotFound />} />

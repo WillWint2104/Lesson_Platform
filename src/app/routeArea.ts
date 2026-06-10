@@ -1,15 +1,15 @@
 /**
  * @file routeArea.ts — parse the active area/stage out of a pathname (pure).
  *
- * The AppShell is a layout route, so it can't read `:subject/:topic/:topicArea`
+ * The AppShell is a layout route, so it can't read `:course/:topic/:topicArea`
  * via useParams (those match on child routes). The contents sidebar instead
  * derives the active area from the location pathname. Kept pure + exported so it
  * is unit-testable without a router.
  *
  * Recognised shapes (segments after the leading slash):
- *   [s, t, a]                          → area root (sidebar shown, no active item)
- *   [s, t, a, "stage", n]              → a stage (video view active)
- *   [s, t, a, "stage", n, "exercise"]  → a stage exercise (exercise view active)
+ *   [c, t, a]                          → area root (sidebar shown, no active item)
+ *   [c, t, a, "stage", n]              → a stage (video view active)
+ *   [c, t, a, "stage", n, "exercise"]  → a stage exercise (exercise view active)
  */
 export type AreaView = "video" | "exercise";
 
@@ -24,8 +24,8 @@ export interface ActiveAreaRoute {
 export function parseAreaRoute(pathname: string): ActiveAreaRoute | null {
   const seg = pathname.split("/").filter(Boolean);
   if (seg.length < 3) return null; // "/" , "/debug", etc.
-  const [subject, topic, topicArea] = seg;
-  const areaId = `${subject}/${topic}/${topicArea}`;
+  const [course, topic, topicArea] = seg;
+  const areaId = `${course}/${topic}/${topicArea}`;
 
   if (seg.length === 3) return { areaId };
 

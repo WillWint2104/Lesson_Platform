@@ -10,8 +10,8 @@ export function titleCase(slug: string): string {
 }
 
 /** A topic-area route path for a lesson/hierarchy. */
-export function areaPath(l: { subject: string; topic: string; topicArea: string }): string {
-  return `/${l.subject}/${l.topic}/${l.topicArea}`;
+export function areaPath(l: { course: string; topic: string; topicArea: string }): string {
+  return `/${l.course}/${l.topic}/${l.topicArea}`;
 }
 
 /** Seconds → "m:ss". Rounds total seconds first so 59.6 → "1:00", not "0:60". */

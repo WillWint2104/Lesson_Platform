@@ -1,5 +1,5 @@
 /**
- * @file AreaRedirect.tsx — /:subject/:topic/:topicArea
+ * @file AreaRedirect.tsx — /:course/:topic/:topicArea
  *
  * The area root has no page of its own; it redirects to the current stage
  * (progress-derived: first stage with an incomplete core exercise, else the
@@ -12,10 +12,10 @@ import { currentStageNumber, stagePath } from "@/app/stageProgress";
 import { NotFound } from "@/app/screens/NotFound";
 
 export function AreaRedirect() {
-  const { subject, topic, topicArea } = useParams();
+  const { course, topic, topicArea } = useParams();
   const registry = useRegistry();
   const store = useProgressStore();
-  const area = registry.getAreaById(`${subject}/${topic}/${topicArea}`);
+  const area = registry.getAreaById(`${course}/${topic}/${topicArea}`);
   if (!area || !area.valid) {
     return <NotFound message="That topic area doesn’t exist." />;
   }
