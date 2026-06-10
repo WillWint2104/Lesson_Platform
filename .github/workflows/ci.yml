@@ -38,9 +38,11 @@ jobs:
       - name: Design tokens presence sanity
         run: |
           test -f styles/tokens.css || { echo "::error::styles/tokens.css is missing"; exit 1; }
-          grep -q -- "--green" styles/tokens.css || { echo "::error::styles/tokens.css is missing the --green token"; exit 1; }
+          test -f styles/tokens-v2.css || { echo "::error::styles/tokens-v2.css is missing"; exit 1; }
+          grep -q -- "--mint" styles/tokens-v2.css || { echo "::error::styles/tokens-v2.css is missing the --mint token (v2 palette)"; exit 1; }
+          grep -q -- "--scrim" styles/tokens.css || { echo "::error::styles/tokens.css is missing the --scrim token (structural)"; exit 1; }
           test -f index.html || { echo "::error::index.html is missing"; exit 1; }
-          echo "tokens.css present and contains --green; index.html present."
+          echo "tokens.css (structural) + tokens-v2.css (--mint palette) present; index.html present."
 
       - name: Pass summary
         run: |
@@ -51,6 +53,6 @@ jobs:
           echo " - tsc --noEmit: no type errors"
           echo " - vitest run: all tests pass"
           echo " - vite build: production build succeeded"
-          echo " - styles/tokens.css present, contains --green token"
+          echo " - styles/tokens.css (structural) + tokens-v2.css (--mint palette) present"
           echo " - index.html present"
           echo "=================================================="

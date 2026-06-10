@@ -703,6 +703,8 @@ body {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
+/* Layout only — surface, flat 1px border, and radius come from .v2-panel
+   (v2 dialogs are flat; no v1 chunky bottom edge). */
 .focus-card {
   width: 100%;
   max-width: var(--container-reading);
@@ -711,11 +713,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  background: var(--surface);
-  border: var(--card-border-width) solid var(--line);
-  border-bottom-width: var(--card-edge-width);
-  border-radius: var(--radius-card);
-  padding: var(--space-5);
 }
 .focus-card__bar {
   display: flex;

@@ -25,13 +25,14 @@ const row: CSSProperties = {
   padding: "var(--space-3) 0",
   flexWrap: "wrap",
 };
+// Destructive action in NEUTRAL tokens — v2 reserves red for an incorrect
+// result ONLY (tokens-v2 §2); the confirm() copy carries the destructive intent.
 const resetButton: CSSProperties = {
   font: "var(--text-card-title)",
-  border: "var(--card-border-width) solid var(--red-line)",
-  borderBottomWidth: "var(--card-edge-width)", // §1 interactive → chunky
+  border: "1px solid var(--line)",
   borderRadius: "var(--radius-sm)",
   background: "var(--surface)",
-  color: "var(--red)",
+  color: "var(--ink)",
   padding: "var(--space-1) var(--space-3)",
   cursor: "pointer",
 };
