@@ -267,6 +267,70 @@ describe("selected course (stale-id guarded)", () => {
   });
 });
 
+describe("local enrolment (joinedCourses, dashboard-register-v1)", () => {
+  const COURSES = ["year-8", "year-11-advanced", "year-12-advanced"];
+
+  it("join/leave/isJoined persist through the backend and a fresh store", () => {
+    const backend = createMemoryBackend();
+    const a = createProgressStore({ backend, courseIds: COURSES });
+    expect(a.getJoinedCourses()).toEqual([]);
+    a.joinCourse("year-8");
+    a.joinCourse("year-11-advanced");
+    a.joinCourse("year-8"); // idempotent
+    expect(a.getJoinedCourses()).toEqual(["year-8", "year-11-advanced"]);
+    expect(a.isJoined("year-8")).toBe(true);
+    expect(backend.getItem("lp:joined-courses")).toBe(JSON.stringify(["year-8", "year-11-advanced"]));
+
+    // Restore path: a fresh store reads the same list.
+    const b = createProgressStore({ backend, courseIds: COURSES });
+    expect(b.getJoinedCourses()).toEqual(["year-8", "year-11-advanced"]);
+    b.leaveCourse("year-11-advanced");
+    expect(b.getJoinedCourses()).toEqual(["year-8"]);
+    expect(b.isJoined("year-11-advanced")).toBe(false);
+  });
+
+  it("stale-guards joined ids against the course registry (retained in storage)", () => {
+    const backend = createMemoryBackend();
+    backend.setItem("lp:joined-courses", JSON.stringify(["ghost-course", "year-8"]));
+    const store = createProgressStore({ backend, courseIds: COURSES });
+    expect(store.getJoinedCourses()).toEqual(["year-8"]); // ghost excluded from reads
+    expect(store.isJoined("ghost-course")).toBe(false);
+    // …but retained in storage (never destroyed).
+    expect(backend.getItem("lp:joined-courses")).toContain("ghost-course");
+    store.joinCourse("nope"); // unknown id is never persisted
+    expect(backend.getItem("lp:joined-courses")).not.toContain("nope");
+  });
+
+  it("the current course must be joined: select auto-joins; leaving clears it", () => {
+    const backend = createMemoryBackend();
+    const store = createProgressStore({ backend, courseIds: COURSES });
+    store.setSelectedCourse("year-8");
+    expect(store.isJoined("year-8")).toBe(true); // selecting implies enrolment
+    expect(store.getSelectedCourse()).toBe("year-8");
+
+    store.leaveCourse("year-8");
+    expect(store.getSelectedCourse()).toBeNull(); // invariant restored
+    expect(backend.getItem("lp:selected-course")).toBeNull();
+  });
+
+  it("a remembered-but-unjoined course reads as null (invariant on read)", () => {
+    const backend = createMemoryBackend();
+    backend.setItem("lp:selected-course", "year-8"); // legacy: selected without joined
+    const store = createProgressStore({ backend, courseIds: COURSES });
+    expect(store.getSelectedCourse()).toBeNull();
+  });
+
+  it("isFirstVisit = no joined courses AND no remembered course", () => {
+    const backend = createMemoryBackend();
+    const store = createProgressStore({ backend, courseIds: COURSES });
+    expect(store.isFirstVisit()).toBe(true);
+    store.joinCourse("year-8");
+    expect(store.isFirstVisit()).toBe(false);
+    store.leaveCourse("year-8");
+    expect(store.isFirstVisit()).toBe(true);
+  });
+});
+
 describe("notice dismissal", () => {
   it("persists through the storage layer without touching the progress key", () => {
     const backend = createMemoryBackend();

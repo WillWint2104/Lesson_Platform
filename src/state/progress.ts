@@ -95,9 +95,26 @@ export interface ProgressStore {
   subscribe(listener: () => void): () => void;
   isNoticeDismissed(noticeId: string): boolean;
   dismissNotice(noticeId: string): void;
-  /** The remembered selected course (content-architecture-v1 §4), or null. */
+  /**
+   * The remembered selected course (content-architecture-v1 §4), or null.
+   * Invariant (dashboard-register-v1): the current course must be a JOINED
+   * course — an unjoined/stale remembered id reads as null.
+   */
   getSelectedCourse(): string | null;
+  /** Remember the current course. Selecting implies enrolment: auto-joins. */
   setSelectedCourse(courseId: string): void;
+  /**
+   * Local enrolment (dashboard-register-v1, pre-accounts): the persisted list
+   * of joined course ids (`lp:joined-courses` — UI state, NOT the versioned
+   * progress key). Stale ids are excluded from reads but retained in storage.
+   */
+  getJoinedCourses(): string[];
+  joinCourse(courseId: string): void;
+  /** Leaving the currently selected course also clears the selection. */
+  leaveCourse(courseId: string): void;
+  isJoined(courseId: string): boolean;
+  /** First visit = no joined courses AND no remembered course → onboarding. */
+  isFirstVisit(): boolean;
 }
 
 export interface CreateProgressStoreOptions {
@@ -284,6 +301,28 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
   // its own key (lp:selected-course), NOT inside the versioned progress key.
   let selectedCourse: string | null = null;
 
+  // Local enrolment (dashboard-register-v1, pre-accounts): joined course ids in
+  // their own side key (lp:joined-courses). Reads stale-guard against the course
+  // registry; storage retains unknown ids (consistent with the area guard).
+  const JOINED_KEY = "lp:joined-courses";
+  function readJoinedRaw(): string[] {
+    try {
+      const raw = backend.getItem(JOINED_KEY);
+      if (raw === null) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+    } catch {
+      return [];
+    }
+  }
+  function writeJoined(ids: string[]): void {
+    try {
+      backend.setItem(JOINED_KEY, JSON.stringify(ids));
+    } catch {
+      /* quota failure must not crash; in-memory callers re-read next tick */
+    }
+  }
+
   const load = loadRaw(backend);
   let persistDisabled = false;
   let state: ProgressState;
@@ -451,7 +490,8 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
 
     getSelectedCourse() {
       // Stale-ID guard (CLAUDE.md §c rule 7): a remembered course that is no
-      // longer in the registry is excluded (truthiness is not validity).
+      // longer in the registry is excluded (truthiness is not validity), and the
+      // current course must be JOINED (dashboard-register-v1 invariant).
       const id =
         selectedCourse ??
         (() => {
@@ -463,10 +503,16 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
           }
         })();
       if (id === null) return null;
-      return isKnownCourseId(id) ? id : null;
+      if (!isKnownCourseId(id)) return null;
+      return readJoinedRaw().includes(id) ? id : null;
     },
 
     setSelectedCourse(courseId) {
+      if (!isKnownCourseId(courseId)) return; // never persist a ghost course
+      // Selecting implies enrolment (pre-accounts): keep the invariant
+      // "current course is always a joined course" by construction.
+      const joined = readJoinedRaw();
+      if (!joined.includes(courseId)) writeJoined([...joined, courseId]);
       selectedCourse = courseId;
       try {
         backend.setItem("lp:selected-course", courseId);
@@ -474,6 +520,51 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
         /* in-memory value still remembers it for the session */
       }
       notify();
+    },
+
+    getJoinedCourses() {
+      return readJoinedRaw().filter((id) => isKnownCourseId(id));
+    },
+
+    joinCourse(courseId) {
+      if (!isKnownCourseId(courseId)) return; // never persist a ghost course
+      const joined = readJoinedRaw();
+      if (joined.includes(courseId)) return;
+      writeJoined([...joined, courseId]);
+      notify();
+    },
+
+    leaveCourse(courseId) {
+      const joined = readJoinedRaw();
+      if (!joined.includes(courseId)) return;
+      writeJoined(joined.filter((id) => id !== courseId));
+      // Invariant: the current course must be joined — clear a now-left selection.
+      const current =
+        selectedCourse ??
+        (() => {
+          try {
+            return backend.getItem("lp:selected-course");
+          } catch {
+            return null;
+          }
+        })();
+      if (current === courseId) {
+        selectedCourse = null;
+        try {
+          backend.removeItem("lp:selected-course");
+        } catch {
+          /* best effort */
+        }
+      }
+      notify();
+    },
+
+    isJoined(courseId) {
+      return isKnownCourseId(courseId) && readJoinedRaw().includes(courseId);
+    },
+
+    isFirstVisit() {
+      return this.getJoinedCourses().length === 0 && this.getSelectedCourse() === null;
     },
   };
 }
