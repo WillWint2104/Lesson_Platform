@@ -154,3 +154,20 @@ These reuse the tokens, surfaces, and shape/icon language above; only their inte
 - **Behaviour change (functional, not just theme)**: remove honour self-mark; add answer-entry + equivalence check + lock-unlocks-solution; record `{answer, correct}` per question in the progress store (replacing the self-mark outcome); add the `math.js` dependency; `Incorrect` wording; per-question solution gating including prev/next.
 - **Contract change**: each question gains a canonical `answer` and a hidden `difficulty`. (MC is already removed.)
 - Keep the figure-kind registry; re-snapshot goldens that touch themed surfaces.
+
+---
+
+## 13. Addenda (dashboard-register-v1 — additive)
+
+### §7c addendum — enlarged-content rules
+Focus dialogs exist for READABILITY: content scales ≥ 2x worksheet size, centered
+single column (max-width ~560px in-dialog), rem-based sizing (browser zoom
+compounds). Applies to question focus AND notes sections.
+
+### Chrome addendum — top-bar navigation
+Top-bar navigation elements are buttons/links at body contrast with visible
+bounds — never muted corner text; min 40px hit targets; visible mint focus rings.
+
+(The dashboard register — home/dashboard, explore, course-detail, onboarding — is
+specified in `docs/dashboard-register-v1.md`, which extends this document. Those
+surfaces carry NO grid texture and NO mint header strips.)
