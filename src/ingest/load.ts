@@ -39,11 +39,15 @@ export interface ResolvedStage {
 }
 
 export interface ValidatedArea {
-  /** areaId = `<subject>/<topic>/<topicArea>` (path-derived, unique). */
+  /** areaId = `<course>/<topic>/<topicArea>` (path-derived, unique). */
   id: string;
   title: string;
-  /** Hierarchy derived from the directory path (CLAUDE.md §a), not the manifest. */
-  subject: string;
+  /**
+   * Hierarchy derived from the directory path (content-architecture-v1 §2), not
+   * the manifest. `course` is the top path segment (the course slug, e.g.
+   * `year-8`).
+   */
+  course: string;
   topic: string;
   topicArea: string;
   /** Manifest file path (glob key). */
@@ -55,7 +59,7 @@ export interface ValidatedArea {
 }
 
 interface AreaHierarchy {
-  subject: string;
+  course: string;
   topic: string;
   topicArea: string;
 }
@@ -94,17 +98,17 @@ function deriveCourseId(manifestPath: string): string | null {
   return segments[0] || null;
 }
 
-/** Derive { subject, topic, topicArea } from a `.../area.json` path, or null. */
+/** Derive { course, topic, topicArea } from a `.../area.json` path, or null. */
 function deriveAreaHierarchy(manifestPath: string): AreaHierarchy | null {
   const marker = "/content/";
   const start = manifestPath.indexOf(marker);
   if (start === -1) return null;
   const segments = manifestPath.slice(start + marker.length).split("/");
-  // [subject, topic, topicArea, "area.json"]
+  // [course, topic, topicArea, "area.json"]
   if (segments.length !== 4 || segments[3] !== "area.json") return null;
-  const [subject, topic, topicArea] = segments;
-  if (!subject || !topic || !topicArea) return null;
-  return { subject, topic, topicArea };
+  const [course, topic, topicArea] = segments;
+  if (!course || !topic || !topicArea) return null;
+  return { course, topic, topicArea };
 }
 
 export interface AreaRegistry {
@@ -118,12 +122,13 @@ export interface AreaRegistry {
   getCourses: () => ValidatedCourse[];
   /** Stale-ID-safe course lookup: undefined for unknown ids. */
   getCourseById: (id: string) => ValidatedCourse | undefined;
-  getSubjects: () => string[];
-  getTopics: (subject: string) => string[];
+  /** Distinct course slugs that have at least one area (path-derived). */
+  getCourseSlugs: () => string[];
+  getTopics: (course: string) => string[];
   /** Distinct topic-area names within a topic, alphabetical. */
-  getTopicAreas: (subject: string, topic: string) => string[];
+  getTopicAreas: (course: string, topic: string) => string[];
   /** Areas within a topic, sorted by topic-area name. */
-  getAreasInTopic: (subject: string, topic: string) => ValidatedArea[];
+  getAreasInTopic: (course: string, topic: string) => ValidatedArea[];
 }
 
 function dirOf(path: string): string {
@@ -263,7 +268,7 @@ export function buildAreaRegistry(
     });
 
     const id = hierarchy
-      ? `${hierarchy.subject}/${hierarchy.topic}/${hierarchy.topicArea}`
+      ? `${hierarchy.course}/${hierarchy.topic}/${hierarchy.topicArea}`
       : manifestPath;
 
     if (seenIds.has(id)) {
@@ -276,7 +281,7 @@ export function buildAreaRegistry(
     areas.push({
       id,
       title,
-      subject: hierarchy?.subject ?? "",
+      course: hierarchy?.course ?? "",
       topic: hierarchy?.topic ?? "",
       topicArea: hierarchy?.topicArea ?? "",
       path: manifestPath,
@@ -302,7 +307,7 @@ export function buildAreaRegistry(
   // calm "content coming", never an error.
   const areaCountByCourse = new Map<string, number>();
   for (const area of areas) {
-    areaCountByCourse.set(area.subject, (areaCountByCourse.get(area.subject) ?? 0) + 1);
+    areaCountByCourse.set(area.course, (areaCountByCourse.get(area.course) ?? 0) + 1);
   }
 
   const courses: ValidatedCourse[] = [];
@@ -357,16 +362,16 @@ export function buildAreaRegistry(
     getCourses: () => courses,
     getCourseById: (id: string) =>
       typeof id === "string" && courseById.has(id) ? courseById.get(id) : undefined,
-    getSubjects: () => distinctSorted(areas.map((a) => a.subject)),
-    getTopics: (subject) =>
-      distinctSorted(areas.filter((a) => a.subject === subject).map((a) => a.topic)),
-    getTopicAreas: (subject, topic) =>
+    getCourseSlugs: () => distinctSorted(areas.map((a) => a.course)),
+    getTopics: (course) =>
+      distinctSorted(areas.filter((a) => a.course === course).map((a) => a.topic)),
+    getTopicAreas: (course, topic) =>
       distinctSorted(
-        areas.filter((a) => a.subject === subject && a.topic === topic).map((a) => a.topicArea),
+        areas.filter((a) => a.course === course && a.topic === topic).map((a) => a.topicArea),
       ),
-    getAreasInTopic: (subject, topic) =>
+    getAreasInTopic: (course, topic) =>
       areas
-        .filter((a) => a.subject === subject && a.topic === topic)
+        .filter((a) => a.course === course && a.topic === topic)
         .sort((a, b) => a.topicArea.localeCompare(b.topicArea)),
   };
 }

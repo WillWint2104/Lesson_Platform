@@ -10,7 +10,7 @@ describe("titleCase", () => {
 
 describe("areaPath", () => {
   it("builds a topic-area route", () => {
-    expect(areaPath({ subject: "math", topic: "algebra", topicArea: "brackets" })).toBe(
+    expect(areaPath({ course: "math", topic: "algebra", topicArea: "brackets" })).toBe(
       "/math/algebra/brackets",
     );
   });

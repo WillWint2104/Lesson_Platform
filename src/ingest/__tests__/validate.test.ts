@@ -549,7 +549,7 @@ describe("buildAreaRegistry (v3 stages)", () => {
     });
     const a = reg.getAreaById("science/biology/cells");
     expect(a?.valid).toBe(true);
-    expect(a?.subject).toBe("science");
+    expect(a?.course).toBe("science");
     expect(a?.stages).toHaveLength(1);
     expect(a?.stages[0]?.exercise.questions).toHaveLength(1);
   });
@@ -602,7 +602,7 @@ describe("buildAreaRegistry (v3 stages)", () => {
       "/content/math/algebra/brackets/area.json": area("B", [stage("S", [{ type: "text", prompt: "Q" }])]),
       "/content/math/algebra/factoring/area.json": area("F", [stage("S", [{ type: "text", prompt: "Q" }])]),
     });
-    expect(reg.getSubjects()).toEqual(["math"]);
+    expect(reg.getCourseSlugs()).toEqual(["math"]);
     expect(reg.getTopics("math")).toEqual(["algebra"]);
     expect(reg.getTopicAreas("math", "algebra")).toEqual(["brackets", "factoring"]);
     expect(reg.getAreasInTopic("math", "algebra").map((a) => a.topicArea)).toEqual([

@@ -32,9 +32,9 @@ export function currentStageNumber(area: ValidatedArea, store: ProgressStore): n
   return currentStageIndex(stageInputs(area, store)) + 1;
 }
 
-export const areaBasePath = (a: { subject: string; topic: string; topicArea: string }) =>
-  `/${a.subject}/${a.topic}/${a.topicArea}`;
-export const stagePath = (a: { subject: string; topic: string; topicArea: string }, n: number) =>
+export const areaBasePath = (a: { course: string; topic: string; topicArea: string }) =>
+  `/${a.course}/${a.topic}/${a.topicArea}`;
+export const stagePath = (a: { course: string; topic: string; topicArea: string }, n: number) =>
   `${areaBasePath(a)}/stage/${n}`;
-export const exercisePath = (a: { subject: string; topic: string; topicArea: string }, n: number) =>
+export const exercisePath = (a: { course: string; topic: string; topicArea: string }, n: number) =>
   `${areaBasePath(a)}/stage/${n}/exercise`;
