@@ -1,7 +1,10 @@
 # Dashboard register — v1
 
 Status: locked. **Extends, does not replace, `docs/design-language-v2.md`.** The app
-has two visual registers sharing one token family:
+has two visual registers sharing one token family — the same token *names/roles*
+(`--ink`, `--mint`, `--line`, …) with **register-scoped values**: lesson surfaces
+resolve them to the design-language-v2 §2 values, dashboard surfaces to the values
+below (scoped under the dashboard shell, not global overrides):
 
 - **LESSON register** (existing): `docs/design-language-v2.md` — grid canvas,
   mint-strip worksheet panels. Lesson/stage/exercise/focus surfaces only.
