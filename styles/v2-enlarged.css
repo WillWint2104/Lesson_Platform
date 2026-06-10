@@ -1,0 +1,139 @@
+/*
+ * v2-enlarged.css — the shared enlarged-content dialog (lesson register;
+ * design-language-v2 §13 readability addendum, PR-D4).
+ *
+ * Enlarged views exist for READABILITY: ~2x worksheet scale, centered single
+ * column, REM-BASED sizes so browser zoom compounds. One dialog component
+ * (EnlargedDialog) serves both the question focus view and the notes expanded
+ * view; these rules size both. The minimums below are the spec's own values.
+ */
+
+:root {
+  /* §13 readability scale (rem so zoom compounds) */
+  --enlarged-question: 2rem; /* expression ~2x worksheet (≥32px) */
+  --enlarged-body: 1.125rem; /* notes body ≥18px */
+  --enlarged-math: 1.25rem; /* solution/example math ≥20px */
+  --enlarged-formula: 1.75rem; /* rule formula ≥28px */
+  --enlarged-why: 0.9375rem; /* why-bodies ≥15px */
+  --enlarged-input: 1.125rem; /* answer input ≥18px */
+  --enlarged-heading: 1.5rem;
+}
+
+/* ---- Dialog frame: width + centered readability column ------------------- */
+.enlarged-dialog {
+  width: min(820px, 94vw);
+  max-width: none; /* overrides the old reading-width cap */
+}
+.enlarged-dialog__body {
+  width: 100%;
+}
+.enlarged-dialog__body > * {
+  /* Centered single column — nothing left-stranded. */
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---- Question focus (PR-D4a) --------------------------------------------- */
+.enlarged-dialog .focus-q__prompt {
+  font-size: var(--enlarged-question);
+  line-height: 1.4;
+  text-align: center;
+}
+.enlarged-dialog .ans__field {
+  font-size: var(--enlarged-input);
+  min-height: 3rem; /* 48px+ touch height */
+}
+.enlarged-dialog .ans__check {
+  min-height: 3rem;
+}
+.enlarged-dialog .ans--large .ans__field {
+  font-size: var(--enlarged-input); /* rem-based (replaces the px unit style) */
+}
+
+/* Solution steps ≥20px math, why ≥15px, lh 1.6+. */
+.qr-reveal--enlarged .qr-reveal__working-line {
+  font-size: var(--enlarged-math);
+  line-height: 1.6;
+}
+.qr-reveal--enlarged .qr-reveal__answer {
+  font-size: var(--enlarged-math);
+}
+
+/* ---- Notes expanded view (PR-D4b) ----------------------------------------- */
+.notes-enlarged {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.notes-enlarged__heading {
+  margin: 0;
+  font-size: var(--enlarged-heading);
+  line-height: 1.3;
+  color: var(--ink);
+}
+.notes-enlarged__para,
+.notes-enlarged__list,
+.notes-enlarged__remember {
+  margin: 0;
+  font-size: var(--enlarged-body);
+  line-height: 1.7;
+  color: var(--body);
+}
+.notes-enlarged__list {
+  padding-left: var(--space-5);
+}
+/* The rule formula: \displaystyle, large, centered. */
+.notes-enlarged__formula {
+  font-size: var(--enlarged-formula);
+  text-align: center;
+  padding: var(--space-3) 0;
+  color: var(--ink);
+}
+/* Worked examples keep tabs + WHY? + explicit ANSWER, at ≥20px math. */
+.notes-enlarged .example__step-tex,
+.notes-enlarged .example__answer {
+  font-size: var(--enlarged-math);
+  line-height: 1.6;
+}
+.notes-enlarged .example__prompt {
+  font-size: var(--enlarged-body);
+}
+.notes-enlarged .example__why {
+  font-size: var(--enlarged-why);
+  line-height: 1.6;
+}
+
+/* ---- Notes section ⤢ expand affordance (stage page) ----------------------- */
+.notes-block__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.notes-block__head .notes-block__label {
+  margin: 0;
+}
+.notes-block__expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: var(--v2-radius-badge);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+.notes-block__expand:hover {
+  background: var(--mint-tint);
+  color: var(--mint-ink);
+  border-color: var(--mint-line);
+}
+.notes-block__expand:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}

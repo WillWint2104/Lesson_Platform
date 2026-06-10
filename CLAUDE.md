@@ -415,6 +415,17 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   cards and the focus view; results record via `recordResult` (sticky
   `completedAt` on all-core-answered); `setLastVisited` updates on navigation.
   Stage helpers + path builders live in `/src/app/stageProgress.ts`.
+  **Readability dialogs (§13 addendum, Stage 2):** ONE shared
+  `EnlargedDialog` (`/src/shared/v2/EnlargedDialog.tsx` — scrim, mint strip,
+  header + Close, centered ~560px column, footer Prev/Next, Esc, Tab trap,
+  focus restore) serves BOTH the question focus view and the notes expanded
+  view (`NotesEnlarged` — ⤢ on THE RULE / REMEMBER / WORKED EXAMPLES; footer
+  CYCLES the sections). Math in dialogs renders displaystyle via MathText's
+  additive `displayStyle` prop at rem-based §13 sizes (question 2rem, body
+  1.125rem, math 1.25rem, formula 1.75rem — `styles/v2-enlarged.css`). The
+  lesson top bar (shared AppBar) carries a bounded "← Back to course" ghost
+  button + a full-contrast breadcrumb (Course › Topic › Area, every segment a
+  real link) + the bounded course switcher — ≥40px targets, mint focus rings.
 - **Two visual registers (`docs/dashboard-register-v1.md`, Stage 2):** the
   DASHBOARD register (home, explore, course-detail, onboarding) is
   modern-minimal — `DashboardShell` (`/src/app/DashboardShell.tsx`): a 248px
@@ -448,7 +459,7 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   | `/explore` | **Explore courses** — filter pills (All/Junior/Senior), Senior/Junior course-card groups with stat chips (N topics / N questions, or CONTENT GROWING) + Join controls; unregistered years 7–12 → dashed COMING SOON cards (no join) |
   | `/explore/:course` | **Course detail** — 52px badge + curriculum line, stat chips, bordered topic list (AVAILABLE/SOON), "Join [course]" + "Back to explore" + per-course-progress note |
   | `/:course/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
-  | `/:course/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
+  | `/:course/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples, each header with a ⤢ enlarge affordance → the shared readability dialog) → "Up next · Exercise N" CTA; nav via the contents sidebar |
   | `/:course/:topic/:topicArea/stage/:n/exercise` | Exercise page (v2 §7b/§8) — one worksheet panel + question-card grid; type a final answer → **Check** (algebraic-equivalence, math.js); Solution locked until answered; completion → next-stage video; "More practice" expander (never gates); difficulty hidden; nav via the contents sidebar |
   | `/debug` | Dormant area inspector |
   | `*` (and invalid hierarchy params) | Token-styled not-found (stale-id guard) |

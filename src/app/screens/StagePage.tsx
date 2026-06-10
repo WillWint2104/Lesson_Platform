@@ -9,7 +9,7 @@
  * single primary action. Stage navigation lives in the contents sidebar (§4),
  * so there is no in-page stepper here.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
@@ -18,10 +18,11 @@ import type { ProgressStore } from "@/state/progress";
 import type { NoteBlock } from "@/ingest/types";
 import { titleCase } from "@/app/format";
 import { exercisePath } from "@/app/stageProgress";
-import { Panel } from "@/shared/v2";
+import { Panel, ExpandIcon } from "@/shared/v2";
 import { VideoEmbed } from "@/render/VideoEmbed";
 import { MathText } from "@/shared/MathText";
 import { StepPlayer, type ExampleData } from "@/render/notes/StepPlayer";
+import { NotesEnlarged, type NotesSection, type NotesSectionId } from "@/render/notes/NotesEnlarged";
 import { NotFound } from "@/app/screens/NotFound";
 
 function useStoreTick(store: ProgressStore): void {
@@ -44,6 +45,10 @@ export function StagePage() {
 
   useStoreTick(store);
 
+  // Notes expanded view state (hooks before the early return).
+  const [enlargedIndex, setEnlargedIndex] = useState<number | null>(null);
+  const enlargeOpenerRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (ok && area) store.setLastVisited(area.id, stageIndex, "stage");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,6 +70,18 @@ export function StagePage() {
   const dur = stage.video && typeof stage.video.duration === "number" ? `${stage.video.duration} min · ` : "";
   const coreCount = stage.exercise.questions.length;
 
+  // Notes expanded view (§13 readability addendum): the available sections, in
+  // the cycle order Rule → Remember → Examples.
+  const sections: NotesSection[] = [];
+  if (prose.length > 0) sections.push({ id: "rule", title: "The rule", blocks: prose });
+  if (callouts.length > 0) sections.push({ id: "remember", title: "Remember", blocks: callouts });
+  if (examples.length > 0)
+    sections.push({ id: "examples", title: "Worked examples", blocks: [], examples });
+  const openSection = (id: NotesSectionId, opener: HTMLElement) => {
+    enlargeOpenerRef.current = opener;
+    setEnlargedIndex(sections.findIndex((s) => s.id === id));
+  };
+
   return (
     <main className="app-page stage-v2">
       <p className="stage-v2__titlerow">
@@ -83,13 +100,24 @@ export function StagePage() {
         </div>
       </Panel>
 
-      {/* Notes — one panel, two internal columns. */}
+      {/* Notes — one panel, two internal columns. Each section header carries a
+          ⤢ expand affordance into the shared enlarged dialog. */}
       <Panel className="stage-v2__notes">
         <div className="notes-cols">
           <div className="notes-cols__rule">
             {prose.length > 0 ? (
               <section className="notes-block">
-                <p className="v2-mono notes-block__label">The rule</p>
+                <div className="notes-block__head">
+                  <p className="v2-mono notes-block__label">The rule</p>
+                  <button
+                    type="button"
+                    className="notes-block__expand"
+                    aria-label="Enlarge the rule"
+                    onClick={(e) => openSection("rule", e.currentTarget)}
+                  >
+                    <ExpandIcon size={14} />
+                  </button>
+                </div>
                 {prose.map((b, i) => (
                   <ProseBlock key={i} block={b} />
                 ))}
@@ -97,7 +125,17 @@ export function StagePage() {
             ) : null}
             {callouts.length > 0 ? (
               <section className="notes-block">
-                <p className="v2-mono notes-block__label">Remember</p>
+                <div className="notes-block__head">
+                  <p className="v2-mono notes-block__label">Remember</p>
+                  <button
+                    type="button"
+                    className="notes-block__expand"
+                    aria-label="Enlarge remember"
+                    onClick={(e) => openSection("remember", e.currentTarget)}
+                  >
+                    <ExpandIcon size={14} />
+                  </button>
+                </div>
                 {callouts.map((b, i) => (
                   <div key={i} className="v2-remember">
                     <MathText>{b.text}</MathText>
@@ -110,7 +148,17 @@ export function StagePage() {
           <div className="notes-cols__examples">
             {examples.length > 0 ? (
               <section className="notes-block">
-                <p className="v2-mono notes-block__label">Worked examples</p>
+                <div className="notes-block__head">
+                  <p className="v2-mono notes-block__label">Worked examples</p>
+                  <button
+                    type="button"
+                    className="notes-block__expand"
+                    aria-label="Enlarge worked examples"
+                    onClick={(e) => openSection("examples", e.currentTarget)}
+                  >
+                    <ExpandIcon size={14} />
+                  </button>
+                </div>
                 <StepPlayer examples={examples} />
               </section>
             ) : (
@@ -119,6 +167,16 @@ export function StagePage() {
           </div>
         </div>
       </Panel>
+
+      {enlargedIndex !== null && enlargedIndex >= 0 ? (
+        <NotesEnlarged
+          sections={sections}
+          index={enlargedIndex}
+          onIndex={setEnlargedIndex}
+          onClose={() => setEnlargedIndex(null)}
+          returnFocusTo={enlargeOpenerRef.current}
+        />
+      ) : null}
 
       {/* Up next footer — a single primary action. */}
       <Panel className="stage-v2__upnext">

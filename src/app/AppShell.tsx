@@ -11,6 +11,7 @@
 import { useEffect } from "react";
 import type { CSSProperties } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useProgressStore } from "@/state/ProgressContext";
 import { useRegistry } from "@/app/RegistryContext";
 import { parseAreaRoute } from "@/app/routeArea";
@@ -103,25 +104,40 @@ function AppBar({
           <Link className="app-bar__wordmark" to="/">
             Lesson Platform
           </Link>
+          {/* §13 chrome addendum: a REAL bounded back button, then the breadcrumb
+              at body contrast — every segment a real link, ≥40px targets. */}
           {area ? (
-            <nav className="appbar-crumb" aria-label="Breadcrumb">
-              {/* "Hub" → the active COURSE's hub (its topic list). */}
-              <Link className="appbar-crumb__home" to={`/${area.course}`}>
-                Hub
+            <>
+              <Link className="appbar-back" to={`/${area.course}`}>
+                <ArrowLeft size={16} aria-hidden="true" /> Back to course
               </Link>
-              <span className="appbar-crumb__sep" aria-hidden="true">
-                ›
-              </span>
-              <span className="appbar-crumb__step">{titleCase(area.topic)}</span>
-              <span className="appbar-crumb__sep" aria-hidden="true">
-                ›
-              </span>
-              <span className="appbar-crumb__current">{area.title}</span>
-            </nav>
+              <nav className="appbar-crumb" aria-label="Breadcrumb">
+                <Link className="appbar-crumb__link" to={`/${area.course}`}>
+                  {courseName ?? titleCase(area.course)}
+                </Link>
+                <span className="appbar-crumb__sep" aria-hidden="true">
+                  ›
+                </span>
+                {/* Topics live on the course home — the topic segment goes there. */}
+                <Link className="appbar-crumb__link" to={`/${area.course}`}>
+                  {titleCase(area.topic)}
+                </Link>
+                <span className="appbar-crumb__sep" aria-hidden="true">
+                  ›
+                </span>
+                <Link
+                  className="appbar-crumb__link appbar-crumb__link--current"
+                  to={`/${area.course}/${area.topic}/${area.topicArea}`}
+                  aria-current="page"
+                >
+                  {area.title}
+                </Link>
+              </nav>
+            </>
           ) : null}
         </div>
         <div className="app-bar__trail">
-          {/* Course switcher (§5) — change course without losing place; → picker. */}
+          {/* Course switcher (§5) — a clearly bounded button; → dashboard home. */}
           {area && courseName ? (
             <Link className="appbar-course" to="/" aria-label={`Switch course (current: ${courseName})`}>
               <span className="appbar-course__name">{courseName}</span>

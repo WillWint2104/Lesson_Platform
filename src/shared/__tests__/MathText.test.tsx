@@ -90,3 +90,23 @@ describe("MathText", () => {
     expect(container.querySelector(".katex-html")?.textContent ?? "").not.toContain("emB");
   });
 });
+
+describe("MathText displayStyle (§13 readability addendum)", () => {
+  it("prefixes \displaystyle on INLINE segments when displayStyle is set", () => {
+    const { container } = render(<MathText displayStyle>{"Expand $\frac{1}{2}x$."}</MathText>);
+    // KaTeX embeds the source TeX in the MathML annotation.
+    expect(container.innerHTML).toContain("\displaystyle");
+  });
+
+  it("does NOT alter math by default (additive prop)", () => {
+    const { container } = render(<MathText>{"Expand $\frac{1}{2}x$."}</MathText>);
+    expect(container.innerHTML).not.toContain("\displaystyle");
+  });
+
+  it("leaves plain text and $$display$$ segments untouched", () => {
+    const { container } = render(<MathText displayStyle>{"Rule: $$a(b+c)=ab+ac$$"}</MathText>);
+    expect(container.textContent).toContain("Rule:");
+    // Display segments already render in display mode; no prefix is injected.
+    expect(container.innerHTML).not.toContain("\displaystyle");
+  });
+});
