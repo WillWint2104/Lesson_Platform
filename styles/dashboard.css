@@ -31,6 +31,11 @@
   --dash-radius-badge: 8px;
   --dash-radius-chip: 6px;
   --dash-shadow: 0 1px 6px rgba(22, 25, 30, 0.04);
+
+  /* type styles (register-local; no raw font shorthand in component rules) */
+  --text-dash-greeting: 800 25px/1.2 var(--v2-font-head); /* "Welcome back" 25px/800 */
+  --text-dash-title: 800 16px/1.3 var(--v2-font-head); /* continue-card title 16px/800 */
+  --text-dash-badge-lg: 800 20px/1 var(--v2-font-head); /* 52px course-detail badge */
 }
 
 /* ---- Shell: 248px white sidebar + main column ---------------------------- */
@@ -285,7 +290,7 @@
 }
 .dash-greeting {
   margin: 0;
-  font: 800 25px/1.2 var(--v2-font-head);
+  font: var(--text-dash-greeting);
   color: var(--ink);
 }
 
@@ -324,7 +329,7 @@
 }
 .dash-continue__title {
   margin: 0;
-  font: 800 16px/1.3 var(--v2-font-head);
+  font: var(--text-dash-title);
   color: var(--ink);
 }
 .dash-continue__sub {
@@ -529,7 +534,7 @@ a.dash-card {
 .dash-detail__badge {
   width: 52px;
   height: 52px;
-  font: 800 20px/1 var(--v2-font-head);
+  font: var(--text-dash-badge-lg);
 }
 .dash-detail__cta {
   display: flex;
