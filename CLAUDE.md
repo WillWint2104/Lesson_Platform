@@ -407,15 +407,17 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   Stage helpers + path builders live in `/src/app/stageProgress.ts`.
 - **Responsive layout system:** `.app-page` is a centered container, fluid
   below a per-screen max-width (`--app-page--wide` Library / `--app-page--area`
-  area page, `--container-area` 960px). The **Library is a hub**: greeting + day/date kicker, registry-driven
-  subject pills, an **always-present** hero ("Continue where you left off" when
-  there is a last-visited area, else "Start here" at the first area), and a
-  responsive topic grid (2 cols within the hub main zone) of topic cards with
-  in-card area rows (area progress reflects stage completion); a dashed
-  empty-room placeholder tile keeps a one-topic library reading as "early", not
-  broken. The hub is a `main 2fr / rail 1fr` grid (rail = up-next / your-progress
-  / how-it-works) collapsing below 920px; the local-progress notice is a muted
-  Library-only app-bar line. Tuned at 360/768/1280/1920.
+  area page, `--container-area` 960px). The landing at `/` is the **course
+  picker** (`CoursePicker`); selecting a course opens its **course hub**
+  (`CourseHub` at `/:course`) — greeting + the course displayName, a course
+  switcher (→ the picker), an **always-present** hero ("Continue where you left
+  off" within that course, else "Start here"), and a responsive topic grid of
+  topic cards with in-card area rows — all SCOPED to the course's areas, so
+  progress is isolated per course. The hub is a `main 2fr / rail 1fr` grid (rail
+  = up-next / your-progress / how-it-works) collapsing below 920px; the
+  selected course is remembered (`getSelectedCourse`/`setSelectedCourse`, a
+  separate `lp:selected-course` key). The local-progress notice is a muted
+  picker-only app-bar line. Tuned at 360/768/1280/1920.
 - **Review-rerun ruling (carried into v3):** a completed stage opens in review
   mode — re-running it records fresh outcomes and increments `attempts` but
   **NEVER clears `completedAt`** (encoded as a test).
@@ -427,7 +429,8 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 
   | Route | Screen |
   |-------|--------|
-  | `/` | Library **hub** (v2 `.v2-home` skin: grid canvas, mint-strip panels, white continue/start hero, subject pills, responsive topic grid with in-card area rows + mastery + empty-room placeholder) |
+  | `/` | **Course picker** (`CoursePicker`, §5) — v2 course cards on the grid canvas, sorted by `order`, mastery % per course; empty courses → calm "content coming soon" (never an error); selecting remembers the course (localStorage) → its hub |
+  | `/:course` | **Course hub** (`CourseHub`, §5) — the home hub SCOPED to one course (`.v2-home` skin: continue/start hero, topic grid, rail), or "content coming soon" when empty; remembers the course; unknown course → not-found |
   | `/:course/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
   | `/:course/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
   | `/:course/:topic/:topicArea/stage/:n/exercise` | Exercise page (v2 §7b/§8) — one worksheet panel + question-card grid; type a final answer → **Check** (algebraic-equivalence, math.js); Solution locked until answered; completion → next-stage video; "More practice" expander (never gates); difficulty hidden; nav via the contents sidebar |

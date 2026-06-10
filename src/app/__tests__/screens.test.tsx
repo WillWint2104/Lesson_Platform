@@ -63,6 +63,24 @@ function mkArea(topicArea: string, opts: { title?: string; stages?: unknown[] } 
   };
 }
 
+/** A course.json fixture for the given course slug (default "math" — matches mkArea). */
+function mkCourse(
+  id = "math",
+  opts: { year?: number; displayName?: string; stream?: string | null } = {},
+) {
+  const year = opts.year ?? 8;
+  return {
+    [`/content/${id}/course.json`]: {
+      id,
+      displayName: opts.displayName ?? id,
+      year,
+      stream: opts.stream ?? null,
+      subject: "Mathematics",
+      order: year * 10,
+    },
+  };
+}
+
 function buildReg(...areas: Record<string, unknown>[]): AreaRegistry {
   return buildAreaRegistry(Object.assign({}, ...areas));
 }
@@ -91,14 +109,18 @@ describe("app chrome (page, not frame)", () => {
     expect(within(footer).getByText("Lesson Platform")).toBeTruthy();
   });
 
-  it("offers a way back to the hub from a lesson (brand + breadcrumb Hub link → /)", () => {
-    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
+  it("offers a way back from a lesson: brand → picker, Hub → course hub, course switcher → picker", () => {
+    const reg = buildReg(mkArea("brackets", { title: "Brackets" }), mkCourse("math", { displayName: "Year 8" }));
     renderAt(STAGE1, reg, buildStore(reg));
     const bar = screen.getByRole("banner");
-    // The brand wordmark links to the hub route.
+    // The brand wordmark links to the picker ("/").
     expect(within(bar).getByRole("link", { name: "Lesson Platform" }).getAttribute("href")).toBe("/");
-    // The breadcrumb's first segment is an explicit Hub link.
-    expect(within(bar).getByRole("link", { name: "Hub" }).getAttribute("href")).toBe("/");
+    // The breadcrumb's "Hub" links to the active course's hub.
+    expect(within(bar).getByRole("link", { name: "Hub" }).getAttribute("href")).toBe("/math");
+    // The course switcher shows the course and links to the picker.
+    const switcher = within(bar).getByRole("link", { name: /Switch course/ });
+    expect(switcher.getAttribute("href")).toBe("/");
+    expect(within(switcher).getByText("Year 8")).toBeTruthy();
   });
 
   it("shows the breadcrumb + mastery % in the top bar on an area route (§7a)", () => {
@@ -146,22 +168,49 @@ describe("Contents sidebar (shell, §4)", () => {
   });
 });
 
-describe("Library", () => {
-  it("carries the v2 home skin on its root (grid-canvas hub)", () => {
-    const reg = buildReg(mkArea("brackets"));
+describe("Course picker (/, §5)", () => {
+  it("carries the v2 home skin on its root (grid-canvas)", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
     const { container } = renderAt("/", reg, buildStore(reg));
     expect(container.querySelector("main.lib.v2-home")).not.toBeNull();
+    expect(screen.getByRole("heading", { name: "Pick your course" })).toBeTruthy();
   });
 
-  it("renders subject pills + a 'more soon' pill", () => {
-    const reg = buildReg(mkArea("brackets"));
+  it("lists course cards sorted by order; a non-empty course links into its hub", () => {
+    const reg = buildReg(
+      mkArea("brackets"),
+      mkCourse("math", { displayName: "Year 8 Maths", year: 8 }),
+      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
+    );
     renderAt("/", reg, buildStore(reg));
-    expect(screen.getByRole("button", { name: "Math" })).toBeTruthy();
-    expect(screen.getByText("more soon")).toBeTruthy();
+    const link = screen.getByText("Year 8 Maths").closest("a");
+    expect(link?.getAttribute("href")).toBe("/math");
   });
 
-  it("local-progress notice shows on Library only + persists dismissal", () => {
-    const reg = buildReg(mkArea("brackets"));
+  it("an empty course shows a calm 'content coming soon' card (no link, not an error)", () => {
+    const reg = buildReg(
+      mkArea("brackets"),
+      mkCourse("math", { displayName: "Year 8" }),
+      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
+    );
+    const { container } = renderAt("/", reg, buildStore(reg));
+    const soon = screen.getByText("Year 11 Advanced").closest(".course-card")!;
+    expect(soon.classList.contains("course-card--soon")).toBe(true);
+    expect(within(soon as HTMLElement).getByText(/content coming soon/i)).toBeTruthy();
+    expect(soon.querySelector("a")).toBeNull(); // not clickable
+    expect(container.querySelector('[role="alert"]')).toBeNull(); // never an error
+  });
+
+  it("selecting a course remembers it (localStorage)", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math", { displayName: "Year 8 Maths" }));
+    const store = buildStore(reg);
+    renderAt("/", reg, store);
+    fireEvent.click(screen.getByText("Year 8 Maths").closest("a")!);
+    expect(store.getSelectedCourse()).toBe("math");
+  });
+
+  it("local-progress notice shows on the picker + persists dismissal", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
     const store = buildStore(reg);
     renderAt("/", reg, store);
     expect(screen.getByText(/saved in this browser/i)).toBeTruthy();
@@ -171,28 +220,50 @@ describe("Library", () => {
     renderAt(STAGE1, reg, store);
     expect(screen.queryByText(/saved in this browser/i)).toBeNull();
   });
+});
+
+describe("Course hub (/:course, §5)", () => {
+  it("an unknown course is not-found", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
+    renderAt("/no-such-course", reg, buildStore(reg));
+    expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
+  });
+
+  it("an empty course shows 'content coming soon', never an error", () => {
+    const reg = buildReg(mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11 }));
+    const { container } = renderAt("/year-11-advanced", reg, buildStore(reg));
+    expect(screen.getByText(/content coming soon/i)).toBeTruthy();
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("remembers the course on open", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
+    const store = buildStore(reg);
+    renderAt("/math", reg, store);
+    expect(store.getSelectedCourse()).toBe("math");
+  });
 
   it("hero 'start here' deep-links to the first incomplete stage page", () => {
-    const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
-    renderAt("/", reg, buildStore(reg));
+    const reg = buildReg(mkArea("brackets", { title: "Brackets" }), mkCourse("math"));
+    renderAt("/math", reg, buildStore(reg));
     expect(screen.getByText("Start here").closest("a")?.getAttribute("href")).toBe(STAGE1);
   });
 
-  it("hero 'continue' deep-links to the stored stage + view", () => {
-    const reg = buildReg(mkArea("brackets", { stages: [stage("A"), stage("B")] }));
+  it("hero 'continue' deep-links to the stored stage + view (scoped to the course)", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("A"), stage("B")] }), mkCourse("math"));
     const store = buildStore(reg);
     store.setLastVisited(AREA_ID, 1, "exercise");
-    renderAt("/", reg, store);
+    renderAt("/math", reg, store);
     expect(
       screen.getByText("Continue where you left off").closest("a")?.getAttribute("href"),
     ).toBe(`/${AREA_ID}/stage/2/exercise`);
   });
 
-  it("up next deep-links to the first incomplete stage page; stats over stages", () => {
-    const reg = buildReg(mkArea("brackets", { stages: [stage("First"), stage("Second")] }));
+  it("up next deep-links to the first incomplete stage; stats are scoped to the course", () => {
+    const reg = buildReg(mkArea("brackets", { stages: [stage("First"), stage("Second")] }), mkCourse("math"));
     const store = buildStore(reg);
     store.recordAttempt(AREA_ID, 0, true);
-    renderAt("/", reg, store);
+    renderAt("/math", reg, store);
     expect(screen.getByText("Second").closest("a")?.getAttribute("href")).toBe(
       `/${AREA_ID}/stage/2`,
     );

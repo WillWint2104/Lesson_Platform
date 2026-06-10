@@ -1,5 +1,15 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+/**
+ * @file CourseHub.tsx — /:course  (content-architecture-v1 §5)
+ *
+ * The home hub SCOPED to one course: greeting + the course displayName, a course
+ * switcher (→ the picker), a continue/start hero, a topic grid, and the rail
+ * (up-next / your-progress / how-it-works) — all computed over THIS course's
+ * areas only, so progress is isolated per course. An empty course (no areas yet)
+ * renders a calm "content coming soon" panel, never an error. Selecting the hub
+ * remembers the course (localStorage). Reuses the v2 `.v2-home` skin.
+ */
+import { useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
@@ -8,57 +18,70 @@ import type { ProgressStore } from "@/state/progress";
 import { titleCase, areaPath } from "@/app/format";
 import { StatusCircle } from "@/shared/StatusCircle";
 import { stagePath, exercisePath } from "@/app/stageProgress";
+import { NotFound } from "@/app/screens/NotFound";
 
-/** Library hub (area model). Lists topics → areas; hero continues/starts an area. */
-export function Library() {
+export function CourseHub() {
+  const { course } = useParams();
   const registry = useRegistry();
-  const subjects = registry.getCourseSlugs();
-  const [subject, setSubject] = useState<string | null>(subjects[0] ?? null);
+  const store = useProgressStore();
+  const courseId = course ?? "";
+  const courseManifest = registry.getCourseById(courseId);
+
+  // Remember the course selection whenever its hub is opened (§4).
+  useEffect(() => {
+    if (courseManifest) store.setSelectedCourse(courseId);
+  }, [courseManifest, courseId, store]);
+
+  if (!courseManifest) {
+    return <NotFound message="That course doesn’t exist." />;
+  }
+
+  const topics = registry.getTopics(courseId);
+  const empty = courseManifest.areaCount === 0 || topics.length === 0;
 
   return (
     <main className="app-page lib v2-home">
       <section className="lib-greeting">
         <p className="lib-kicker">{todayKicker()}</p>
-        <h1 className="lib-headline">Welcome back</h1>
-        <div className="lib-pills" role="group" aria-label="Subjects">
-          {subjects.map((s) => (
-            <button
-              key={s}
-              type="button"
-              aria-pressed={s === subject}
-              className={`lib-pill${s === subject ? " lib-pill--active" : ""}`}
-              onClick={() => setSubject(s)}
-            >
-              {titleCase(s)}
-            </button>
-          ))}
-          <span className="lib-pill lib-pill--soon" aria-disabled="true">
-            more soon
-          </span>
-        </div>
+        <h1 className="lib-headline">{courseManifest.displayName}</h1>
+        <Link className="course-switch" to="/">
+          <ArrowRight size={14} aria-hidden="true" style={{ transform: "rotate(180deg)" }} /> Switch
+          course
+        </Link>
       </section>
 
-      <div className="hub">
-        <div className="hub__main">
-          <Hero subject={subject} />
-          <section className="area-section" aria-label="Topics">
-            <p className="section-label">Topics</p>
-            <div className="topic-grid">
-              {subject !== null
-                ? registry.getTopics(subject).map((topic) => (
-                    <TopicCard key={topic} subject={subject} topic={topic} />
-                  ))
-                : null}
-              <div className="topic-placeholder">Future topics drop in as content packs.</div>
+      {empty ? (
+        <section className="area-section" aria-label="Course status">
+          <div className="course-empty v2-panel">
+            <div className="v2-panel__strip" aria-hidden="true" />
+            <div className="v2-panel__body">
+              <p className="course-empty__title">Content coming soon</p>
+              <p className="course-empty__note">
+                This course is set up — its lessons are being authored and will appear here.
+              </p>
             </div>
-          </section>
+          </div>
+        </section>
+      ) : (
+        <div className="hub">
+          <div className="hub__main">
+            <Hero course={courseId} />
+            <section className="area-section" aria-label="Topics">
+              <p className="section-label">Topics</p>
+              <div className="topic-grid">
+                {topics.map((topic) => (
+                  <TopicCard key={topic} course={courseId} topic={topic} />
+                ))}
+              </div>
+            </section>
+          </div>
+          <aside className="hub__rail" aria-label="Hub sidebar">
+            <RailUpNext course={courseId} />
+            <RailProgress course={courseId} />
+            <RailHowItWorks />
+          </aside>
         </div>
-        <aside className="hub__rail" aria-label="Hub sidebar">
-          <RailUpNext />
-          <RailProgress />
-          <RailHowItWorks />
-        </aside>
-      </div>
+      )}
     </main>
   );
 }
@@ -74,7 +97,6 @@ function todayKicker(): string {
     return "Today";
   }
 }
-
 
 /** Stage completion counts for an area. */
 function areaProgress(area: ValidatedArea, store: ProgressStore): { done: number; total: number } {
@@ -93,28 +115,29 @@ function firstIncompleteStageNumber(area: ValidatedArea, store: ProgressStore): 
   return null;
 }
 
-function firstAreaOf(registry: AreaRegistry, subject: string | null): ValidatedArea | undefined {
-  if (!subject) return undefined;
-  for (const topic of registry.getTopics(subject)) {
-    const firstValid = registry.getAreasInTopic(subject, topic).find((a) => a.valid);
-    if (firstValid) return firstValid;
-  }
-  return undefined;
+/** Valid areas of one course, in topic → topic-area order. */
+function courseAreas(registry: AreaRegistry, course: string): ValidatedArea[] {
+  return registry
+    .getTopics(course)
+    .flatMap((topic) => registry.getAreasInTopic(course, topic))
+    .filter((a) => a.valid);
 }
 
-function Hero({ subject }: { subject: string | null }) {
+function firstAreaOf(registry: AreaRegistry, course: string): ValidatedArea | undefined {
+  return courseAreas(registry, course)[0];
+}
+
+function Hero({ course }: { course: string }) {
   const registry = useRegistry();
   const store = useProgressStore();
   const lastVisited = store.getLastVisited();
   const lastArea = lastVisited ? registry.getAreaById(lastVisited.areaId) : undefined;
-  // Only continue to a *valid* last-visited area; otherwise fall back to "start here".
-  const resume = lastArea?.valid ? lastArea : undefined;
-  const target = resume ?? firstAreaOf(registry, subject);
+  // Continue only within THIS course; otherwise "start here" at its first area.
+  const resume = lastArea?.valid && lastArea.course === course ? lastArea : undefined;
+  const target = resume ?? firstAreaOf(registry, course);
   if (!target) return null;
 
   const kicker = resume ? "Continue where you left off" : "Start here";
-  // Continue: deep-link to the stored stage + view. Start here / fallback: the
-  // first incomplete stage's page (clamp a stale stored index into range).
   let to: string;
   if (resume && lastVisited) {
     const sn = Math.min(Math.max(lastVisited.stageIndex, 0), target.stages.length - 1) + 1;
@@ -128,7 +151,7 @@ function Hero({ subject }: { subject: string | null }) {
         <span className="hero__kicker">{kicker}</span>
         <span className="hero__title">{target.title}</span>
         <span className="hero__crumb">
-          {titleCase(target.course)} · {titleCase(target.topic)}
+          {titleCase(target.topic)} · {titleCase(target.topicArea)}
         </span>
       </span>
       <span className="hero__cta" aria-hidden="true">
@@ -139,7 +162,7 @@ function Hero({ subject }: { subject: string | null }) {
 }
 
 // ---------------------------------------------------------------------------
-// Rail (hub sidebar) — flat informational cards (§1/§4).
+// Rail (hub sidebar) — flat informational cards, scoped to the course.
 // ---------------------------------------------------------------------------
 
 interface UpNext {
@@ -148,9 +171,9 @@ interface UpNext {
   to: string;
 }
 
-/** First incomplete stage across the registry, in order (null if all done). */
-function findUpNext(registry: AreaRegistry, store: ProgressStore): UpNext | null {
-  for (const area of registry.areas.filter((a) => a.valid)) {
+/** First incomplete stage within the course, in order (null if all done). */
+function findUpNext(registry: AreaRegistry, store: ProgressStore, course: string): UpNext | null {
+  for (const area of courseAreas(registry, course)) {
     for (let i = 0; i < area.stages.length; i++) {
       if (!store.getStageProgress(area.id, i)?.completedAt) {
         const stage = area.stages[i]!;
@@ -173,8 +196,8 @@ interface HubStats {
   questionsAnswered: number;
 }
 
-function computeHubStats(registry: AreaRegistry, store: ProgressStore): HubStats {
-  const areas = registry.areas.filter((a) => a.valid);
+function computeHubStats(registry: AreaRegistry, store: ProgressStore, course: string): HubStats {
+  const areas = courseAreas(registry, course);
   let areasDone = 0;
   let exercisesDone = 0;
   let exercisesTotal = 0;
@@ -197,10 +220,10 @@ function computeHubStats(registry: AreaRegistry, store: ProgressStore): HubStats
   return { areasDone, areasTotal: areas.length, exercisesDone, exercisesTotal, questionsAnswered };
 }
 
-function RailUpNext() {
+function RailUpNext({ course }: { course: string }) {
   const registry = useRegistry();
   const store = useProgressStore();
-  const next = findUpNext(registry, store);
+  const next = findUpNext(registry, store, course);
   return (
     <aside className="rail-card">
       <p className="section-label">Up next</p>
@@ -221,10 +244,10 @@ function RailUpNext() {
   );
 }
 
-function RailProgress() {
+function RailProgress({ course }: { course: string }) {
   const registry = useRegistry();
   const store = useProgressStore();
-  const s = computeHubStats(registry, store);
+  const s = computeHubStats(registry, store, course);
   return (
     <aside className="rail-card">
       <p className="section-label">Your progress</p>
@@ -250,7 +273,7 @@ function RailHowItWorks() {
   const steps = [
     "Watch the video.",
     "Work the exercise on paper.",
-    "Tap the solution icon to check.",
+    "Type your answer and check it.",
   ];
   return (
     <aside className="rail-card">
@@ -267,10 +290,10 @@ function RailHowItWorks() {
   );
 }
 
-function TopicCard({ subject, topic }: { subject: string; topic: string }) {
+function TopicCard({ course, topic }: { course: string; topic: string }) {
   const registry = useRegistry();
   const store = useProgressStore();
-  const areas = registry.getAreasInTopic(subject, topic).filter((a) => a.valid);
+  const areas = registry.getAreasInTopic(course, topic).filter((a) => a.valid);
   const totals = areas.reduce(
     (acc, a) => {
       const p = areaProgress(a, store);
