@@ -7,8 +7,9 @@
  * "[Course] — Topics" bordered list (rows: mint badge, name, meta, status chip,
  * chevron) → "All courses" card grid (joined/authored cards link; unauthored =
  * dashed SOON cards). An empty current course shows a calm "content coming"
- * card — never an error. Pre-onboarding fallback (until PR-D3): with no current
- * course, `/` falls back to the first course by `order`.
+ * card — never an error. First visits never reach this screen (HomeGate routes
+ * them to onboarding); with no remembered course it falls back to the first
+ * joined course, then the first by `order`.
  */
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -100,8 +101,10 @@ export function DashboardHome() {
   useStoreTick(store);
 
   // Which course is this home for? Route param wins; else the remembered
-  // course; else (pre-onboarding fallback, replaced in PR-D3) first by order.
-  const fallback = registry.getCourses()[0]?.id ?? null;
+  // course; else the first joined course; else first by order (first-visit
+  // lands on onboarding via HomeGate before this can apply).
+  const fallback =
+    store.getJoinedCourses()[0] ?? registry.getCourses()[0]?.id ?? null;
   const courseId = courseParam ?? store.getSelectedCourse() ?? fallback;
   const course = courseId ? registry.getCourseById(courseId) : undefined;
 

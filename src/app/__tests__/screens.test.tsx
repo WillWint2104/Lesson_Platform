@@ -195,7 +195,9 @@ describe("Contents sidebar (shell, §4)", () => {
 describe("Dashboard home (/, /:course — dashboard-register-v1)", () => {
   it("greets, shows the current course's topics, and the all-courses grid", () => {
     const reg = buildReg(mkArea("brackets"), mkCourse("math", { displayName: "Year 8 Maths" }));
-    renderAt("/", reg, buildStore(reg));
+    const store = buildStore(reg);
+    store.joinCourse("math"); // past first visit (fresh "/" shows onboarding)
+    renderAt("/", reg, store);
     expect(screen.getByRole("heading", { name: "Welcome back" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Year 8 Maths — Topics" })).toBeTruthy();
     expect(screen.getByRole("heading", { name: "All courses" })).toBeTruthy();
@@ -207,6 +209,7 @@ describe("Dashboard home (/, /:course — dashboard-register-v1)", () => {
       mkCourse("math"),
     );
     const store = buildStore(reg);
+    store.joinCourse("math");
     renderAt("/", reg, store);
     expect(screen.getByText("Brackets")).toBeTruthy(); // continue title = area title
     expect(screen.getByRole("link", { name: "Continue" }).getAttribute("href")).toBe(STAGE1);
@@ -225,6 +228,7 @@ describe("Dashboard home (/, /:course — dashboard-register-v1)", () => {
       mkCourse("math"),
     );
     const store = buildStore(reg);
+    store.joinCourse("math");
     renderAt("/", reg, store);
     let row = screen.getByText("Algebra").closest("a")!;
     expect(row.getAttribute("href")).toBe(`/${AREA_ID}`);
@@ -243,10 +247,13 @@ describe("Dashboard home (/, /:course — dashboard-register-v1)", () => {
       mkCourse("math", { displayName: "Year 8 Maths", year: 8 }),
       mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
     );
-    const { container } = renderAt("/", reg, buildStore(reg));
-    const authored = screen.getByText("Year 8 Maths").closest("a");
+    const store = buildStore(reg);
+    store.joinCourse("math");
+    const { container } = renderAt("/", reg, store);
+    const grid = screen.getByRole("region", { name: "All courses" });
+    const authored = within(grid).getByText("Year 8 Maths").closest("a");
     expect(authored?.getAttribute("href")).toBe("/math");
-    const soon = screen.getByText("Year 11 Advanced").closest(".dash-card")!;
+    const soon = within(grid).getByText("Year 11 Advanced").closest(".dash-card")!;
     expect(soon.classList.contains("dash-card--soon")).toBe(true);
     expect(within(soon as HTMLElement).getByText("Soon")).toBeTruthy();
     expect(soon.closest("a")).toBeNull(); // not clickable
@@ -313,6 +320,155 @@ describe("Dashboard sidebar", () => {
     const item = within(yours).getByRole("link", { name: /Year 11 Advanced/ });
     expect(within(item).getByText("Soon")).toBeTruthy();
     expect(screen.getByText("Local progress")).toBeTruthy();
+  });
+});
+
+describe("First-visit onboarding (/)", () => {
+  const threeCourses = () =>
+    buildReg(
+      mkArea("brackets"),
+      mkCourse("math", { displayName: "Year 8 Maths", year: 8 }),
+      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
+    );
+
+  it("a fresh visitor sees the centered welcome card, not the home", () => {
+    const reg = threeCourses();
+    renderAt("/", reg, buildStore(reg));
+    expect(screen.getByRole("heading", { name: "Welcome to Lesson Platform" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Welcome back" })).toBeNull();
+    expect(screen.getByText(/saved in this browser on this device/i)).toBeTruthy();
+  });
+
+  it("authored years are selectable; unauthored + unregistered years are disabled SOON", () => {
+    const reg = threeCourses();
+    renderAt("/", reg, buildStore(reg));
+    const grid = screen.getByRole("group", { name: "Choose your year" });
+    const year8 = within(grid).getByRole("button", { name: /Year 8/ }) as HTMLButtonElement;
+    expect(year8.disabled).toBe(false);
+    // Registered-but-empty (year 11) and unregistered (year 7) are both disabled.
+    const year11 = within(grid).getByRole("button", { name: /Year 11/ }) as HTMLButtonElement;
+    const year7 = within(grid).getByRole("button", { name: /Year 7/ }) as HTMLButtonElement;
+    expect(year11.disabled).toBe(true);
+    expect(year7.disabled).toBe(true);
+  });
+
+  it("Start with [selection] joins the course and lands on its dashboard", () => {
+    const reg = threeCourses();
+    const store = buildStore(reg);
+    renderAt("/", reg, store);
+    fireEvent.click(screen.getByRole("button", { name: /Start with Year 8 Maths/ }));
+    expect(store.isJoined("math")).toBe(true);
+    expect(store.getSelectedCourse()).toBe("math");
+    expect(screen.getByRole("heading", { name: "Year 8 Maths — Topics" })).toBeTruthy();
+  });
+
+  it("a returning visitor (joined course) goes straight to the home", () => {
+    const reg = threeCourses();
+    const store = buildStore(reg);
+    store.joinCourse("math");
+    renderAt("/", reg, store);
+    expect(screen.queryByRole("heading", { name: "Welcome to Lesson Platform" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeTruthy();
+  });
+});
+
+describe("Explore courses (/explore)", () => {
+  const reg3 = () =>
+    buildReg(
+      mkArea("brackets", { stages: [stage("A"), stage("B")] }),
+      mkCourse("math", { displayName: "Year 8 Maths", year: 8 }),
+      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
+    );
+
+  it("is reachable from the sidebar and groups courses Senior/Junior", () => {
+    const reg = reg3();
+    const store = buildStore(reg);
+    store.joinCourse("math");
+    renderAt("/", reg, store);
+    fireEvent.click(screen.getByRole("link", { name: /Explore courses/ }));
+    expect(screen.getByRole("heading", { name: "Explore courses" })).toBeTruthy();
+    expect(within(screen.getByLabelText("Senior courses")).getByText("Year 11 Advanced")).toBeTruthy();
+    expect(within(screen.getByLabelText("Junior courses")).getByText("Year 8 Maths")).toBeTruthy();
+  });
+
+  it("authored cards show stat chips; empty registered = CONTENT GROWING but joinable", () => {
+    const reg = reg3();
+    renderAt("/explore", reg, buildStore(reg));
+    const junior = screen.getByLabelText("Junior courses");
+    expect(within(junior).getByText("1 topic")).toBeTruthy();
+    expect(within(junior).getByText(/\d+ questions?/)).toBeTruthy();
+    const senior = screen.getByLabelText("Senior courses");
+    expect(within(senior).getByText("Content growing")).toBeTruthy();
+    // Both registered courses carry a Join control.
+    expect(screen.getAllByRole("button", { name: /Join course/ })).toHaveLength(2);
+  });
+
+  it("joining flips the control to ✓ Added with a JOINED chip and updates the sidebar", () => {
+    const reg = reg3();
+    const store = buildStore(reg);
+    renderAt("/explore", reg, store);
+    const senior = screen.getByLabelText("Senior courses");
+    fireEvent.click(within(senior).getByRole("button", { name: /Join course/ }));
+    expect(store.isJoined("year-11-advanced")).toBe(true);
+    expect(within(senior).getByRole("button", { name: /Added/ })).toBeTruthy();
+    expect(within(senior).getByText("Joined")).toBeTruthy();
+    // Sidebar YOUR COURSES now lists it.
+    const yours = screen.getByRole("navigation", { name: "Your courses" });
+    expect(within(yours).getByRole("link", { name: /Year 11 Advanced/ })).toBeTruthy();
+  });
+
+  it("purely-future years render as dashed soon-cards without a join button", () => {
+    const reg = reg3();
+    renderAt("/explore", reg, buildStore(reg));
+    const card = screen.getByText("Year 9 · Mathematics").closest(".dash-card")!;
+    expect(card.classList.contains("dash-card--soon")).toBe(true);
+    expect(within(card as HTMLElement).getByText("Coming soon")).toBeTruthy();
+    expect(within(card as HTMLElement).queryByRole("button")).toBeNull();
+  });
+
+  it("filter pills narrow the groups", () => {
+    const reg = reg3();
+    renderAt("/explore", reg, buildStore(reg));
+    fireEvent.click(screen.getByRole("button", { name: "Senior 11–12" }));
+    expect(screen.queryByLabelText("Junior courses")).toBeNull();
+    expect(screen.getByLabelText("Senior courses")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Junior 7–10" }));
+    expect(screen.getByLabelText("Junior courses")).toBeTruthy();
+    expect(screen.queryByLabelText("Senior courses")).toBeNull();
+  });
+});
+
+describe("Course detail (/explore/:course)", () => {
+  it("shows badge, curriculum line, stats, topic list, and the join CTA row", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math", { displayName: "Year 8 Maths" }));
+    const store = buildStore(reg);
+    renderAt("/explore/math", reg, store);
+    expect(screen.getByRole("heading", { name: "Year 8 Maths" })).toBeTruthy();
+    expect(screen.getByText("Year 8 · Mathematics")).toBeTruthy(); // curriculum line
+    expect(screen.getByText("Available")).toBeTruthy(); // topic chip
+    expect(screen.getByText(/Joining adds it to your courses/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Back to explore" }).getAttribute("href")).toBe(
+      "/explore",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Join Year 8 Maths/ }));
+    expect(store.isJoined("math")).toBe(true);
+    expect(screen.getByRole("button", { name: /Added/ })).toBeTruthy();
+  });
+
+  it("an empty course details as 'being authored' + Content growing, still joinable", () => {
+    const reg = buildReg(
+      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
+    );
+    renderAt("/explore/year-11-advanced", reg, buildStore(reg));
+    expect(screen.getByText("Content growing")).toBeTruthy();
+    expect(screen.getByText("Topics are being authored")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Join Year 11 Advanced/ })).toBeTruthy();
+  });
+
+  it("an unknown course is not-found", () => {
+    const reg = buildReg(mkCourse("math"));
+    renderAt("/explore/nope", reg, buildStore(reg));
+    expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
   });
 });
 

@@ -443,8 +443,10 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 
   | Route | Screen |
   |-------|--------|
-  | `/` | **Dashboard home** (`DashboardHome`, dashboard register) — greeting, CONTINUE focal card, current course's topics list, all-courses grid; sidebar shell; no current course → first by `order` (onboarding lands PR-D3) |
+  | `/` | **HomeGate**: first visit (no joined + no remembered course) → **Onboarding** (centered welcome card, year grid 7–12, "Start with [selection]" joins + lands on its dashboard); else **Dashboard home** (greeting, CONTINUE focal card, current course's topics, all-courses grid) |
   | `/:course` | **Dashboard home for that course** — same screen scoped to the course (selects + auto-joins it); empty course → "content coming soon"; unknown → not-found |
+  | `/explore` | **Explore courses** — filter pills (All/Junior/Senior), Senior/Junior course-card groups with stat chips (N topics / N questions, or CONTENT GROWING) + Join controls; unregistered years 7–12 → dashed COMING SOON cards (no join) |
+  | `/explore/:course` | **Course detail** — 52px badge + curriculum line, stat chips, bordered topic list (AVAILABLE/SOON), "Join [course]" + "Back to explore" + per-course-progress note |
   | `/:course/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
   | `/:course/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
   | `/:course/:topic/:topicArea/stage/:n/exercise` | Exercise page (v2 §7b/§8) — one worksheet panel + question-card grid; type a final answer → **Check** (algebraic-equivalence, math.js); Solution locked until answered; completion → next-stage video; "More practice" expander (never gates); difficulty hidden; nav via the contents sidebar |
