@@ -95,6 +95,9 @@ export interface ProgressStore {
   subscribe(listener: () => void): () => void;
   isNoticeDismissed(noticeId: string): boolean;
   dismissNotice(noticeId: string): void;
+  /** The remembered selected course (content-architecture-v1 §4), or null. */
+  getSelectedCourse(): string | null;
+  setSelectedCourse(courseId: string): void;
 }
 
 export interface CreateProgressStoreOptions {
@@ -102,6 +105,8 @@ export interface CreateProgressStoreOptions {
   persistent?: boolean;
   /** Known area ids (from the registry) — enables the stale-id guard. */
   areaIds?: string[];
+  /** Known course ids (from the registry) — enables the stale-course guard. */
+  courseIds?: string[];
   now?: () => string;
 }
 
@@ -267,8 +272,17 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     return !hasRegistry || knownAreaIds.has(areaId);
   }
 
+  const knownCourseIds = new Set(options.courseIds ?? []);
+  const hasCourseRegistry = options.courseIds !== undefined;
+  function isKnownCourseId(courseId: string): boolean {
+    return !hasCourseRegistry || knownCourseIds.has(courseId);
+  }
+
   const listeners = new Set<() => void>();
   const dismissedNotices = new Set<string>();
+  // Remembered course selection (content-architecture-v1 §4) — UI state, kept in
+  // its own key (lp:selected-course), NOT inside the versioned progress key.
+  let selectedCourse: string | null = null;
 
   const load = loadRaw(backend);
   let persistDisabled = false;
@@ -431,6 +445,33 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
         backend.setItem(`lp:notice:${noticeId}`, "1");
       } catch {
         /* in-memory flag still hides it for the session */
+      }
+      notify();
+    },
+
+    getSelectedCourse() {
+      // Stale-ID guard (CLAUDE.md §c rule 7): a remembered course that is no
+      // longer in the registry is excluded (truthiness is not validity).
+      const id =
+        selectedCourse ??
+        (() => {
+          try {
+            const v = backend.getItem("lp:selected-course");
+            return typeof v === "string" && v.length > 0 ? v : null;
+          } catch {
+            return null;
+          }
+        })();
+      if (id === null) return null;
+      return isKnownCourseId(id) ? id : null;
+    },
+
+    setSelectedCourse(courseId) {
+      selectedCourse = courseId;
+      try {
+        backend.setItem("lp:selected-course", courseId);
+      } catch {
+        /* in-memory value still remembers it for the session */
       }
       notify();
     },

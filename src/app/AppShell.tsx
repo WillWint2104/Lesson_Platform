@@ -55,11 +55,16 @@ export function AppShell() {
     const inputs = stageInputs(activeArea, store);
     mastery = inputs.length === 0 ? 0 : Math.round((inputs.filter((s) => s.complete).length / inputs.length) * 100);
   }
+  // The course of the active area, for the breadcrumb hub link + course switcher.
+  const courseManifest = activeArea ? registry.getCourseById(activeArea.course) : undefined;
+  const courseName = activeArea
+    ? (courseManifest?.displayName ?? titleCase(activeArea.course))
+    : undefined;
 
   return (
     <div className="app-shell v2-canvas" style={style}>
-      <AppBar area={activeArea} mastery={mastery} />
-      {/* The local-progress notice belongs to the Library hub only. */}
+      <AppBar area={activeArea} mastery={mastery} courseName={courseName} />
+      {/* The local-progress notice belongs to the course picker (landing) only. */}
       <NoticeBar visible={pathname === "/"} />
       <div className={`shell-body${showSidebar ? " shell-body--with-sidebar" : ""}`}>
         {showSidebar && area ? (
@@ -110,7 +115,15 @@ function NoticeBar({ visible }: { visible: boolean }) {
   );
 }
 
-function AppBar({ area, mastery }: { area?: ValidatedArea; mastery: number | null }) {
+function AppBar({
+  area,
+  mastery,
+  courseName,
+}: {
+  area?: ValidatedArea;
+  mastery: number | null;
+  courseName?: string;
+}) {
   return (
     <header className="app-bar">
       <div className="app-bar__inner">
@@ -120,7 +133,8 @@ function AppBar({ area, mastery }: { area?: ValidatedArea; mastery: number | nul
           </Link>
           {area ? (
             <nav className="appbar-crumb" aria-label="Breadcrumb">
-              <Link className="appbar-crumb__home" to="/">
+              {/* "Hub" → the active COURSE's hub (its topic list). */}
+              <Link className="appbar-crumb__home" to={`/${area.course}`}>
                 Hub
               </Link>
               <span className="appbar-crumb__sep" aria-hidden="true">
@@ -135,6 +149,13 @@ function AppBar({ area, mastery }: { area?: ValidatedArea; mastery: number | nul
           ) : null}
         </div>
         <div className="app-bar__trail">
+          {/* Course switcher (§5) — change course without losing place; → picker. */}
+          {area && courseName ? (
+            <Link className="appbar-course" to="/" aria-label={`Switch course (current: ${courseName})`}>
+              <span className="appbar-course__name">{courseName}</span>
+              <span className="appbar-course__hint v2-mono">Switch</span>
+            </Link>
+          ) : null}
           {mastery !== null ? (
             <span className="appbar-mastery" aria-label={`${mastery}% mastery`}>
               <span className="appbar-mastery__pct">{mastery}%</span>

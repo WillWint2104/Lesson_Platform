@@ -52,7 +52,8 @@
 /* ---- Shared panel chrome: white, flat, 8px mint strip on top ------------ */
 .v2-home .hero,
 .v2-home .topic-card,
-.v2-home .rail-card {
+.v2-home .rail-card,
+.v2-home .course-card {
   position: relative;
   overflow: hidden;
   background: var(--surface);
@@ -62,12 +63,115 @@
 }
 .v2-home .hero::before,
 .v2-home .topic-card::before,
-.v2-home .rail-card::before {
+.v2-home .rail-card::before,
+.v2-home .course-card::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
   height: var(--v2-strip-h);
   background: var(--mint-strip);
+}
+
+/* ---- Course picker (§5): cards on the grid canvas ----------------------- */
+.v2-home .course-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
+  gap: var(--space-4);
+}
+.v2-home .course-card {
+  display: flex;
+}
+.v2-home .course-card__link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  padding: calc(var(--v2-strip-h) + var(--space-4)) var(--space-4) var(--space-4);
+  text-decoration: none;
+}
+.v2-home .course-card__link:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.v2-home .course-card__name {
+  margin: 0;
+  font: var(--text-v2-cardtitle);
+  color: var(--ink);
+}
+.v2-home .course-card__meta {
+  margin: 0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.v2-home .course-card__progress {
+  height: var(--v2-strip-h);
+  border-radius: var(--radius-pill);
+  background: var(--line-2);
+  overflow: hidden;
+  margin-top: var(--space-1);
+}
+.v2-home .course-card__progress-fill {
+  height: 100%;
+  background: var(--mint-line);
+}
+.v2-home .course-card__pct {
+  margin: 0;
+  font: var(--text-v2-body);
+  color: var(--muted);
+}
+.v2-home .course-card__pct-val {
+  font: var(--text-v2-btn);
+  color: var(--mint-ink);
+}
+/* Empty course — a calm "content coming soon" (§1: NOT pressable, so it must
+   not look pressable: recessed, dashed, no shadow, no mint strip). */
+.v2-home .course-card--soon {
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--page); /* recessed onto the canvas tone */
+  border: 1px dashed var(--line);
+  box-shadow: none;
+}
+.v2-home .course-card--soon::before {
+  content: none; /* no mint strip on a non-interactive card */
+}
+.v2-home .course-card__soon {
+  margin: var(--space-1) 0 0;
+  font: var(--text-v2-body);
+  color: var(--faint);
+}
+
+/* ---- Course hub: switcher + empty state --------------------------------- */
+.v2-home .course-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font: var(--text-v2-body);
+  color: var(--mint-ink);
+  text-decoration: none;
+}
+.v2-home .course-switch:hover {
+  text-decoration: underline;
+}
+.v2-home .course-switch:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+  border-radius: var(--v2-radius-badge);
+}
+.v2-home .course-empty__title {
+  margin: 0;
+  font: var(--text-v2-unit);
+  color: var(--ink);
+}
+.v2-home .course-empty__note {
+  margin: var(--space-2) 0 0;
+  font: var(--text-v2-body);
+  color: var(--muted);
 }
 
 /* ---- Continue / start hero (white card, mint CTA) ----------------------- */
