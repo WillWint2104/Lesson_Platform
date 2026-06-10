@@ -5,7 +5,7 @@ import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
 import type { AreaRegistry, ValidatedArea } from "@/ingest/load";
 import type { ProgressStore } from "@/state/progress";
-import { titleCase } from "@/app/format";
+import { titleCase, areaPath } from "@/app/format";
 import { StatusCircle } from "@/shared/StatusCircle";
 import { stagePath, exercisePath } from "@/app/stageProgress";
 
@@ -75,7 +75,6 @@ function todayKicker(): string {
   }
 }
 
-const areaPath = (a: ValidatedArea) => `/${a.course}/${a.topic}/${a.topicArea}`;
 
 /** Stage completion counts for an area. */
 function areaProgress(area: ValidatedArea, store: ProgressStore): { done: number; total: number } {

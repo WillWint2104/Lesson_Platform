@@ -352,6 +352,9 @@ export function buildAreaRegistry(
   for (const c of courses) if (!courseById.has(c.id)) courseById.set(c.id, c);
 
   const distinctSorted = (values: string[]) => Array.from(new Set(values)).sort();
+  // A stray/superseded manifest (e.g. lesson.json) yields an area with empty
+  // hierarchy segments; exclude those so discovery never surfaces blank buckets.
+  const hasHierarchy = (a: ValidatedArea) => a.course !== "" && a.topic !== "" && a.topicArea !== "";
 
   return {
     areas,
@@ -362,16 +365,18 @@ export function buildAreaRegistry(
     getCourses: () => courses,
     getCourseById: (id: string) =>
       typeof id === "string" && courseById.has(id) ? courseById.get(id) : undefined,
-    getCourseSlugs: () => distinctSorted(areas.map((a) => a.course)),
+    getCourseSlugs: () => distinctSorted(areas.filter(hasHierarchy).map((a) => a.course)),
     getTopics: (course) =>
-      distinctSorted(areas.filter((a) => a.course === course).map((a) => a.topic)),
+      distinctSorted(areas.filter((a) => hasHierarchy(a) && a.course === course).map((a) => a.topic)),
     getTopicAreas: (course, topic) =>
       distinctSorted(
-        areas.filter((a) => a.course === course && a.topic === topic).map((a) => a.topicArea),
+        areas
+          .filter((a) => hasHierarchy(a) && a.course === course && a.topic === topic)
+          .map((a) => a.topicArea),
       ),
     getAreasInTopic: (course, topic) =>
       areas
-        .filter((a) => a.course === course && a.topic === topic)
+        .filter((a) => hasHierarchy(a) && a.course === course && a.topic === topic)
         .sort((a, b) => a.topicArea.localeCompare(b.topicArea)),
   };
 }

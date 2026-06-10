@@ -610,6 +610,16 @@ describe("buildAreaRegistry (v3 stages)", () => {
       "factoring",
     ]);
   });
+
+  it("excludes empty-hierarchy areas (a stray lesson.json) from discovery buckets", () => {
+    const reg = buildAreaRegistry({
+      "/content/math/algebra/brackets/area.json": area("B", [stage("S", [{ type: "text", prompt: "Q" }])]),
+      // A superseded lesson.json yields an area with empty hierarchy segments.
+      "/content/math/algebra/brackets/single-1/lesson.json": { lesson: { id: "x", title: "X" } },
+    });
+    expect(reg.getCourseSlugs()).toEqual(["math"]); // no blank "" bucket
+    expect(reg.getTopics("math")).toEqual(["algebra"]);
+  });
 });
 
 // ---------------------------------------------------------------------------
