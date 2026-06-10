@@ -415,19 +415,23 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   cards and the focus view; results record via `recordResult` (sticky
   `completedAt` on all-core-answered); `setLastVisited` updates on navigation.
   Stage helpers + path builders live in `/src/app/stageProgress.ts`.
-- **Responsive layout system:** `.app-page` is a centered container, fluid
-  below a per-screen max-width (`--app-page--wide` Library / `--app-page--area`
-  area page, `--container-area` 960px). The landing at `/` is the **course
-  picker** (`CoursePicker`); selecting a course opens its **course hub**
-  (`CourseHub` at `/:course`) — greeting + the course displayName, a course
-  switcher (→ the picker), an **always-present** hero ("Continue where you left
-  off" within that course, else "Start here"), and a responsive topic grid of
-  topic cards with in-card area rows — all SCOPED to the course's areas, so
-  progress is isolated per course. The hub is a `main 2fr / rail 1fr` grid (rail
-  = up-next / your-progress / how-it-works) collapsing below 920px; the
-  selected course is remembered (`getSelectedCourse`/`setSelectedCourse`, a
-  separate `lp:selected-course` key). The local-progress notice is a muted
-  picker-only app-bar line. Tuned at 360/768/1280/1920.
+- **Two visual registers (`docs/dashboard-register-v1.md`, Stage 2):** the
+  DASHBOARD register (home, explore, course-detail, onboarding) is
+  modern-minimal — `DashboardShell` (`/src/app/DashboardShell.tsx`): a 248px
+  white sidebar (brand tile, Home/Explore/Progress nav, YOUR COURSES with %/soon
+  chips from `getJoinedCourses`, "Local progress" footer) + a 980px main column,
+  with the shared token names re-scoped to dashboard values under `.dash-root`
+  (`styles/dashboard.css`) — **no grid texture, no mint strips there**. The
+  LESSON register (stage/exercise/focus) keeps design-language-v2 unchanged.
+  `/` and `/:course` render `DashboardHome` (greeting → CONTINUE focal card →
+  "[Course] — Topics" bordered list → "All courses" grid; empty course → calm
+  "content coming"); opening a course's home selects + auto-joins it
+  (`lp:selected-course` / `lp:joined-courses` side keys, stale-guarded; the
+  current course must be a joined course). Local enrolment: `joinCourse` /
+  `leaveCourse` / `isJoined` / `isFirstVisit` (no joined + no remembered →
+  onboarding, PR-D3). The old full-width NoticeBar is retired (the sidebar
+  footer + onboarding footnote carry the local-progress message); the store
+  notice API remains (lesson 8).
 - **Review-rerun ruling (carried into v3):** a completed stage opens in review
   mode — re-running it records fresh outcomes and increments `attempts` but
   **NEVER clears `completedAt`** (encoded as a test).
@@ -439,8 +443,8 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
 
   | Route | Screen |
   |-------|--------|
-  | `/` | **Course picker** (`CoursePicker`, §5) — v2 course cards on the grid canvas, sorted by `order`, mastery % per course; empty courses → calm "content coming soon" (never an error); selecting remembers the course (localStorage) → its hub |
-  | `/:course` | **Course hub** (`CourseHub`, §5) — the home hub SCOPED to one course (`.v2-home` skin: continue/start hero, topic grid, rail), or "content coming soon" when empty; remembers the course; unknown course → not-found |
+  | `/` | **Dashboard home** (`DashboardHome`, dashboard register) — greeting, CONTINUE focal card, current course's topics list, all-courses grid; sidebar shell; no current course → first by `order` (onboarding lands PR-D3) |
+  | `/:course` | **Dashboard home for that course** — same screen scoped to the course (selects + auto-joins it); empty course → "content coming soon"; unknown → not-found |
   | `/:course/:topic/:topicArea` | **Redirects** to the current stage (progress-derived) |
   | `/:course/:topic/:topicArea/stage/:n` | Stage page (v2 §7a) — full-width video band → two-column notes panel (rule + remember / worked examples) → "Up next · Exercise N" CTA; nav via the contents sidebar |
   | `/:course/:topic/:topicArea/stage/:n/exercise` | Exercise page (v2 §7b/§8) — one worksheet panel + question-card grid; type a final answer → **Check** (algebraic-equivalence, math.js); Solution locked until answered; completion → next-stage video; "More practice" expander (never gates); difficulty hidden; nav via the contents sidebar |

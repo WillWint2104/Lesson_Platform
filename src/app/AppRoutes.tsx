@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { AppShell } from "@/app/AppShell";
-import { CoursePicker } from "@/app/screens/CoursePicker";
-import { CourseHub } from "@/app/screens/CourseHub";
+import { DashboardShell } from "@/app/DashboardShell";
+import { DashboardHome } from "@/app/screens/DashboardHome";
 import { AreaRedirect } from "@/app/screens/AreaRedirect";
 import { StagePage } from "@/app/screens/StagePage";
 import { ExercisePage } from "@/app/screens/ExercisePage";
@@ -11,14 +11,18 @@ import { NotFound } from "@/app/screens/NotFound";
 export function AppRoutes() {
   return (
     <Routes>
-      {/* Shared page chrome (full-width app bar + footer) wraps every route. */}
+      {/* DASHBOARD register (dashboard-register-v1): sidebar shell, no grid
+          texture, no mint strips. Home for the current course at /, a course's
+          home at /:course (explore/onboarding land in PR-D3). */}
+      <Route element={<DashboardShell />}>
+        <Route path="/" element={<DashboardHome />} />
+        <Route path="/:course" element={<DashboardHome />} />
+      </Route>
+
+      {/* LESSON register (design-language-v2): grid canvas + mint-strip panels. */}
       <Route element={<AppShell />}>
-        {/* Course picker landing; selecting a course routes into its hub (§5). */}
-        <Route path="/" element={<CoursePicker />} />
         {/* Dormant dev harness, retained but linked nowhere (lesson 8/9). */}
         <Route path="/debug" element={<DebugHarness />} />
-        {/* Course-scoped routes (content-architecture-v1 §4). */}
-        <Route path="/:course" element={<CourseHub />} />
         {/* Area root redirects to the current stage (progress-derived). */}
         <Route path="/:course/:topic/:topicArea" element={<AreaRedirect />} />
         <Route path="/:course/:topic/:topicArea/stage/:n" element={<StagePage />} />

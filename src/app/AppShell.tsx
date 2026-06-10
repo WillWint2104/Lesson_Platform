@@ -8,7 +8,7 @@
  * shell (per route) so the app bar, footer, and page content all align to the
  * same column.
  */
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { CSSProperties } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { useProgressStore } from "@/state/ProgressContext";
@@ -21,7 +21,6 @@ import type { ValidatedArea } from "@/ingest/load";
 
 /** Map a route to its content container width (kept in sync with each screen). */
 function containerForPath(pathname: string): string {
-  if (pathname === "/") return "var(--container-wide)"; // Library hub
   if (pathname === "/debug") return "var(--container-area)";
   const segments = pathname.split("/").filter(Boolean);
   // /:course/:topic/:topicArea/stage/:n[/exercise] — the stage-flow pages.
@@ -64,8 +63,6 @@ export function AppShell() {
   return (
     <div className="app-shell v2-canvas" style={style}>
       <AppBar area={activeArea} mastery={mastery} courseName={courseName} />
-      {/* The local-progress notice belongs to the course picker (landing) only. */}
-      <NoticeBar visible={pathname === "/"} />
       <div className={`shell-body${showSidebar ? " shell-body--with-sidebar" : ""}`}>
         {showSidebar && area ? (
           <ContentsSidebar
@@ -84,36 +81,11 @@ export function AppShell() {
   );
 }
 
-/**
- * Demoted local-progress notice (design-language v3): a single muted full-width
- * app-bar line, out of the content flow. Dismissal is store-backed and persists;
- * local state hides it immediately for the session.
- */
-function NoticeBar({ visible }: { visible: boolean }) {
-  const store = useProgressStore();
-  const [dismissed, setDismissed] = useState(() => store.isNoticeDismissed("local-progress"));
-  if (!visible || dismissed) return null;
-  return (
-    <div className="app-noticebar">
-      <div className="app-noticebar__inner">
-        <span className="app-noticebar__text">
-          Your progress is saved in this browser on this device. Clearing site data or switching
-          devices starts fresh.
-        </span>
-        <button
-          type="button"
-          className="app-noticebar__dismiss"
-          onClick={() => {
-            store.dismissNotice("local-progress");
-            setDismissed(true);
-          }}
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
-  );
-}
+// The old full-width local-progress NoticeBar lived on the landing route, which
+// is now the DASHBOARD register: its job is carried by the sidebar's "Local
+// progress" footer + the onboarding footnote (dashboard-register-v1). The store
+// notice API (isNoticeDismissed/dismissNotice) is retained (lesson 8) and still
+// store-tested.
 
 function AppBar({
   area,
