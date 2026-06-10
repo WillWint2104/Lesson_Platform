@@ -25,30 +25,30 @@
   height: 36px;
 }
 .status-circle--check {
-  background: var(--green); /* §5 progress/done */
-  color: var(--card-bg);
+  background: var(--mint); /* §5 progress/done */
+  color: var(--mint-ink);
 }
 .status-circle--play-ring {
-  background: var(--card-bg);
-  color: var(--green-edge);
-  border: 2px solid var(--green);
+  background: var(--surface);
+  color: var(--mint-ink);
+  border: 2px solid var(--mint-line);
 }
 .status-circle--number {
-  background: var(--page-bg);
+  background: var(--page);
   color: var(--muted);
-  border: var(--border-flat-width) solid var(--border);
+  border: var(--border-flat-width) solid var(--line);
 }
 .status-circle--lock {
-  background: var(--card-border);
-  color: var(--brand-ink);
+  background: var(--line);
+  color: var(--ink);
 }
 .status-circle--dot {
-  background: var(--coral); /* §5 incorrect */
-  color: var(--coral-deep);
+  background: var(--red-tint); /* §5 incorrect */
+  color: var(--red);
 }
 /* §1: chunky construction only when the circle is itself the interactive nav. */
 .status-circle--pressable {
-  border: var(--card-border-width) solid var(--card-border);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
 }
 
@@ -58,14 +58,14 @@
   flex-direction: column;
   gap: var(--space-4);
   font: var(--text-body);
-  color: var(--brand-ink);
+  color: var(--ink);
   text-align: left;
 }
 
 /* ---- Heading ---- */
 .note-heading {
   font: var(--text-title);
-  color: var(--brand-ink);
+  color: var(--ink);
   margin: var(--space-1) 0 0;
 }
 
@@ -91,31 +91,31 @@
 /* ---- Callout (tinted, left-accented card; informational → flat §1) ---- */
 .note-callout {
   font: var(--text-body);
-  border: var(--border-flat-width) solid var(--border);
+  border: var(--border-flat-width) solid var(--line);
   border-left-width: 6px;
   border-radius: var(--radius-card);
   padding: var(--space-4);
 }
 
 .note-callout--key {
-  background: var(--green-tint);
-  border-left-color: var(--green);
+  background: var(--mint-tint);
+  border-left-color: var(--mint-ink);
 }
 
 .note-callout--warning {
-  background: var(--gold-tint);
-  border-left-color: var(--gold-deep);
+  background: var(--mint-tint);
+  border-left-color: var(--mint-ink);
 }
 
 .note-callout--info {
-  background: var(--cyan-tint);
-  border-left-color: var(--cyan-deep);
+  background: var(--mint-tint);
+  border-left-color: var(--mint-line);
 }
 
 /* ---- Worked example (white card; informational → flat §1) ---- */
 .note-example {
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
   display: flex;
@@ -134,7 +134,7 @@
 
 .note-example__prompt {
   font: var(--text-card-title);
-  color: var(--brand-ink);
+  color: var(--ink);
   margin: 0;
 }
 
@@ -169,8 +169,8 @@
 .note-example__answer {
   display: inline-block;
   font: var(--text-card-title);
-  color: var(--card-bg);
-  background: var(--green);
+  color: var(--mint-ink);
+  background: var(--mint);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-3);
 }
@@ -178,9 +178,9 @@
 /* ---- Unknown-block error chip (defence in depth) ---- */
 .note-error {
   font: var(--text-card-title);
-  color: var(--coral-deep);
-  background: var(--coral);
-  border: var(--border-flat-width) solid var(--coral-deep);
+  color: var(--red);
+  background: var(--red-tint);
+  border: var(--border-flat-width) solid var(--red-line);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-3);
 }
@@ -199,10 +199,10 @@
 /* Math emphasis macros (\emA / \emB) — the ONLY in-math emphasis (authoring.md).
  * Colours stay mapped to theme tokens here, never hardcoded in content. */
 .ktx-em-a {
-  color: var(--green-edge);
+  color: var(--mint-ink);
 }
 .ktx-em-b {
-  color: var(--cyan-deep);
+  color: var(--mint-ink);
 }
 
 /* =========================================================================
@@ -214,7 +214,7 @@
   flex-direction: column;
   gap: var(--space-4);
   font: var(--text-body);
-  color: var(--brand-ink);
+  color: var(--ink);
   text-align: left;
 }
 
@@ -234,25 +234,25 @@
   width: 12px;
   height: 12px;
   border-radius: var(--radius-pill);
-  background: var(--card-border);
+  background: var(--line);
   border: 2px solid transparent;
 }
 
 .qr-dot--correct {
-  background: var(--green);
+  background: var(--mint);
 }
 
 .qr-dot--wrong {
-  background: var(--coral-deep);
+  background: var(--red);
 }
 
 .qr-dot--current {
-  background: var(--card-bg);
-  border-color: var(--brand-ink);
+  background: var(--surface);
+  border-color: var(--ink);
 }
 
 .qr-dot--ahead {
-  background: var(--card-border);
+  background: var(--line);
 }
 
 .qr-progress-label {
@@ -266,9 +266,9 @@
   font: var(--text-label);
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--gold-deep);
-  background: var(--gold-tint);
-  border: var(--border-flat-width) solid var(--gold);
+  color: var(--mint-ink);
+  background: var(--mint-tint);
+  border: var(--border-flat-width) solid var(--mint-line);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-3);
 }
@@ -299,9 +299,9 @@
   width: 100%;
   text-align: left;
   font: var(--text-body);
-  color: var(--brand-ink);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
   border-radius: var(--radius-card);
   padding: var(--space-4);
@@ -309,7 +309,7 @@
 }
 
 .qr-mc__option:hover:enabled {
-  border-color: var(--green);
+  border-color: var(--mint-ink);
 }
 
 .qr-mc__option:disabled {
@@ -317,13 +317,13 @@
 }
 
 .qr-mc__option--correct {
-  background: var(--green-tint);
-  border-color: var(--green);
+  background: var(--mint-tint);
+  border-color: var(--mint-ink);
 }
 
 .qr-mc__option--wrong {
-  background: var(--coral);
-  border-color: var(--coral-deep);
+  background: var(--red-tint);
+  border-color: var(--red);
 }
 
 .qr-feedback {
@@ -339,13 +339,13 @@
 }
 
 .qr-table__cell {
-  border: 2px solid var(--card-border);
+  border: 2px solid var(--line);
   padding: var(--space-3);
   text-align: left;
 }
 
 .qr-table__cell--blank {
-  background: var(--page-bg);
+  background: var(--page);
 }
 
 /* ---- Figure placeholder (informational → flat §1) ---- */
@@ -354,8 +354,8 @@
   flex-direction: column;
   align-items: center;
   gap: var(--space-3);
-  background: var(--cyan-tint);
-  border: var(--border-flat-width) dashed var(--cyan-deep);
+  background: var(--mint-tint);
+  border: var(--border-flat-width) dashed var(--mint-line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
   text-align: center;
@@ -365,8 +365,8 @@
   font: var(--text-label);
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--cyan-deep);
-  background: var(--card-bg);
+  color: var(--mint-ink);
+  background: var(--surface);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-3);
 }
@@ -374,7 +374,7 @@
 .qr-figure__note {
   margin: 0;
   font: var(--text-meta);
-  color: var(--cyan-deep);
+  color: var(--mint-ink);
 }
 
 /* ---- Video stage (RECORDED EXCEPTION to §1/§4: the bold-framed near-black
@@ -384,7 +384,7 @@
   width: 100%;
   aspect-ratio: 16 / 9;
   background: var(--video-bg);
-  border: 5px solid var(--brand-ink);
+  border: 5px solid var(--ink);
   border-radius: var(--radius-card);
   overflow: hidden;
 }
@@ -412,8 +412,8 @@
   font: var(--text-label);
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--brand-ink);
-  background: var(--studio-mint);
+  color: var(--ink);
+  background: var(--mint-strip);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-3);
 }
@@ -421,7 +421,7 @@
 .video-stage__note {
   margin: 0;
   font: var(--text-meta);
-  color: var(--studio-mint);
+  color: var(--mint-strip);
 }
 
 /* ---- Rendered figures (registry slot) ---- */
@@ -449,8 +449,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
 }
@@ -460,8 +460,8 @@
   display: inline-block;
   align-self: flex-start;
   font: var(--text-card-title);
-  color: var(--card-bg);
-  background: var(--green);
+  color: var(--mint-ink);
+  background: var(--mint);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-3);
 }
@@ -499,22 +499,22 @@
 
 .qr-button--primary,
 .qr-button--correct {
-  background: var(--green);
-  color: var(--card-bg);
-  border-bottom: 4px solid var(--green-edge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-bottom: 4px solid var(--mint-line);
 }
 
 .qr-button--ghost {
-  background: var(--card-bg);
-  color: var(--brand-ink);
-  border-color: var(--card-border);
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
   border-bottom-width: 4px;
 }
 
 .qr-button--review {
-  background: var(--card-bg);
-  color: var(--coral-deep);
-  border-color: var(--coral-deep);
+  background: var(--surface);
+  color: var(--red);
+  border-color: var(--red);
   border-bottom-width: 4px;
 }
 
@@ -529,8 +529,8 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
 }
@@ -538,7 +538,7 @@
 .qr-summary__title {
   font: var(--text-card-title);
   margin: 0;
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 
 .qr-summary__counts {
@@ -555,19 +555,19 @@
 }
 
 .qr-summary__correct {
-  color: var(--green-edge);
+  color: var(--mint-ink);
 }
 
 .qr-summary__review {
-  color: var(--coral-deep);
+  color: var(--red);
 }
 
 /* ---- Unknown-type error chip (defence in depth) ---- */
 .qr-error {
   font: var(--text-card-title);
-  color: var(--coral-deep);
-  background: var(--coral);
-  border: var(--border-flat-width) solid var(--coral-deep);
+  color: var(--red);
+  background: var(--red-tint);
+  border: var(--border-flat-width) solid var(--red-line);
   border-radius: var(--radius-sm);
   padding: var(--space-1) var(--space-3);
 }
@@ -591,39 +591,10 @@
 .ws-row {
   display: flex;
   gap: var(--space-3);
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
-}
-.ws-row__num {
-  flex: none;
-  font: var(--text-card-title);
-  color: var(--brand-ink);
-  min-width: 1.5rem;
-}
-.ws-row__main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-}
-.ws-row__head {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-.ws-row__prompt {
-  flex: 1;
-  font: var(--text-body);
-  min-width: 0;
-}
-.ws-row__tools {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
 }
 /* Answered-state indicator now uses the shared StatusCircle motif (§6). */
 /* Answer-icon button (interactive → chunky §1; cyan = hint/informational §5). */
@@ -634,9 +605,9 @@
   min-height: 44px;
   padding: var(--space-1) var(--space-3);
   font: var(--text-card-title);
-  color: var(--cyan-deep);
-  background: var(--cyan-tint);
-  border: var(--card-border-width) solid var(--cyan-deep);
+  color: var(--mint-ink);
+  background: var(--mint-tint);
+  border: var(--card-border-width) solid var(--mint-line);
   border-bottom-width: var(--card-edge-width);
   border-radius: var(--radius-pill);
   cursor: pointer;
@@ -664,8 +635,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
 }
@@ -678,7 +649,7 @@
 .modal__title {
   margin: 0;
   font: var(--text-title);
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 .modal__close {
   flex: none;
@@ -686,10 +657,10 @@
   min-height: 44px;
   border-radius: var(--radius-sm);
   font: var(--text-card-title);
-  color: var(--brand-ink);
-  background: var(--card-bg);
+  color: var(--ink);
+  background: var(--surface);
   /* §1 interactive → chunky */
-  border: var(--card-border-width) solid var(--card-border);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
   cursor: pointer;
 }
@@ -702,11 +673,6 @@
   margin: 0;
   font: var(--text-meta);
   color: var(--muted);
-}
-.modal__actions {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
 }
 
 /* ---- Worked-example step player (stage notes) ---- */
@@ -723,18 +689,18 @@
 /* Chunky example tabs (interactive, design-language §1). */
 .step-tab {
   font: var(--text-card-title);
-  color: var(--brand-ink);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-4);
   cursor: pointer;
 }
 .step-tab--active {
-  background: var(--green);
-  color: var(--card-bg);
-  border-color: var(--green-edge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-color: var(--mint-ink);
 }
 .example {
   display: flex;
@@ -744,7 +710,7 @@
 .example__prompt {
   margin: 0;
   font: var(--text-card-title);
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 .example__steps {
   display: flex;
@@ -759,12 +725,12 @@
   padding: var(--space-3);
 }
 .example__step--revealed {
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--green-soft);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--mint-line);
 }
 .example__step-tex {
   font: var(--text-body);
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 /* "why?" toggle (cyan chip) + cyan-tinted explanation. */
 .example__why-toggle {
@@ -772,9 +738,9 @@
   font: var(--text-label);
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: var(--cyan-deep);
-  background: var(--cyan-tint);
-  border: var(--border-flat-width) solid var(--cyan-deep);
+  color: var(--mint-ink);
+  background: var(--mint-tint);
+  border: var(--border-flat-width) solid var(--mint-line);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-3);
   cursor: pointer;
@@ -782,19 +748,16 @@
 .example__why {
   margin: 0;
   font: var(--text-meta);
-  color: var(--cyan-deep);
-  background: var(--cyan-tint);
+  color: var(--mint-ink);
+  background: var(--mint-tint);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
 }
 .example__answer {
   align-self: flex-start;
   font: var(--text-card-title);
-  color: var(--card-bg);
-  background: var(--green);
+  color: var(--mint-ink);
+  background: var(--mint);
   border-radius: var(--radius-pill);
   padding: var(--space-1) var(--space-3);
-}
-.example__next {
-  align-self: flex-start;
 }

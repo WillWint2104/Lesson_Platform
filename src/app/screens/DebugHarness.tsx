@@ -10,8 +10,8 @@ import { useRegistry } from "@/app/RegistryContext";
 import { useProgressStore } from "@/state/ProgressContext";
 
 const card: CSSProperties = {
-  background: "var(--card-bg)",
-  border: "var(--border-flat-width) solid var(--border)", // §1 informational → flat
+  background: "var(--surface)",
+  border: "var(--border-flat-width) solid var(--line)", // §1 informational → flat
   borderRadius: "var(--radius-card)",
   padding: "var(--space-4)",
   maxWidth: "44rem",
@@ -27,11 +27,11 @@ const row: CSSProperties = {
 };
 const resetButton: CSSProperties = {
   font: "var(--text-card-title)",
-  border: "var(--card-border-width) solid var(--coral-deep)",
+  border: "var(--card-border-width) solid var(--red-line)",
   borderBottomWidth: "var(--card-edge-width)", // §1 interactive → chunky
   borderRadius: "var(--radius-sm)",
-  background: "var(--card-bg)",
-  color: "var(--coral-deep)",
+  background: "var(--surface)",
+  color: "var(--red)",
   padding: "var(--space-1) var(--space-3)",
   cursor: "pointer",
 };
@@ -40,8 +40,8 @@ const tag: CSSProperties = {
   borderRadius: "var(--radius-pill)",
   padding: "var(--space-1) var(--space-3)",
 };
-const validTag: CSSProperties = { ...tag, background: "var(--green)", color: "var(--card-bg)" };
-const issueTag: CSSProperties = { ...tag, background: "var(--coral)", color: "var(--coral-deep)" };
+const validTag: CSSProperties = { ...tag, background: "var(--mint)", color: "var(--mint-ink)" };
+const issueTag: CSSProperties = { ...tag, background: "var(--red-tint)", color: "var(--red)" };
 
 export function DebugHarness() {
   const registry = useRegistry();

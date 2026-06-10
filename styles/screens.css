@@ -17,8 +17,8 @@ body,
 }
 body {
   margin: 0;
-  background: var(--page-bg);
-  color: var(--brand-ink);
+  background: var(--page);
+  color: var(--ink);
   font-family: var(--font-body);
 }
 
@@ -38,8 +38,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--card-bg);
-  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
 }
 .app-bar__inner {
   width: 100%;
@@ -53,7 +53,7 @@ body {
 }
 .app-bar__wordmark {
   font: var(--text-title);
-  color: var(--brand-ink);
+  color: var(--ink);
   text-decoration: none;
 }
 .app-bar__identity {
@@ -63,15 +63,15 @@ body {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-pill);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  background: var(--surface);
+  border: var(--card-border-width) solid var(--line);
   font: var(--text-card-title);
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 
 /* ---- Slim full-width footer ---- */
 .app-footer {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
 }
 .app-footer__inner {
   width: 100%;
@@ -100,7 +100,7 @@ body {
   flex: 1; /* grow to push the footer to the bottom */
   padding: var(--page-pad-block) var(--page-pad-inline) var(--space-7);
   font: var(--text-body);
-  color: var(--brand-ink);
+  color: var(--ink);
   display: flex;
   flex-direction: column;
   gap: var(--space-6); /* §3: gap between sections = 32 */
@@ -120,15 +120,15 @@ body {
   border: var(--card-border-width) solid transparent;
 }
 .btn--primary {
-  background: var(--green);
-  color: var(--card-bg);
-  border-bottom: 4px solid var(--green-edge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-bottom: 4px solid var(--mint-line);
 }
 .btn--quiet,
 .btn--ghost {
-  background: var(--card-bg);
-  color: var(--brand-ink);
-  border-color: var(--card-border);
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
   border-bottom-width: 4px;
 }
 
@@ -144,20 +144,20 @@ body {
 /* ---- Progress bar ---- */
 .progress {
   height: 10px;
-  background: var(--card-border);
+  background: var(--line);
   border-radius: var(--radius-pill);
   overflow: hidden;
 }
 .progress__fill {
   height: 100%;
-  background: var(--green);
+  background: var(--mint);
   border-radius: var(--radius-pill);
 }
 
 /* ---- Demoted local-progress notice: a muted full-width app-bar line (v3) ---- */
 .app-noticebar {
-  background: var(--cyan-tint);
-  border-bottom: var(--border-flat-width) solid var(--cyan-deep);
+  background: var(--mint-tint);
+  border-bottom: var(--border-flat-width) solid var(--mint-line);
 }
 .app-noticebar__inner {
   width: 100%;
@@ -172,7 +172,7 @@ body {
   flex: 1;
   min-width: 0;
   font: var(--text-meta);
-  color: var(--cyan-deep);
+  color: var(--mint-ink);
 }
 .app-noticebar__dismiss {
   flex: none;
@@ -181,10 +181,10 @@ body {
   border-radius: var(--radius-sm);
   font: var(--text-meta);
   cursor: pointer;
-  background: var(--card-bg);
-  color: var(--cyan-deep);
+  background: var(--surface);
+  color: var(--mint-ink);
   /* §1 interactive → chunky */
-  border: var(--card-border-width) solid var(--cyan-deep);
+  border: var(--card-border-width) solid var(--mint-line);
   border-bottom-width: var(--card-edge-width);
 }
 
@@ -204,38 +204,7 @@ body {
 .lib-headline {
   margin: 0;
   font: var(--text-display);
-  color: var(--brand-ink);
-}
-
-.lib-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-.lib-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: var(--space-1) var(--space-4);
-  border-radius: var(--radius-pill);
-  font: var(--text-card-title);
-  cursor: pointer;
-  background: var(--card-bg);
-  color: var(--brand-ink);
-  /* §1 pressable pill */
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
-}
-.lib-pill--active {
-  background: var(--green);
-  color: var(--card-bg);
-  border-color: var(--green-edge);
-}
-.lib-pill--soon {
-  color: var(--muted-ink);
-  background: transparent;
-  border-style: dashed;
-  cursor: default;
+  color: var(--ink);
 }
 
 /* ---- Hero (a wide button-card, ALWAYS present — banner, not a slab) ---- */
@@ -246,9 +215,9 @@ body {
   justify-content: space-between;
   gap: var(--space-4);
   text-decoration: none;
-  background: var(--green);
-  color: var(--card-bg);
-  border-bottom: var(--card-edge-width) solid var(--green-edge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-bottom: var(--card-edge-width) solid var(--mint-line);
   border-radius: var(--radius-card);
   padding: var(--space-4); /* §3 card padding 16 */
 }
@@ -281,8 +250,8 @@ body {
   min-height: 44px;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-sm);
-  background: var(--card-bg);
-  color: var(--brand-ink);
+  background: var(--surface);
+  color: var(--ink);
   font: var(--text-card-title);
 }
 
@@ -314,8 +283,8 @@ body {
 
 /* ---- Rail cards (flat informational anatomy §1, card recipe §4) ---- */
 .rail-card {
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
   display: flex;
@@ -333,9 +302,9 @@ body {
   align-items: center;
   gap: var(--space-3);
   text-decoration: none;
-  color: var(--brand-ink);
-  background: var(--page-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  color: var(--ink);
+  background: var(--page);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
   border-radius: var(--radius-card);
   padding: var(--space-3);
@@ -373,7 +342,7 @@ body {
 .stat-row__val {
   margin: 0;
   font: var(--text-card-title);
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 /* How-it-works steps */
 .howto {
@@ -408,8 +377,8 @@ body {
 
 /* Topic card = informational container (§1 flat, no bottom edge). */
 .topic-card {
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) solid var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
   display: flex;
@@ -429,9 +398,9 @@ body {
   width: 36px;
   height: 36px;
   border-radius: var(--radius-icon);
-  background: var(--page-bg);
-  border: var(--border-flat-width) solid var(--border);
-  color: var(--brand-ink);
+  background: var(--page);
+  border: var(--border-flat-width) solid var(--line);
+  color: var(--ink);
   font: var(--text-card-title);
 }
 .topic-card__headtext {
@@ -448,7 +417,7 @@ body {
 }
 .topic-card__pct {
   font: var(--text-card-title);
-  color: var(--green-edge); /* §5 green = progress */
+  color: var(--mint-ink); /* §5 green = progress */
 }
 .topic-card__areas {
   list-style: none;
@@ -468,10 +437,10 @@ body {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-card);
   text-decoration: none;
-  background: var(--page-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  background: var(--page);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 .topic-area-row__name {
   flex: 1;
@@ -490,7 +459,7 @@ body {
   text-align: center;
   min-height: 120px;
   padding: var(--space-4);
-  border: var(--border-flat-width) dashed var(--border);
+  border: var(--border-flat-width) dashed var(--line);
   border-radius: var(--radius-card);
   color: var(--muted);
   font: var(--text-body);
@@ -502,12 +471,8 @@ body {
   color: var(--muted);
 }
 .breadcrumb__link {
-  color: var(--green-edge);
+  color: var(--mint-ink);
   text-decoration: none;
-}
-.sel-title {
-  font: var(--text-title);
-  margin: 0;
 }
 
 /* ===== Area page (worksheet model) ===== */
@@ -515,11 +480,6 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-}
-.area-meta {
-  margin: 0;
-  color: var(--muted);
-  font: var(--text-meta);
 }
 .area-section {
   display: flex;
@@ -540,17 +500,6 @@ body {
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
-.ws-seg-headtext {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.ws-section-head {
-  font: var(--text-title);
-  margin: 0;
-  color: var(--brand-ink);
-}
 /* Stage sub-zones (notes / extra-practice) within a stage section. */
 .stage-notes,
 .stage-extra {
@@ -569,20 +518,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  background: var(--card-bg);
-  border: var(--border-flat-width) dashed var(--border);
+  background: var(--surface);
+  border: var(--border-flat-width) dashed var(--line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
-  color: var(--muted);
-}
-.ws-locked__title {
-  margin: 0;
-  font: var(--text-card-title);
-  color: var(--brand-ink);
-}
-.ws-locked__note {
-  margin: 0;
-  font: var(--text-meta);
   color: var(--muted);
 }
 
@@ -593,18 +532,10 @@ body {
   justify-content: space-between;
   gap: var(--space-3);
   flex-wrap: wrap;
-  background: var(--green-tint);
-  border: var(--border-flat-width) solid var(--green);
+  background: var(--mint-tint);
+  border: var(--border-flat-width) solid var(--mint-line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
-}
-.area-complete__text {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font: var(--text-card-title);
-  color: var(--green-edge); /* §5 green = progress/completion */
 }
 
 /* ===== Not found ===== */
@@ -669,11 +600,11 @@ body {
   content: "";
   width: var(--space-6);
   height: 2px;
-  background: var(--border);
+  background: var(--line);
   flex: none;
 }
 .stepper__item--done:not(:last-child)::after {
-  background: var(--green);
+  background: var(--mint);
 }
 .stepper__link {
   display: inline-flex;
@@ -684,7 +615,7 @@ body {
   font: var(--text-meta);
 }
 .stepper__item--active .stepper__link {
-  color: var(--brand-ink);
+  color: var(--ink);
   font: var(--text-card-title);
 }
 .stepper__title {
@@ -703,18 +634,6 @@ body {
     grid-template-columns: 1.6fr 1fr;
   }
 }
-.stage-grid__main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
-.stage-grid__rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
 /* CTA sits at the foot of the rail. */
 .stage-cta {
   display: flex;
@@ -722,27 +641,12 @@ body {
   align-items: flex-start;
   gap: var(--space-2);
 }
-.notes-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  background: var(--card-bg);
-  border: var(--border-flat-width) solid var(--border);
-  border-radius: var(--radius-card);
-  padding: var(--space-4);
-}
 /* Centered green-tint display-formula block inside THE RULE. */
 .rule-formula {
-  background: var(--green-tint);
+  background: var(--mint-tint);
   border-radius: var(--radius-card);
   padding: var(--space-4);
   text-align: center;
-}
-.stage-back {
-  align-self: flex-start;
-  font: var(--text-meta);
-  color: var(--green-edge);
-  text-decoration: none;
 }
 
 /* ===== Exercise page (worksheet 7 / rail 4) ===== */
@@ -757,32 +661,8 @@ body {
     grid-template-columns: 7fr 4fr;
   }
 }
-.ex-grid__main {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-6);
-  min-width: 0;
-}
-.ex-grid__rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
-}
 /* Tappable row + enlarge affordance. */
 .ws-row--tappable {
-  cursor: pointer;
-}
-.ws-row__enlarge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: var(--radius-sm);
-  color: var(--muted);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
   cursor: pointer;
 }
 /* Completion row (informational, green) + gentle nudge. */
@@ -791,50 +671,23 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  background: var(--green-tint);
-  border: var(--border-flat-width) solid var(--green);
+  background: var(--mint-tint);
+  border: var(--border-flat-width) solid var(--mint-line);
   border-radius: var(--radius-card);
   padding: var(--space-4);
-}
-.ex-complete__text {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-  font: var(--text-card-title);
-  color: var(--brand-ink);
-}
-.ex-nudge {
-  margin: 0;
-  font: var(--text-meta);
-  color: var(--muted);
 }
 /* More-practice expander (chunky) + recessed extra list. */
 .ex-expander {
   width: 100%;
   text-align: left;
   font: var(--text-card-title);
-  color: var(--brand-ink);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
   border-radius: var(--radius-card);
   padding: var(--space-4);
   cursor: pointer;
-}
-.ws-list--extra {
-  margin-top: var(--space-4);
-  padding: var(--space-4);
-  background: var(--page-bg);
-  border-radius: var(--radius-card);
-}
-.ex-rewatch {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  font: var(--text-meta);
-  color: var(--green-edge);
-  text-decoration: none;
 }
 
 /* ===== Question focus view (enlarge IN PLACE — dialog over a blurred scrim) ===== */
@@ -858,8 +711,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  background: var(--surface);
+  border: var(--card-border-width) solid var(--line);
   border-bottom-width: var(--card-edge-width);
   border-radius: var(--radius-card);
   padding: var(--space-5);
@@ -872,7 +725,7 @@ body {
 }
 .focus-card__count {
   font: var(--text-card-title);
-  color: var(--brand-ink);
+  color: var(--ink);
 }
 .focus-card__close {
   display: inline-flex;
@@ -881,9 +734,9 @@ body {
   min-height: 44px;
   padding: var(--space-1) var(--space-3);
   font: var(--text-card-title);
-  color: var(--brand-ink);
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--card-border-width) solid var(--line);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
@@ -913,9 +766,9 @@ body {
 }
 /* Strong focus indicators inside the dialog (≥2px, outline + shadow). */
 .focus-card :focus-visible {
-  outline: 2px solid var(--green-edge);
+  outline: 2px solid var(--mint-line);
   outline-offset: 2px;
-  box-shadow: 0 0 0 3px var(--green-tint);
+  box-shadow: 0 0 0 3px var(--mint-tint);
 }
 
 /* ===== Self-mark controls (exercise rows + focus view) ===== */
@@ -923,31 +776,4 @@ body {
   display: flex;
   gap: var(--space-3);
   flex-wrap: wrap;
-}
-.selfmark__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: 44px;
-  padding: var(--space-2) var(--space-4);
-  font: var(--text-card-title);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  background: var(--card-bg);
-  border: var(--card-border-width) solid var(--card-border);
-  border-bottom-width: var(--card-edge-width);
-}
-.selfmark__btn--got {
-  color: var(--green-edge);
-}
-.selfmark__btn--not {
-  color: var(--coral-deep);
-}
-.selfmark__btn--got.selfmark__btn--on {
-  background: var(--green-tint);
-  border-color: var(--green);
-}
-.selfmark__btn--not.selfmark__btn--on {
-  background: var(--coral);
-  border-color: var(--coral-deep);
 }
