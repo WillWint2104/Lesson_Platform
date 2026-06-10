@@ -105,6 +105,8 @@ export interface CreateProgressStoreOptions {
   persistent?: boolean;
   /** Known area ids (from the registry) — enables the stale-id guard. */
   areaIds?: string[];
+  /** Known course ids (from the registry) — enables the stale-course guard. */
+  courseIds?: string[];
   now?: () => string;
 }
 
@@ -268,6 +270,12 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
 
   function isKnownAreaId(areaId: string): boolean {
     return !hasRegistry || knownAreaIds.has(areaId);
+  }
+
+  const knownCourseIds = new Set(options.courseIds ?? []);
+  const hasCourseRegistry = options.courseIds !== undefined;
+  function isKnownCourseId(courseId: string): boolean {
+    return !hasCourseRegistry || knownCourseIds.has(courseId);
   }
 
   const listeners = new Set<() => void>();
@@ -442,13 +450,20 @@ export function createProgressStore(options: CreateProgressStoreOptions = {}): P
     },
 
     getSelectedCourse() {
-      if (selectedCourse !== null) return selectedCourse;
-      try {
-        const v = backend.getItem("lp:selected-course");
-        return typeof v === "string" && v.length > 0 ? v : null;
-      } catch {
-        return null;
-      }
+      // Stale-ID guard (CLAUDE.md §c rule 7): a remembered course that is no
+      // longer in the registry is excluded (truthiness is not validity).
+      const id =
+        selectedCourse ??
+        (() => {
+          try {
+            const v = backend.getItem("lp:selected-course");
+            return typeof v === "string" && v.length > 0 ? v : null;
+          } catch {
+            return null;
+          }
+        })();
+      if (id === null) return null;
+      return isKnownCourseId(id) ? id : null;
     },
 
     setSelectedCourse(courseId) {

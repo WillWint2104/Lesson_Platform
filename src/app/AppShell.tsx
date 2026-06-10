@@ -64,7 +64,7 @@ export function AppShell() {
   return (
     <div className="app-shell v2-canvas" style={style}>
       <AppBar area={activeArea} mastery={mastery} courseName={courseName} />
-      {/* The local-progress notice belongs to the Library hub only. */}
+      {/* The local-progress notice belongs to the course picker (landing) only. */}
       <NoticeBar visible={pathname === "/"} />
       <div className={`shell-body${showSidebar ? " shell-body--with-sidebar" : ""}`}>
         {showSidebar && area ? (

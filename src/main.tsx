@@ -29,7 +29,10 @@ import { AppRoutes } from "@/app/AppRoutes";
 // Built once at startup. Figure schemas validate figure data per kind; the
 // area-id list enables the store's stale-id guard.
 const registry = loadAllAreas({ figureSchemas });
-const store = createProgressStore({ areaIds: registry.areas.map((a) => a.id) });
+const store = createProgressStore({
+  areaIds: registry.areas.map((a) => a.id),
+  courseIds: registry.courses.map((c) => c.id),
+});
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {

@@ -84,8 +84,12 @@ function mkCourse(
 function buildReg(...areas: Record<string, unknown>[]): AreaRegistry {
   return buildAreaRegistry(Object.assign({}, ...areas));
 }
-function buildStore(reg: AreaRegistry): ProgressStore {
-  return createProgressStore({ backend: createMemoryBackend(), areaIds: reg.areas.map((a) => a.id) });
+function buildStore(reg: AreaRegistry, backend: ReturnType<typeof createMemoryBackend> = createMemoryBackend()): ProgressStore {
+  return createProgressStore({
+    backend,
+    areaIds: reg.areas.map((a) => a.id),
+    courseIds: reg.courses.map((c) => c.id),
+  });
 }
 function renderAt(path: string, reg: AreaRegistry, store: ProgressStore) {
   return render(
@@ -183,6 +187,10 @@ describe("Course picker (/, §5)", () => {
       mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
     );
     renderAt("/", reg, buildStore(reg));
+    // Sorted by order: math (80) before year-11-advanced (110).
+    const cards = screen.getAllByRole("listitem");
+    expect(within(cards[0]!).getByText("Year 8 Maths")).toBeTruthy();
+    expect(within(cards[1]!).getByText("Year 11 Advanced")).toBeTruthy();
     const link = screen.getByText("Year 8 Maths").closest("a");
     expect(link?.getAttribute("href")).toBe("/math");
   });
@@ -201,11 +209,14 @@ describe("Course picker (/, §5)", () => {
     expect(container.querySelector('[role="alert"]')).toBeNull(); // never an error
   });
 
-  it("selecting a course remembers it (localStorage)", () => {
+  it("selecting a course persists it to localStorage (restore path)", () => {
     const reg = buildReg(mkArea("brackets"), mkCourse("math", { displayName: "Year 8 Maths" }));
-    const store = buildStore(reg);
+    const backend = createMemoryBackend();
+    const store = buildStore(reg, backend);
     renderAt("/", reg, store);
     fireEvent.click(screen.getByText("Year 8 Maths").closest("a")!);
+    // Assert the persisted key directly (not just the in-memory cache).
+    expect(backend.getItem("lp:selected-course")).toBe("math");
     expect(store.getSelectedCourse()).toBe("math");
   });
 

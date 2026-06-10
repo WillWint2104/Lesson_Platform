@@ -249,6 +249,24 @@ describe("robustness", () => {
 // One-time notice dismissal
 // ---------------------------------------------------------------------------
 
+describe("selected course (stale-id guarded)", () => {
+  it("remembers + persists the selected course, and excludes a stale one", () => {
+    const backend = createMemoryBackend();
+    const a = createProgressStore({ backend, courseIds: ["year-8", "year-11-advanced"] });
+    expect(a.getSelectedCourse()).toBeNull();
+    a.setSelectedCourse("year-8");
+    expect(a.getSelectedCourse()).toBe("year-8");
+    expect(backend.getItem("lp:selected-course")).toBe("year-8");
+
+    // A reopened store with a registry that no longer has that course excludes it.
+    const b = createProgressStore({ backend, courseIds: ["year-11-advanced"] });
+    expect(b.getSelectedCourse()).toBeNull(); // stale → guarded out
+    // Without a course registry (no guard), the stored value is returned as-is.
+    const c = createProgressStore({ backend });
+    expect(c.getSelectedCourse()).toBe("year-8");
+  });
+});
+
 describe("notice dismissal", () => {
   it("persists through the storage layer without touching the progress key", () => {
     const backend = createMemoryBackend();
