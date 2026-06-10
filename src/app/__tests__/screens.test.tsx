@@ -104,8 +104,8 @@ function renderAt(path: string, reg: AreaRegistry, store: ProgressStore) {
 }
 
 describe("app chrome (page, not frame)", () => {
-  const routes = ["/", STAGE1, "/nope", "/debug"];
-  it.each(routes)("renders the full-width app bar + footer on %s", (path) => {
+  const routes = [STAGE1, "/debug", "/no/such/area"];
+  it.each(routes)("renders the lesson app bar + footer on %s", (path) => {
     const reg = buildReg(mkArea("brackets"));
     renderAt(path, reg, buildStore(reg));
     expect(screen.getByRole("link", { name: "Lesson Platform" })).toBeTruthy();
@@ -138,12 +138,32 @@ describe("app chrome (page, not frame)", () => {
     expect(within(bar).getByLabelText("50% mastery")).toBeTruthy();
   });
 
-  it("hides the breadcrumb + mastery on the Library (no active area)", () => {
+  it("hides the breadcrumb + mastery when there is no active area (/debug)", () => {
     const reg = buildReg(mkArea("brackets", { title: "Brackets" }));
-    renderAt("/", reg, buildStore(reg));
+    renderAt("/debug", reg, buildStore(reg));
     const bar = screen.getByRole("banner");
     expect(within(bar).queryByLabelText("Breadcrumb")).toBeNull(); // breadcrumb absent
     expect(within(bar).queryByText(/mastery/)).toBeNull();
+  });
+});
+
+describe("Register boundary (dashboard vs lesson)", () => {
+  it("dashboard routes get the sidebar shell — no grid canvas, no mint strips", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
+    const { container } = renderAt("/", reg, buildStore(reg));
+    expect(container.querySelector(".dash-root")).not.toBeNull();
+    expect(container.querySelector(".dash-sidebar")).not.toBeNull();
+    expect(container.querySelector(".v2-canvas")).toBeNull(); // no grid texture
+    expect(container.querySelector(".v2-panel__strip")).toBeNull(); // no mint strips
+    expect(screen.queryByRole("contentinfo")).toBeNull(); // no lesson footer
+  });
+
+  it("lesson routes keep the lesson register — grid canvas, no dashboard sidebar", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
+    const { container } = renderAt(STAGE1, reg, buildStore(reg));
+    expect(container.querySelector(".v2-canvas")).not.toBeNull();
+    expect(container.querySelector(".dash-root")).toBeNull();
+    expect(container.querySelector(".dash-sidebar")).toBeNull();
   });
 });
 
@@ -172,116 +192,127 @@ describe("Contents sidebar (shell, §4)", () => {
   });
 });
 
-describe("Course picker (/, §5)", () => {
-  it("carries the v2 home skin on its root (grid-canvas)", () => {
-    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
-    const { container } = renderAt("/", reg, buildStore(reg));
-    expect(container.querySelector("main.lib.v2-home")).not.toBeNull();
-    expect(screen.getByRole("heading", { name: "Pick your course" })).toBeTruthy();
+describe("Dashboard home (/, /:course — dashboard-register-v1)", () => {
+  it("greets, shows the current course's topics, and the all-courses grid", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math", { displayName: "Year 8 Maths" }));
+    renderAt("/", reg, buildStore(reg));
+    expect(screen.getByRole("heading", { name: "Welcome back" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Year 8 Maths — Topics" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "All courses" })).toBeTruthy();
   });
 
-  it("lists course cards sorted by order; a non-empty course links into its hub", () => {
+  it("CONTINUE card: fresh → first area stage 1; after a visit → the stored stage + view", () => {
+    const reg = buildReg(
+      mkArea("brackets", { title: "Brackets", stages: [stage("A"), stage("B")] }),
+      mkCourse("math"),
+    );
+    const store = buildStore(reg);
+    renderAt("/", reg, store);
+    expect(screen.getByText("Brackets")).toBeTruthy(); // continue title = area title
+    expect(screen.getByRole("link", { name: "Continue" }).getAttribute("href")).toBe(STAGE1);
+    cleanup();
+
+    store.setLastVisited(AREA_ID, 1, "exercise");
+    renderAt("/", reg, store);
+    expect(screen.getByRole("link", { name: "Continue" }).getAttribute("href")).toBe(
+      `/${AREA_ID}/stage/2/exercise`,
+    );
+  });
+
+  it("topic rows: badge + name + meta + status chip, linking to the area", () => {
+    const reg = buildReg(
+      mkArea("brackets", { stages: [stage("First"), stage("Second")] }),
+      mkCourse("math"),
+    );
+    const store = buildStore(reg);
+    renderAt("/", reg, store);
+    let row = screen.getByText("Algebra").closest("a")!;
+    expect(row.getAttribute("href")).toBe(`/${AREA_ID}`);
+    expect(within(row as HTMLElement).getByText("Not started")).toBeTruthy();
+    cleanup();
+
+    store.recordAttempt(AREA_ID, 0, true); // 1 of 2 stages → 50%
+    renderAt("/", reg, store);
+    row = screen.getByText("Algebra").closest("a")!;
+    expect(within(row as HTMLElement).getByText("In progress · 50%")).toBeTruthy();
+  });
+
+  it("all-courses grid: authored card links + shows %; empty course = dashed SOON, no link", () => {
     const reg = buildReg(
       mkArea("brackets"),
       mkCourse("math", { displayName: "Year 8 Maths", year: 8 }),
       mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
     );
-    renderAt("/", reg, buildStore(reg));
-    // Sorted by order: math (80) before year-11-advanced (110).
-    const cards = screen.getAllByRole("listitem");
-    expect(within(cards[0]!).getByText("Year 8 Maths")).toBeTruthy();
-    expect(within(cards[1]!).getByText("Year 11 Advanced")).toBeTruthy();
-    const link = screen.getByText("Year 8 Maths").closest("a");
-    expect(link?.getAttribute("href")).toBe("/math");
-  });
-
-  it("an empty course shows a calm 'content coming soon' card (no link, not an error)", () => {
-    const reg = buildReg(
-      mkArea("brackets"),
-      mkCourse("math", { displayName: "Year 8" }),
-      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11, stream: "Advanced" }),
-    );
     const { container } = renderAt("/", reg, buildStore(reg));
-    const soon = screen.getByText("Year 11 Advanced").closest(".course-card")!;
-    expect(soon.classList.contains("course-card--soon")).toBe(true);
-    expect(within(soon as HTMLElement).getByText(/content coming soon/i)).toBeTruthy();
-    expect(soon.querySelector("a")).toBeNull(); // not clickable
+    const authored = screen.getByText("Year 8 Maths").closest("a");
+    expect(authored?.getAttribute("href")).toBe("/math");
+    const soon = screen.getByText("Year 11 Advanced").closest(".dash-card")!;
+    expect(soon.classList.contains("dash-card--soon")).toBe(true);
+    expect(within(soon as HTMLElement).getByText("Soon")).toBeTruthy();
+    expect(soon.closest("a")).toBeNull(); // not clickable
     expect(container.querySelector('[role="alert"]')).toBeNull(); // never an error
   });
 
-  it("selecting a course persists it to localStorage (restore path)", () => {
+  it("/:course opens that course's home, remembers it, and persists (restore path)", () => {
     const reg = buildReg(mkArea("brackets"), mkCourse("math", { displayName: "Year 8 Maths" }));
     const backend = createMemoryBackend();
     const store = buildStore(reg, backend);
-    renderAt("/", reg, store);
-    fireEvent.click(screen.getByText("Year 8 Maths").closest("a")!);
-    // Assert the persisted key directly (not just the in-memory cache)…
+    renderAt("/math", reg, store);
+    expect(screen.getByRole("heading", { name: "Year 8 Maths — Topics" })).toBeTruthy();
+    // Opening makes it current (auto-join) and persists…
     expect(backend.getItem("lp:selected-course")).toBe("math");
-    // …and that a FRESH store restores it from that backend (the restore path).
+    expect(store.isJoined("math")).toBe(true);
+    // …and a FRESH store restores it from that backend (the restore path).
     expect(buildStore(reg, backend).getSelectedCourse()).toBe("math");
   });
 
-  it("local-progress notice shows on the picker + persists dismissal", () => {
-    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
-    const store = buildStore(reg);
-    renderAt("/", reg, store);
-    expect(screen.getByText(/saved in this browser/i)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(store.isNoticeDismissed("local-progress")).toBe(true);
+  it("an unknown course is not-found; an empty course is 'content coming soon', never an error", () => {
+    const reg = buildReg(
+      mkArea("brackets"),
+      mkCourse("math"),
+      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11 }),
+    );
+    renderAt("/no-such-course", reg, buildStore(reg));
+    expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
     cleanup();
-    renderAt(STAGE1, reg, store);
-    expect(screen.queryByText(/saved in this browser/i)).toBeNull();
+
+    const { container } = renderAt("/year-11-advanced", reg, buildStore(reg));
+    expect(screen.getByText("Content coming soon")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Continue" })).toBeNull(); // no focal card
+    expect(container.querySelector('[role="alert"]')).toBeNull();
   });
 });
 
-describe("Course hub (/:course, §5)", () => {
-  it("an unknown course is not-found", () => {
-    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
-    renderAt("/no-such-course", reg, buildStore(reg));
-    expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
-  });
-
-  it("an empty course shows 'content coming soon', never an error", () => {
-    const reg = buildReg(mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11 }));
-    const { container } = renderAt("/year-11-advanced", reg, buildStore(reg));
-    expect(screen.getByText(/content coming soon/i)).toBeTruthy();
-    expect(container.querySelector('[role="alert"]')).toBeNull();
-  });
-
-  it("remembers the course on open", () => {
-    const reg = buildReg(mkArea("brackets"), mkCourse("math"));
+describe("Dashboard sidebar", () => {
+  it("brand → /, Home nav active on /, YOUR COURSES lists joined with a % chip", () => {
+    const reg = buildReg(mkArea("brackets"), mkCourse("math", { displayName: "Year 8 Maths" }));
     const store = buildStore(reg);
-    renderAt("/math", reg, store);
-    expect(store.getSelectedCourse()).toBe("math");
-  });
-
-  it("hero 'start here' deep-links to the first incomplete stage page", () => {
-    const reg = buildReg(mkArea("brackets", { title: "Brackets" }), mkCourse("math"));
-    renderAt("/math", reg, buildStore(reg));
-    expect(screen.getByText("Start here").closest("a")?.getAttribute("href")).toBe(STAGE1);
-  });
-
-  it("hero 'continue' deep-links to the stored stage + view (scoped to the course)", () => {
-    const reg = buildReg(mkArea("brackets", { stages: [stage("A"), stage("B")] }), mkCourse("math"));
-    const store = buildStore(reg);
-    store.setLastVisited(AREA_ID, 1, "exercise");
-    renderAt("/math", reg, store);
-    expect(
-      screen.getByText("Continue where you left off").closest("a")?.getAttribute("href"),
-    ).toBe(`/${AREA_ID}/stage/2/exercise`);
-  });
-
-  it("up next deep-links to the first incomplete stage; stats are scoped to the course", () => {
-    const reg = buildReg(mkArea("brackets", { stages: [stage("First"), stage("Second")] }), mkCourse("math"));
-    const store = buildStore(reg);
-    store.recordAttempt(AREA_ID, 0, true);
-    renderAt("/math", reg, store);
-    expect(screen.getByText("Second").closest("a")?.getAttribute("href")).toBe(
-      `/${AREA_ID}/stage/2`,
+    store.joinCourse("math");
+    renderAt("/", reg, store);
+    const sidebar = screen.getByRole("navigation", { name: "Dashboard" });
+    expect(screen.getByRole("link", { name: /Lesson Platform/ }).getAttribute("href")).toBe("/");
+    expect(within(sidebar).getByRole("link", { name: "Home" }).getAttribute("aria-current")).toBe(
+      "page",
     );
-    const statVal = (label: string) =>
-      screen.getByText(label).closest(".stat-row")?.querySelector(".stat-row__val")?.textContent;
-    expect(statVal("Exercises completed")).toBe("1/2");
+    const yours = screen.getByRole("navigation", { name: "Your courses" });
+    const item = within(yours).getByRole("link", { name: /Year 8 Maths/ });
+    expect(item.getAttribute("href")).toBe("/math");
+    expect(within(item).getByText("0%")).toBeTruthy();
+  });
+
+  it("a joined-but-empty course shows a 'Soon' chip; footer says Local progress", () => {
+    const reg = buildReg(
+      mkArea("brackets"),
+      mkCourse("math"),
+      mkCourse("year-11-advanced", { displayName: "Year 11 Advanced", year: 11 }),
+    );
+    const store = buildStore(reg);
+    store.joinCourse("year-11-advanced");
+    renderAt("/", reg, store);
+    const yours = screen.getByRole("navigation", { name: "Your courses" });
+    const item = within(yours).getByRole("link", { name: /Year 11 Advanced/ });
+    expect(within(item).getByText("Soon")).toBeTruthy();
+    expect(screen.getByText("Local progress")).toBeTruthy();
   });
 });
 

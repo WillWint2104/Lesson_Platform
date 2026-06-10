@@ -14,7 +14,8 @@ import "../styles/screens.css";
 // v2 shell + contents sidebar — loaded last so it re-themes the shared chrome.
 import "../styles/v2-shell.css";
 import "../styles/v2-stage.css";
-import "../styles/v2-home.css";
+// Dashboard register (dashboard-register-v1) — scoped tokens + components.
+import "../styles/dashboard.css";
 import "../styles/v2-exercise.css";
 // KaTeX stylesheet (npm, not CDN — see CLAUDE.md §f). Required for math layout.
 import "katex/dist/katex.min.css";

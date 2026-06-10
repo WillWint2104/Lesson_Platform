@@ -1,0 +1,498 @@
+/*
+ * dashboard.css — the DASHBOARD register (docs/dashboard-register-v1.md).
+ *
+ * Modern-minimal surfaces for home/dashboard, explore, course-detail and
+ * onboarding. NO grid texture, NO mint header strips here — those are LESSON
+ * register signatures (design-language-v2). One shared token family: the same
+ * token NAMES as the lesson register, re-scoped to the dashboard values under
+ * `.dash-root` (scoped overrides, not global). Tokens only — no stray hex in
+ * component rules below the :where() token block.
+ */
+
+/* ---- Register-scoped tokens (dashboard values; names shared with v2) ----- */
+.dash-root {
+  --bg: #f3f5f7; /* shell background; deeper grey than lesson canvas, no grid */
+  --surface: #ffffff;
+  --line: #dde2e8;
+  --line-2: #ecf0f3;
+  --ink: #16191e;
+  --body: #343b45;
+  --muted: #5d6673;
+  --faint: #8b95a1;
+  --mint: #bfe8d2;
+  --mint-tint: #e9f8f0;
+  --mint-line: #8fd6b1;
+  --mint-ink: #175c39;
+  --hover: #f4f7f8;
+
+  /* shape + elevation (register-local) */
+  --dash-radius-card: 12px;
+  --dash-radius-btn: 10px;
+  --dash-radius-badge: 8px;
+  --dash-radius-chip: 6px;
+  --dash-shadow: 0 1px 6px rgba(22, 25, 30, 0.04);
+}
+
+/* ---- Shell: 248px white sidebar + main column ---------------------------- */
+.dash-root {
+  display: flex;
+  min-height: 100vh;
+  min-height: 100svh;
+  background: var(--bg);
+  font: var(--text-v2-body);
+  color: var(--body);
+}
+.dash-sidebar {
+  width: 248px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: var(--space-4) var(--space-3);
+  gap: var(--space-4);
+}
+.dash-main {
+  flex: 1;
+  min-width: 0;
+  padding: 34px 44px;
+}
+.dash-main__inner {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ---- Sidebar: brand ------------------------------------------------------ */
+.dash-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 10px;
+  text-decoration: none;
+}
+.dash-brand__tile {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: var(--dash-radius-badge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--text-v2-badge);
+}
+.dash-brand__word {
+  font: var(--text-v2-cardtitle);
+  color: var(--ink);
+}
+.dash-brand:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+  border-radius: var(--dash-radius-btn);
+}
+
+/* ---- Sidebar: nav -------------------------------------------------------- */
+.dash-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-height: 40px;
+  text-decoration: none;
+  color: var(--body);
+  font-weight: 600;
+}
+.dash-nav__item:hover {
+  background: var(--hover);
+}
+.dash-nav__item--active {
+  background: var(--mint-tint);
+  box-shadow: inset 3px 0 0 var(--mint-line);
+  color: var(--ink);
+  font-weight: 700;
+}
+.dash-nav__item:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.dash-nav__item--soon {
+  color: var(--muted);
+  cursor: default;
+}
+.dash-nav__icon {
+  flex: none;
+  color: var(--muted);
+}
+.dash-nav__item--active .dash-nav__icon {
+  color: var(--mint-ink);
+}
+
+/* ---- Sidebar: YOUR COURSES group ----------------------------------------- */
+.dash-group__label {
+  margin: var(--space-3) 0 var(--space-1);
+  padding: 0 10px;
+  font: var(--text-v2-mono);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dash-course-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-height: 40px;
+  text-decoration: none;
+  color: var(--body);
+  font-weight: 600;
+}
+.dash-course-item:hover {
+  background: var(--hover);
+}
+.dash-course-item--active {
+  background: var(--mint-tint);
+  box-shadow: inset 3px 0 0 var(--mint-line);
+  color: var(--ink);
+  font-weight: 700;
+}
+.dash-course-item:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.dash-course-item__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- Sidebar: footer ------------------------------------------------------ */
+.dash-sidefoot {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 10px;
+  border-top: 1px solid var(--line-2);
+}
+.dash-avatar {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--mint-tint);
+  border: 1px solid var(--mint-line);
+  color: var(--mint-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: var(--text-v2-mono);
+}
+.dash-sidefoot__note {
+  font: var(--text-v2-mono);
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ---- Chips / badges / pills (shared dashboard atoms) ---------------------- */
+.dash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--dash-radius-chip);
+  font: var(--text-v2-mono);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+.dash-chip--mint {
+  background: var(--mint-tint);
+  color: var(--mint-ink);
+  border: 1px solid var(--mint-line);
+}
+.dash-chip--soon {
+  background: var(--line-2); /* grey fill = soon/disabled only */
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
+.dash-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--dash-radius-badge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  font: var(--text-v2-badge);
+}
+.dash-badge--grey {
+  background: var(--line-2);
+  color: var(--muted);
+}
+
+/* ---- Buttons -------------------------------------------------------------- */
+.dash-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: var(--dash-radius-btn);
+  font: var(--text-v2-btn);
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.dash-btn--primary {
+  background: var(--mint);
+  color: var(--mint-ink);
+  border-color: var(--mint-line);
+}
+.dash-btn--ghost {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.dash-btn:hover {
+  border-color: var(--mint-line);
+}
+.dash-btn:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+
+/* ---- HOME: greeting ------------------------------------------------------- */
+.dash-date {
+  margin: 0 0 var(--space-1);
+  font: var(--text-v2-mono);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dash-greeting {
+  margin: 0;
+  font: 800 25px/1.2 var(--v2-font-head);
+  color: var(--ink);
+}
+
+/* ---- HOME: continue card (the one focal element) -------------------------- */
+.dash-continue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--mint-line);
+  border-radius: var(--dash-radius-card);
+  box-shadow: 0 1px 10px rgba(23, 92, 57, 0.08); /* soft mint shadow */
+  padding: var(--space-4);
+}
+.dash-continue__tile {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: var(--dash-radius-badge);
+  background: var(--mint);
+  color: var(--mint-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dash-continue__text {
+  flex: 1;
+  min-width: 0;
+}
+.dash-continue__kicker {
+  margin: 0 0 2px;
+  font: var(--text-v2-mono);
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--mint-ink);
+}
+.dash-continue__title {
+  margin: 0;
+  font: 800 16px/1.3 var(--v2-font-head);
+  color: var(--ink);
+}
+.dash-continue__sub {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ---- HOME: topics list ----------------------------------------------------- */
+.dash-section__title {
+  margin: 0 0 var(--space-3);
+  font: var(--text-v2-cardtitle);
+  color: var(--ink);
+}
+.dash-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--dash-radius-card);
+  box-shadow: var(--dash-shadow);
+  overflow: hidden;
+}
+.dash-list__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-height: 56px;
+  text-decoration: none;
+  color: var(--body);
+}
+.dash-list__row + .dash-list__row {
+  border-top: 1px solid var(--line-2);
+}
+.dash-list__row:hover {
+  background: var(--hover);
+}
+.dash-list__row:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: -2px;
+}
+.dash-list__badge {
+  width: 32px;
+  height: 32px;
+}
+.dash-list__name {
+  font-weight: 700;
+  color: var(--ink);
+}
+.dash-list__meta {
+  color: var(--muted);
+  font-weight: 600;
+}
+.dash-list__text {
+  flex: 1;
+  min-width: 0;
+}
+.dash-list__chevron {
+  color: var(--muted);
+  flex: none;
+}
+
+/* ---- HOME: all-courses grid ------------------------------------------------ */
+.dash-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+.dash-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--dash-radius-card);
+  box-shadow: var(--dash-shadow);
+  padding: var(--space-4);
+}
+a.dash-card {
+  text-decoration: none;
+  color: var(--body);
+}
+.dash-card:hover {
+  border-color: var(--mint-line);
+}
+.dash-card:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
+.dash-card--soon {
+  border-style: dashed;
+  box-shadow: none;
+}
+.dash-card--soon:hover {
+  border-color: var(--line); /* not interactive — no mint hover */
+}
+.dash-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.dash-card__badge {
+  width: 36px;
+  height: 36px;
+}
+.dash-card__name {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink);
+}
+.dash-card__meta {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+.dash-card__pct {
+  margin-left: auto;
+  font: var(--text-v2-btn);
+  color: var(--mint-ink);
+}
+.dash-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-2);
+  overflow: hidden;
+}
+.dash-progress__fill {
+  height: 100%;
+  background: var(--mint-line);
+}
+
+/* ---- Empty current course (content coming) --------------------------------- */
+.dash-empty {
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: var(--dash-radius-card);
+  padding: var(--space-5);
+}
+.dash-empty__title {
+  margin: 0 0 var(--space-1);
+  font: var(--text-v2-cardtitle);
+  color: var(--ink);
+}
+.dash-empty__note {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ---- Narrow screens: sidebar collapses above the main column --------------- */
+@media (max-width: 820px) {
+  .dash-root {
+    flex-direction: column;
+  }
+  .dash-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+  .dash-sidefoot {
+    margin-top: 0;
+  }
+  .dash-main {
+    padding: var(--space-4);
+  }
+}
