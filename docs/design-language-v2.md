@@ -167,6 +167,8 @@ compounds). Applies to question focus AND notes sections.
 ### Chrome addendum — top-bar navigation
 Top-bar navigation elements are buttons/links at body contrast with visible
 bounds — never muted corner text; min 40px hit targets; visible mint focus rings.
+The course identity appears once in the bar (the right-side course chip);
+breadcrumbs begin at the topic level (no course segment).
 
 (The dashboard register — home/dashboard, explore, course-detail, onboarding — is
 specified in `docs/dashboard-register-v1.md`, which extends this document. Those

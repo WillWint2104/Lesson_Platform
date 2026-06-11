@@ -119,21 +119,24 @@ describe("app chrome (page, not frame)", () => {
     const bar = screen.getByRole("banner");
     // The brand wordmark links to the dashboard home ("/").
     expect(within(bar).getByRole("link", { name: "Lesson Platform" }).getAttribute("href")).toBe("/");
-    // LEFT: a real bounded "← Back to course" button → the course dashboard.
+    // NAV zone: a real bounded "← Back to course" button → the course dashboard.
     expect(within(bar).getByRole("link", { name: /Back to course/ }).getAttribute("href")).toBe(
       "/math",
     );
-    // Breadcrumb: Course › Topic › Area — every segment a real link.
+    // Breadcrumb begins at the TOPIC (Topic › Area) — the course identity lives
+    // in the right-side chip only, never duplicated in the breadcrumb.
     const crumb = within(bar).getByLabelText("Breadcrumb");
-    expect(within(crumb).getByRole("link", { name: "Year 8" }).getAttribute("href")).toBe("/math");
+    expect(within(crumb).queryByRole("link", { name: "Year 8" })).toBeNull();
     expect(within(crumb).getByRole("link", { name: "Algebra" }).getAttribute("href")).toBe("/math");
     expect(within(crumb).getByRole("link", { name: "Brackets" }).getAttribute("href")).toBe(
       `/${AREA_ID}`,
     );
-    // RIGHT: the course switcher is a clearly bounded link to the dashboard.
+    // RIGHT: the course chip is one bounded hit target to the picker, with
+    // "Switch" as a real button label inside it (not mono caps).
     const switcher = within(bar).getByRole("link", { name: /Switch course/ });
     expect(switcher.getAttribute("href")).toBe("/");
     expect(within(switcher).getByText("Year 8")).toBeTruthy();
+    expect(within(switcher).getByText("Switch")).toBeTruthy();
   });
 
   it("shows the breadcrumb + mastery % in the top bar on an area route (§7a)", () => {
@@ -144,7 +147,9 @@ describe("app chrome (page, not frame)", () => {
     const bar = screen.getByRole("banner");
     expect(within(bar).getByLabelText("Breadcrumb")).toBeTruthy(); // breadcrumb present
     expect(within(bar).getByText("Brackets")).toBeTruthy(); // area title (breadcrumb current)
+    // Mastery reads in sentence case ("Mastery 50%"), not mono caps.
     expect(within(bar).getByLabelText("50% mastery")).toBeTruthy();
+    expect(within(bar).getByText(/Mastery/)).toBeTruthy();
   });
 
   it("hides the breadcrumb + mastery when there is no active area (/debug)", () => {
@@ -152,7 +157,7 @@ describe("app chrome (page, not frame)", () => {
     renderAt("/debug", reg, buildStore(reg));
     const bar = screen.getByRole("banner");
     expect(within(bar).queryByLabelText("Breadcrumb")).toBeNull(); // breadcrumb absent
-    expect(within(bar).queryByText(/mastery/)).toBeNull();
+    expect(within(bar).queryByText(/mastery/i)).toBeNull();
   });
 });
 
