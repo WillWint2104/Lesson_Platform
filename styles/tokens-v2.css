@@ -58,6 +58,7 @@
   /* ---- Surface treatment (§4) ---- */
   --v2-panel-shadow: 0 6px 20px rgba(33, 40, 55, 0.06);
   --v2-grid-size: 30px; /* grid motif cell */
+  --v2-sidebar-w: 288px; /* contents sidebar column; the top-bar brand zone aligns over it */
 
   /* ---- Typography (§3) — faces ---- */
   --v2-font-head: "Plus Jakarta Sans", system-ui, sans-serif; /* headings, UI, buttons, badges */

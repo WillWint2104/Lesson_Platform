@@ -32,13 +32,40 @@ body.lp-app {
   border: 1px solid var(--line);
   color: var(--ink);
 }
-/* Top-bar layout: brand + breadcrumb (lead) · mastery + avatar (trail) — §7a */
-.app-bar__lead,
+/* Top-bar layout — three anchored zones (§7a + §13 chrome addendum):
+   brand (flush left, aligned over the sidebar column) · nav (back + breadcrumb,
+   immediately after the brand) · trail (course chip + mastery + avatar, flush
+   right). The bar is full-bleed: no centered container, no dead space before
+   the brand. */
+.app-bar__inner {
+  max-width: none;
+  margin: 0;
+  justify-content: flex-start;
+  /* Zones own their spacing (gap: 0) so the nav zone starts exactly at the
+     brand zone's edge — over the main-content edge below it. */
+  gap: 0;
+  padding: var(--space-2) var(--space-4) var(--space-2) 0;
+}
+.app-bar__brand {
+  display: flex;
+  align-items: center;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--v2-sidebar-w);
+  /* Matches the contents sidebar's own left padding so the wordmark sits
+     exactly over the sidebar content. */
+  padding-left: var(--space-4);
+}
+.app-bar__nav,
 .app-bar__trail {
   display: flex;
   align-items: center;
   gap: var(--space-4);
   min-width: 0;
+}
+.app-bar__trail {
+  flex: none;
+  margin-left: auto;
 }
 /* §13 chrome addendum: navigation at body contrast with visible bounds — never
    muted corner text; min 40px hit targets; visible mint focus rings. */
@@ -127,8 +154,18 @@ body.lp-app {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.appbar-course__hint {
+/* "Switch" is a proper small button label inside the chip (§13: nothing
+   navigational in mono caps) — Plus Jakarta 700 ≥12.5px, mint on mint-tint. */
+.appbar-course__switch {
+  font: var(--text-v2-btn);
   color: var(--mint-ink);
+  background: var(--mint-tint);
+  border: 1px solid var(--mint-line);
+  border-radius: var(--v2-radius-badge);
+  padding: var(--space-1) var(--space-2);
+}
+.appbar-course:hover .appbar-course__switch {
+  background: var(--mint);
 }
 @media (max-width: 640px) {
   .appbar-course__name {
@@ -136,23 +173,24 @@ body.lp-app {
   }
 }
 
+/* Mastery — sentence case at body contrast (no mono caps); the % in mint. */
 .appbar-mastery {
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-1);
+  font: var(--text-v2-body);
+  font-weight: 600;
+  color: var(--body);
+  white-space: nowrap;
 }
 .appbar-mastery__pct {
   font: var(--text-v2-btn);
   color: var(--mint-ink);
 }
-.appbar-mastery__label {
-  color: var(--muted);
-}
 @media (max-width: 640px) {
-  /* Keep the current segment; drop ancestors + labels on narrow screens. */
+  /* Keep the current segment; drop ancestors on narrow screens. */
   .appbar-crumb__link:not(.appbar-crumb__link--current),
-  .appbar-crumb__sep,
-  .appbar-mastery__label {
+  .appbar-crumb__sep {
     display: none;
   }
 }
@@ -187,7 +225,10 @@ body.lp-app {
 
 /* ---- Contents sidebar (§4): 288px primary nav --------------------------- */
 .contents-sidebar {
-  width: 288px;
+  /* border-box: the RENDERED column is exactly the token, so the top-bar brand
+     zone (same width) aligns the nav zone over the main-content edge. */
+  box-sizing: border-box;
+  width: var(--v2-sidebar-w);
   flex: none;
   background: var(--surface);
   border-right: 1px solid var(--line);
@@ -311,5 +352,9 @@ body.lp-app {
   }
   .contents-sidebar {
     display: none;
+  }
+  /* No sidebar column to align over — the brand zone shrinks to its content. */
+  .app-bar__brand {
+    width: auto;
   }
 }

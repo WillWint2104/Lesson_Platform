@@ -423,9 +423,13 @@ for a minimal valid area (`area.json` + `notes.json` + `exercise-*.json`).
   CYCLES the sections). Math in dialogs renders displaystyle via MathText's
   additive `displayStyle` prop at rem-based §13 sizes (question 2rem, body
   1.125rem, math 1.25rem, formula 1.75rem — `styles/v2-enlarged.css`). The
-  lesson top bar (shared AppBar) carries a bounded "← Back to course" ghost
-  button + a full-contrast breadcrumb (Course › Topic › Area, every segment a
-  real link) + the bounded course switcher — ≥40px targets, mint focus rings.
+  lesson top bar (shared AppBar) is three anchored zones: brand flush left
+  (aligned over the sidebar column) · nav (a bounded "← Back to course" ghost
+  button + a full-contrast breadcrumb at TOPIC level — Topic › Area, every
+  segment a real link; the course identity lives in the right-side chip only)
+  · trail flush right (course chip with a "Switch" button label inside it,
+  sentence-case "Mastery N%", avatar) — ≥40px targets, mint focus rings, no
+  mono caps on navigational elements.
 - **Two visual registers (`docs/dashboard-register-v1.md`, Stage 2):** the
   DASHBOARD register (home, explore, course-detail, onboarding) is
   modern-minimal — `DashboardShell` (`/src/app/DashboardShell.tsx`): a 248px

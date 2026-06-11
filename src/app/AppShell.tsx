@@ -100,54 +100,54 @@ function AppBar({
   return (
     <header className="app-bar">
       <div className="app-bar__inner">
-        <div className="app-bar__lead">
+        {/* LEFT — brand zone, flush to the viewport edge and aligned over the
+            sidebar column (same width + left padding), so the nav zone starts
+            where the main content starts. */}
+        <div className="app-bar__brand">
           <Link className="app-bar__wordmark" to="/">
             Lesson Platform
           </Link>
-          {/* §13 chrome addendum: a REAL bounded back button, then the breadcrumb
-              at body contrast — every segment a real link, ≥40px targets. */}
-          {area ? (
-            <>
-              <Link className="appbar-back" to={`/${area.course}`}>
-                <ArrowLeft size={16} aria-hidden="true" /> Back to course
-              </Link>
-              <nav className="appbar-crumb" aria-label="Breadcrumb">
-                <Link className="appbar-crumb__link" to={`/${area.course}`}>
-                  {courseName ?? titleCase(area.course)}
-                </Link>
-                <span className="appbar-crumb__sep" aria-hidden="true">
-                  ›
-                </span>
-                {/* Topics live on the course home — the topic segment goes there. */}
-                <Link className="appbar-crumb__link" to={`/${area.course}`}>
-                  {titleCase(area.topic)}
-                </Link>
-                <span className="appbar-crumb__sep" aria-hidden="true">
-                  ›
-                </span>
-                <Link
-                  className="appbar-crumb__link appbar-crumb__link--current"
-                  to={`/${area.course}/${area.topic}/${area.topicArea}`}
-                  aria-current="page"
-                >
-                  {area.title}
-                </Link>
-              </nav>
-            </>
-          ) : null}
         </div>
+        {/* MIDDLE-LEFT — nav zone (§13 chrome addendum): a REAL bounded back
+            button, then the breadcrumb at body contrast — every segment a real
+            link, ≥40px targets. The breadcrumb begins at the TOPIC: the course
+            identity lives in the right-side chip only (never duplicated). */}
+        {area ? (
+          <div className="app-bar__nav">
+            <Link className="appbar-back" to={`/${area.course}`}>
+              <ArrowLeft size={16} aria-hidden="true" /> Back to course
+            </Link>
+            <nav className="appbar-crumb" aria-label="Breadcrumb">
+              {/* Topics live on the course home — the topic segment goes there. */}
+              <Link className="appbar-crumb__link" to={`/${area.course}`}>
+                {titleCase(area.topic)}
+              </Link>
+              <span className="appbar-crumb__sep" aria-hidden="true">
+                ›
+              </span>
+              <Link
+                className="appbar-crumb__link appbar-crumb__link--current"
+                to={`/${area.course}/${area.topic}/${area.topicArea}`}
+                aria-current="page"
+              >
+                {area.title}
+              </Link>
+            </nav>
+          </div>
+        ) : null}
+        {/* RIGHT — identity zone, flush right: course chip → mastery → avatar. */}
         <div className="app-bar__trail">
-          {/* Course switcher (§5) — a clearly bounded button; → dashboard home. */}
+          {/* Course switcher (§5) — the whole chip is one ≥40px hit target to
+              the picker; "Switch" reads as a proper small button inside it. */}
           {area && courseName ? (
             <Link className="appbar-course" to="/" aria-label={`Switch course (current: ${courseName})`}>
               <span className="appbar-course__name">{courseName}</span>
-              <span className="appbar-course__hint v2-mono">Switch</span>
+              <span className="appbar-course__switch">Switch</span>
             </Link>
           ) : null}
           {mastery !== null ? (
             <span className="appbar-mastery" aria-label={`${mastery}% mastery`}>
-              <span className="appbar-mastery__pct">{mastery}%</span>
-              <span className="appbar-mastery__label v2-mono">mastery</span>
+              Mastery <span className="appbar-mastery__pct">{mastery}%</span>
             </span>
           ) : null}
           <span className="app-bar__identity" aria-label="Profile (placeholder)">
