@@ -40,48 +40,74 @@ body.lp-app {
   gap: var(--space-4);
   min-width: 0;
 }
+/* §13 chrome addendum: navigation at body contrast with visible bounds — never
+   muted corner text; min 40px hit targets; visible mint focus rings. */
+.appbar-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--v2-radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--text-v2-btn);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.appbar-back:hover {
+  border-color: var(--mint-line);
+  background: var(--mint-tint);
+}
+.appbar-back:focus-visible {
+  outline: 2px solid var(--mint-ink);
+  outline-offset: 2px;
+}
 .appbar-crumb {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
   font: var(--text-v2-body);
-  color: var(--muted);
+  color: var(--body);
 }
-/* "Hub" — the way back to the home route from a lesson/exercise (§4). */
-.appbar-crumb__home {
-  /* Inherits the crumb's --text-v2-body token; distinguished as a link by the
-     mint-ink colour + hover underline + focus ring (no raw font-weight). */
-  color: var(--mint-ink);
+.appbar-crumb__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: var(--space-1);
+  color: var(--body);
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
 }
-.appbar-crumb__home:hover {
+.appbar-crumb__link:hover {
   text-decoration: underline;
 }
-.appbar-crumb__home:focus-visible {
+.appbar-crumb__link:focus-visible {
   outline: 2px solid var(--mint-ink);
   outline-offset: 2px;
   border-radius: var(--v2-radius-badge);
 }
-.appbar-crumb__sep {
-  color: var(--faint);
-}
-.appbar-crumb__current {
+.appbar-crumb__link--current {
   color: var(--ink);
   font-weight: 700;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Course switcher chip (§5) — current course → the picker. */
+.appbar-crumb__sep {
+  color: var(--muted);
+}
+/* Course switcher (§5) — a clearly bounded button; → dashboard home. */
 .appbar-course {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  min-height: 40px;
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
+  border-radius: var(--v2-radius-control);
   background: var(--surface);
   text-decoration: none;
 }
@@ -123,7 +149,9 @@ body.lp-app {
   color: var(--muted);
 }
 @media (max-width: 640px) {
-  .appbar-crumb__step,
+  /* Keep the current segment; drop ancestors + labels on narrow screens. */
+  .appbar-crumb__link:not(.appbar-crumb__link--current),
+  .appbar-crumb__sep,
   .appbar-mastery__label {
     display: none;
   }

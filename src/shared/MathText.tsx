@@ -81,10 +81,17 @@ export function segmentMath(input: string): MathSegment[] {
 
 export interface MathTextProps {
   children: string;
+  /**
+   * Enlarged-content mode (design-language-v2 §13 addendum): render INLINE math
+   * segments in `\displaystyle` so fractions stack at full height inside the
+   * readability dialogs. Display (`$$…$$`) segments are unaffected (already
+   * display mode); plain text is unaffected. Additive — defaults off.
+   */
+  displayStyle?: boolean;
 }
 
 /** Render a content string with inline/display math through KaTeX. */
-export function MathText({ children }: MathTextProps) {
+export function MathText({ children, displayStyle = false }: MathTextProps) {
   const segments = segmentMath(children);
 
   return (
@@ -94,7 +101,9 @@ export function MathText({ children }: MathTextProps) {
           // Plain authored text: a React text node, never injected HTML.
           return <Fragment key={index}>{seg.value}</Fragment>;
         }
-        const html = katex.renderToString(seg.value, {
+        const tex =
+          displayStyle && seg.type === "inline" ? `\\displaystyle ${seg.value}` : seg.value;
+        const html = katex.renderToString(tex, {
           throwOnError: false,
           displayMode: seg.type === "display",
           macros: { ...KATEX_MACROS },

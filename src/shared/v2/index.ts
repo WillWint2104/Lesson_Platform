@@ -15,4 +15,6 @@ export { Button } from "./Button";
 export type { ButtonProps, ButtonVariant } from "./Button";
 export { ResultBar } from "./ResultBar";
 export type { ResultBarProps, ResultState } from "./ResultBar";
+export { EnlargedDialog } from "./EnlargedDialog";
+export type { EnlargedDialogProps } from "./EnlargedDialog";
 export * from "./icons";

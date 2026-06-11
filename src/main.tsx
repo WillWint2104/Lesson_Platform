@@ -17,6 +17,8 @@ import "../styles/v2-stage.css";
 // Dashboard register (dashboard-register-v1) — scoped tokens + components.
 import "../styles/dashboard.css";
 import "../styles/v2-exercise.css";
+// Shared enlarged-content dialog (lesson register, §13 readability addendum).
+import "../styles/v2-enlarged.css";
 // KaTeX stylesheet (npm, not CDN — see CLAUDE.md §f). Required for math layout.
 import "katex/dist/katex.min.css";
 

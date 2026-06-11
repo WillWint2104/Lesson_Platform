@@ -113,15 +113,24 @@ describe("app chrome (page, not frame)", () => {
     expect(within(footer).getByText("Lesson Platform")).toBeTruthy();
   });
 
-  it("offers a way back from a lesson: brand → picker, Hub → course hub, course switcher → picker", () => {
+  it("lesson top bar: Back-to-course button, breadcrumb segments as real links, bounded switcher", () => {
     const reg = buildReg(mkArea("brackets", { title: "Brackets" }), mkCourse("math", { displayName: "Year 8" }));
     renderAt(STAGE1, reg, buildStore(reg));
     const bar = screen.getByRole("banner");
-    // The brand wordmark links to the picker ("/").
+    // The brand wordmark links to the dashboard home ("/").
     expect(within(bar).getByRole("link", { name: "Lesson Platform" }).getAttribute("href")).toBe("/");
-    // The breadcrumb's "Hub" links to the active course's hub.
-    expect(within(bar).getByRole("link", { name: "Hub" }).getAttribute("href")).toBe("/math");
-    // The course switcher shows the course and links to the picker.
+    // LEFT: a real bounded "← Back to course" button → the course dashboard.
+    expect(within(bar).getByRole("link", { name: /Back to course/ }).getAttribute("href")).toBe(
+      "/math",
+    );
+    // Breadcrumb: Course › Topic › Area — every segment a real link.
+    const crumb = within(bar).getByLabelText("Breadcrumb");
+    expect(within(crumb).getByRole("link", { name: "Year 8" }).getAttribute("href")).toBe("/math");
+    expect(within(crumb).getByRole("link", { name: "Algebra" }).getAttribute("href")).toBe("/math");
+    expect(within(crumb).getByRole("link", { name: "Brackets" }).getAttribute("href")).toBe(
+      `/${AREA_ID}`,
+    );
+    // RIGHT: the course switcher is a clearly bounded link to the dashboard.
     const switcher = within(bar).getByRole("link", { name: /Switch course/ });
     expect(switcher.getAttribute("href")).toBe("/");
     expect(within(switcher).getByText("Year 8")).toBeTruthy();
@@ -550,6 +559,72 @@ describe("StagePage", () => {
     const reg = buildReg(mkArea("brackets"));
     renderAt(`/${AREA_ID}/stage/9`, reg, buildStore(reg));
     expect(screen.getByRole("heading", { name: "Not found" })).toBeTruthy();
+  });
+
+  it("notes sections expand into the shared enlarged dialog; Prev/Next CYCLE the sections", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [
+          stage("S", {
+            notes: [
+              { type: "paragraph", text: "Rule prose." },
+              { type: "paragraph", text: "$$a(b + c) = ab + ac$$" },
+              { type: "callout", style: "key", text: "Remember me." },
+              { type: "example", prompt: "Ex", answer: "$3$", steps: [{ tex: "3", why: "why text" }] },
+            ],
+            video: { src: null, duration: null },
+          }),
+        ],
+      }),
+    );
+    renderAt(STAGE1, reg, buildStore(reg));
+    const opener = screen.getByRole("button", { name: "Enlarge the rule" });
+    fireEvent.click(opener);
+    let dialog = screen.getByRole("dialog", { name: "The rule" });
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(within(dialog).getByText("Rule prose.")).toBeTruthy();
+
+    // Footer Next is labelled with the NEXT section and cycles Rule → Remember.
+    fireEvent.click(within(dialog).getByRole("button", { name: /Remember/ }));
+    dialog = screen.getByRole("dialog", { name: "Remember" });
+    expect(within(dialog).getByText("Remember me.")).toBeTruthy();
+
+    // → Worked examples (tabs + WHY? + ANSWER preserved via the shared StepPlayer).
+    fireEvent.click(within(dialog).getByRole("button", { name: /Worked examples/ }));
+    dialog = screen.getByRole("dialog", { name: "Worked examples" });
+    expect(within(dialog).getByRole("button", { name: "why?" })).toBeTruthy();
+
+    // …and CYCLES back around to the rule.
+    fireEvent.click(within(dialog).getByRole("button", { name: /The rule/ }));
+    expect(screen.getByRole("dialog", { name: "The rule" })).toBeTruthy();
+
+    // Esc closes and focus returns to the opener.
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(opener);
+  });
+
+  it("each notes section header carries its own enlarge affordance", () => {
+    const reg = buildReg(
+      mkArea("brackets", {
+        stages: [
+          stage("S", {
+            notes: [
+              { type: "paragraph", text: "Rule prose." },
+              { type: "callout", style: "key", text: "Remember me." },
+              { type: "example", prompt: "Ex", answer: "$3$", steps: [{ tex: "3" }] },
+            ],
+            video: { src: null, duration: null },
+          }),
+        ],
+      }),
+    );
+    renderAt(STAGE1, reg, buildStore(reg));
+    fireEvent.click(screen.getByRole("button", { name: "Enlarge worked examples" }));
+    expect(screen.getByRole("dialog", { name: "Worked examples" })).toBeTruthy();
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    fireEvent.click(screen.getByRole("button", { name: "Enlarge remember" }));
+    expect(screen.getByRole("dialog", { name: "Remember" })).toBeTruthy();
   });
 
   it("navigates freely between stages via the contents sidebar (§4 is the nav)", () => {
