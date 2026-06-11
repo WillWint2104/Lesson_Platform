@@ -45,9 +45,9 @@ body.lp-app {
 .appbar-back {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-height: 40px;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--v2-radius-control);
   background: var(--surface);
@@ -76,7 +76,7 @@ body.lp-app {
   display: inline-flex;
   align-items: center;
   min-height: 40px;
-  padding: var(--space-2) var(--space-1);
+  padding: var(--space-1);
   color: var(--body);
   font-weight: 600;
   text-decoration: none;

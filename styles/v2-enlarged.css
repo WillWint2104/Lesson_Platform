@@ -81,7 +81,7 @@
   color: var(--body);
 }
 .notes-enlarged__list {
-  padding-left: var(--space-5);
+  padding-left: var(--space-4);
 }
 /* The rule formula: \displaystyle, large, centered. */
 .notes-enlarged__formula {
@@ -109,8 +109,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
 }
 .notes-block__head .notes-block__label {
   margin: 0;
